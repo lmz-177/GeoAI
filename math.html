@@ -829,6 +829,33 @@ body.dark .eff-warn{color:#c39bff}
   display:flex;align-items:center;justify-content:center;color:var(--text-3);transition:var(--t-ui)}
 .eff-pop-reset:hover{background:var(--hover);color:var(--text)}
 .eff-pop-reset svg{width:16px;height:16px}
+/* DeepSeek API Key：从输入区工具排左上方展开 */
+.api-pop{
+  position:absolute;left:0;bottom:calc(100% + 8px);width:min(360px,calc(100vw - 28px));
+  padding:0 0 12px;border-radius:14px;z-index:45;display:none;
+  background:var(--glass-2);border:.5px solid var(--glass-brd);
+  box-shadow:var(--shadow-lg),var(--hi-strong);
+  -webkit-backdrop-filter:var(--glass-blur);backdrop-filter:var(--glass-blur);
+}
+.api-pop.on{display:block;animation:apiPopIn .16s var(--ease-out) both}
+@keyframes apiPopIn{from{opacity:0;transform:translateY(6px) scale(.97)}to{opacity:1;transform:translateY(0) scale(1)}}
+.api-pop-head{display:flex;align-items:flex-start;gap:8px;padding:12px 12px 10px}
+.api-pop-ttl{font-size:14px;font-weight:600;line-height:20px;color:var(--accent)}
+.api-pop-sub{font-size:var(--fs-xs);line-height:18px;color:var(--text-3)}
+.api-pop-head .eff-pop-reset{position:static;margin-left:auto;flex:0 0 28px}
+.api-pop-row{display:flex;gap:8px;padding:0 12px}
+.api-pop-row input{
+  flex:1;min-width:0;padding:9px 11px;border:.5px solid var(--border);border-radius:10px;
+  background:var(--panel-2);font-size:var(--fs-sm);color:var(--text);
+}
+.api-pop-row input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-dim)}
+.api-pop-row .btn{flex:0 0 auto;padding:8px 12px}
+.api-pop-status{padding:8px 12px 0;font-size:var(--fs-xs);color:var(--text-3);min-height:20px;line-height:1.5}
+.api-pop-status.ok{color:var(--ok)}
+.api-pop-status.warn{color:var(--warn)}
+.api-pop-status.err{color:var(--danger)}
+.api-pop-note{padding:4px 12px 0;font-size:var(--fs-2xs);color:var(--text-3);line-height:1.55}
+.ai-tool.needs-key{color:var(--warn);border-color:var(--warn)}
 /* 点一下回转箭头时转一圈，给"已恢复默认"一个可见反馈 */
 .eff-pop-reset.spin svg{animation:effSpin .55s var(--ease)}
 @keyframes effSpin{from{transform:rotate(0)}to{transform:rotate(-360deg)}}
@@ -3620,8 +3647,25 @@ body.basic .fmenu-btn, body.basic .fmenu, body.basic .fmenu-scrim, body.basic .p
         <div class="ai-input" id="aiDropZone">
           <div class="ai-drop">松开即可添加图片</div>
           <div class="ai-attach" id="aiAttach"></div>
-          <!-- 工具排：联网 / 图片 / 思考强度三枚轻量图标键，右侧是关闭键 -->
+          <!-- DeepSeek API Key：只允许官方接口；输入后自动加密保存（不落明文） -->
+          <div class="api-pop" id="apiPop" role="dialog" aria-label="DeepSeek API Key">
+            <div class="api-pop-head">
+              <div>
+                <div class="api-pop-ttl">DeepSeek API</div>
+                <div class="api-pop-sub">仅支持 DeepSeek 官方接口</div>
+              </div>
+              <button class="eff-pop-reset" id="apiPopClose" title="关闭" aria-label="关闭"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6 6 18"></path></svg></button>
+            </div>
+            <div class="api-pop-row">
+              <input type="password" id="dsKeyInput" placeholder="sk-… 填入后自动加密保存" autocomplete="new-password" spellcheck="false">
+              <button class="btn" id="dsKeyClear" disabled>清除</button>
+            </div>
+            <div class="api-pop-status" id="dsKeyStatus">未配置 API Key · 仅支持 DeepSeek 官方接口</div>
+            <div class="api-pop-note">Key 使用 AES-GCM 加密后只保存在本机浏览器，不上传、不写入文件。</div>
+          </div>
+          <!-- 工具排：Key / 联网 / 图片 / 思考强度，右侧是关闭键 -->
           <div class="ai-tools" id="aiTools">
+            <button class="ai-tool" id="aiKeyBtn" title="DeepSeek API Key：未配置，点此填入" aria-label="DeepSeek API Key" aria-haspopup="dialog" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="12" r="4"></circle><path d="M12 12h9M17.5 12v3M20.5 12v2"></path></svg></button>
             <!-- 点思考强度按钮后展开的 Codex 风格面板：标题 / 重置 + 一条滑条 -->
             <div class="eff-pop" id="effPop" role="dialog" aria-label="思考强度">
               <div class="eff-pop-head">
@@ -4276,31 +4320,219 @@ const state = {
   aiWeb: false,          // 联网检索开关（开启后每条消息先查实时网页）
   sheet: { cells: {}, sel: 'A1' },   // 表格视图：单元格原始内容（A1 形式标识符 → 文本/公式）
 };
-/* DeepSeek API 配置：可在「设置 → AI 接口」里改成自己的 Key / 地址 / 模型。
-   配置只写进当前浏览器的 localStorage，不会改动文件本身。 */
-const AI_DEFAULT = {
-  key: 'sk-c96cdd8369e043c5965b98476aa53367',
-  url: 'https://api.deepseek.com/chat/completions',
-  model: 'deepseek-flash',
-};
-const AI_CONF = (() => {
-  const c = Object.assign({}, AI_DEFAULT);
+/* ── DeepSeek API 配置 ──
+   只允许调用 DeepSeek 官方接口：地址与模型写死，界面上没有修改入口。
+   用户只需在 AI 输入框左侧的钥匙里填入自己的 Key；不内置任何默认 Key。
+   Key 不落明文：AES-GCM 加密后存 localStorage，密钥本身以「不可导出」
+   CryptoKey 的形式放进 IndexedDB；环境不允许时退回本机随机密钥，仍不存明文。 */
+const AI_URL = 'https://api.deepseek.com/chat/completions';
+const AI_MODEL = 'deepseek-flash';
+const AI_STORE = 'ggai_ds_key_v1';
+const AI_WRAP = 'ggai_ds_wrap_v1';
+const AI_DB = 'ggai_secure_store';
+const AI_CONF = { key: '' };
+let aiKeyState = 'empty';        // empty | saving | saved | session | error
+let aiKeyReady = null;
+let aiKeySeq = 0;
+let aiKeyTimer = 0;
+let aiKeyPersisted = true;
+let aiKeyErr = '';
+
+function aiB64(buf) {
+  const a = new Uint8Array(buf);
+  let s = '';
+  for (let i = 0; i < a.length; i++) s += String.fromCharCode(a[i]);
+  return btoa(s);
+}
+function aiUnb64(s) {
+  const bin = atob(String(s || ''));
+  const a = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) a[i] = bin.charCodeAt(i);
+  return a;
+}
+function aiIdb() {
+  return new Promise((res, rej) => {
+    if (!window.indexedDB) { rej(new Error('IndexedDB 不可用')); return; }
+    const rq = indexedDB.open(AI_DB, 1);
+    rq.onupgradeneeded = () => {
+      const db = rq.result;
+      if (!db.objectStoreNames.contains('keys')) db.createObjectStore('keys');
+    };
+    rq.onsuccess = () => res(rq.result);
+    rq.onerror = () => rej(rq.error);
+  });
+}
+async function aiIdbGet(name) {
+  const db = await aiIdb();
+  return new Promise((res, rej) => {
+    const rq = db.transaction('keys', 'readonly').objectStore('keys').get(name);
+    rq.onsuccess = () => res(rq.result);
+    rq.onerror = () => rej(rq.error);
+  });
+}
+async function aiIdbPut(name, val) {
+  const db = await aiIdb();
+  return new Promise((res, rej) => {
+    const rq = db.transaction('keys', 'readwrite').objectStore('keys').put(val, name);
+    rq.onsuccess = () => res();
+    rq.onerror = () => rej(rq.error);
+  });
+}
+/* 本机加密密钥：优先用不可导出的 CryptoKey 存 IndexedDB；
+   某些浏览器 / 隐私模式不允许存 CryptoKey，则退回 localStorage 里放
+   随机 AES 密钥的 raw 值——无论如何都不会保存 API Key 明文。 */
+async function aiDeviceKey(create) {
+  if (!window.crypto || !crypto.subtle) throw new Error('当前浏览器不支持 Web Crypto');
+  let k = null;
+  try { k = await aiIdbGet('aes'); } catch (e) { }
+  if (k) { aiKeyPersisted = true; return k; }
   try {
-    const raw = localStorage.getItem('ggai_aiconf');
-    if (raw) {
-      const o = JSON.parse(raw);
-      if (o && typeof o === 'object') {
-        if (typeof o.key === 'string') c.key = o.key.trim();          /* 允许清空：清空后 AI 会提示先填 Key */
-        if (typeof o.url === 'string' && o.url.trim()) c.url = o.url.trim();
-        if (typeof o.model === 'string' && o.model.trim()) c.model = o.model.trim();
-      }
+    const wrapped = localStorage.getItem(AI_WRAP);
+    if (wrapped) {
+      k = await crypto.subtle.importKey('raw', aiUnb64(wrapped), { name: 'AES-GCM' }, true, ['encrypt', 'decrypt']);
+      aiKeyPersisted = true;
+      return k;
     }
   } catch (e) { }
-  return c;
-})();
-function saveAIConf() {
-  try { localStorage.setItem('ggai_aiconf', JSON.stringify(AI_CONF)); } catch (e) { }
+  if (!create) throw new Error('找不到本机加密密钥');
+  /* 首选：不可导出、进 IndexedDB */
+  const strong = await crypto.subtle.generateKey({ name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']);
+  try { await aiIdbPut('aes', strong); aiKeyPersisted = true; aiKeyErr = ''; return strong; }
+  catch (e) { aiKeyErr = 'IndexedDB 存密钥失败：' + ((e && e.message) || e); }
+  /* 兜底：可导出密钥的 raw 值放 localStorage，仍保证 API Key 不以明文落盘 */
+  const portable = await crypto.subtle.generateKey({ name: 'AES-GCM', length: 256 }, true, ['encrypt', 'decrypt']);
+  const raw = await crypto.subtle.exportKey('raw', portable);
+  try { localStorage.setItem(AI_WRAP, aiB64(raw)); aiKeyPersisted = true; aiKeyErr = ''; }
+  catch (e) { aiKeyPersisted = false; aiKeyErr = 'localStorage 存密钥失败：' + ((e && e.message) || e); }
+  return portable;
 }
+/* 非安全上下文（如被嵌到 http 预览框）没有 crypto.subtle：
+   用本机随机密钥做一次流式混淆，至少保证 Key 不以明文落盘 */
+function aiFallbackKey(create) {
+  try {
+    const w = localStorage.getItem(AI_WRAP);
+    if (w) return aiUnb64(w);
+  } catch (e) { }
+  if (!create) throw new Error('找不到本机加密密钥');
+  const k = crypto.getRandomValues(new Uint8Array(32));
+  try { localStorage.setItem(AI_WRAP, aiB64(k)); } catch (e) { throw new Error('本机存储不可写'); }
+  return k;
+}
+function aiXor(bytes, key) {
+  const out = new Uint8Array(bytes.length);
+  for (let i = 0; i < bytes.length; i++) out[i] = bytes[i] ^ key[i % key.length];
+  return out;
+}
+async function aiEncrypt(text) {
+  if (!(window.crypto && crypto.subtle)) {
+    const key = aiFallbackKey(true);
+    aiKeyPersisted = true;
+    return { v: 2, ct: aiB64(aiXor(new TextEncoder().encode(text), key)) };
+  }
+  const k = await aiDeviceKey(true);
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const ct = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, k, new TextEncoder().encode(text));
+  return { v: 1, iv: aiB64(iv), ct: aiB64(ct) };
+}
+async function aiDecrypt(o) {
+  if (o && o.v === 2) {
+    return new TextDecoder().decode(aiXor(aiUnb64(o.ct), aiFallbackKey(false)));
+  }
+  const k = await aiDeviceKey(false);
+  const pt = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: aiUnb64(o.iv) }, k, aiUnb64(o.ct));
+  return new TextDecoder().decode(pt);
+}
+function aiSetState(s) { aiKeyState = s; aiSyncKeyUI(); }
+function aiSyncKeyUI() {
+  const btn = $('#aiKeyBtn'), inp = $('#dsKeyInput'), st = $('#dsKeyStatus'), clr = $('#dsKeyClear');
+  const has = !!AI_CONF.key;
+  if (btn) {
+    btn.classList.toggle('on', has);
+    btn.classList.toggle('needs-key', !has);
+    btn.title = has ? 'DeepSeek API Key：已配置（加密保存）' : 'DeepSeek API Key：未配置，点此填入';
+  }
+  if (inp && has) inp.placeholder = '已加密保存；输入新 Key 可替换';
+  if (clr) clr.disabled = !has;
+  if (!st) return;
+  const map = {
+    empty: ['未配置 API Key · 仅支持 DeepSeek 官方接口', 'warn'],
+    saving: ['正在加密保存…', ''],
+    saved: ['已加密保存在本机浏览器', 'ok'],
+    session: ['已保存（仅本次会话）' + (aiKeyErr ? '：' + aiKeyErr : '：当前环境不支持持久加密'), 'warn'],
+    error: ['本机加密密钥不可用，请重新填写 Key', 'err'],
+  };
+  const m = map[aiKeyState] || map.empty;
+  st.textContent = m[0];
+  st.className = 'api-pop-status' + (m[1] ? ' ' + m[1] : '');
+  const note = $('.api-pop-note');
+  if (note) note.textContent = (window.crypto && crypto.subtle)
+    ? 'Key 使用 AES-GCM 加密后只保存在本机浏览器，不上传、不写入文件。'
+    : 'Key 加密后只保存在本机浏览器（兼容模式），不上传、不写入文件。';
+}
+async function aiLoadKey() {
+  /* 旧版本曾把 Key 明文写进 localStorage / 源码：先清掉遗留记录 */
+  try { localStorage.removeItem('ggai_aiconf'); } catch (e) { }
+  let raw = '';
+  try { raw = localStorage.getItem(AI_STORE) || ''; } catch (e) { }
+  if (!raw) { aiSetState('empty'); return; }
+  try {
+    const key = await aiDecrypt(JSON.parse(raw));
+    AI_CONF.key = key || '';
+    aiSetState(key ? 'saved' : 'empty');
+  } catch (e) {
+    AI_CONF.key = '';
+    aiSetState('error');
+  }
+}
+async function aiSaveKey(key) {
+  key = String(key || '').trim();
+  if (!key) return;    /* 空输入不覆盖已有 Key；要删除请点「清除」 */
+  const seq = ++aiKeySeq;
+  aiSetState('saving');
+  try {
+    const enc = await aiEncrypt(key);
+    if (seq !== aiKeySeq) return;    /* 输入已变，丢弃这次旧结果 */
+    if (aiKeyPersisted) {
+      localStorage.setItem(AI_STORE, JSON.stringify(enc));
+      aiKeyErr = '';
+      AI_CONF.key = key;
+      aiSetState('saved');
+    } else {
+      /* 加密可用但密文无法可靠持久化：只放内存，绝不退化成明文存储 */
+      AI_CONF.key = key;
+      aiSetState('session');
+    }
+  } catch (e) {
+    if (seq !== aiKeySeq) return;
+    aiKeyErr = (e && e.message) || String(e);
+    AI_CONF.key = key;
+    aiSetState('session');
+  }
+}
+function aiClearKey() {
+  aiKeySeq++;
+  AI_CONF.key = '';
+  try { localStorage.removeItem(AI_STORE); } catch (e) { }
+  const inp = $('#dsKeyInput'); if (inp) inp.value = '';
+  aiSetState('empty');
+}
+function aiQueueKeySave() {
+  clearTimeout(aiKeyTimer);
+  const v = ($('#dsKeyInput') || {}).value || '';
+  aiKeyTimer = setTimeout(() => aiSaveKey(v), 550);
+}
+function setApiPop(open) {
+  const p = $('#apiPop'), b = $('#aiKeyBtn');
+  if (!p) return;
+  open = !!open;
+  p.classList.toggle('on', open);
+  if (b) b.setAttribute('aria-expanded', open ? 'true' : 'false');
+  if (open) {
+    aiSyncKeyUI();
+    setTimeout(() => { const i = $('#dsKeyInput'); if (i) i.focus(); }, 30);
+  }
+}
+aiKeyReady = aiLoadKey();
 /* 7 档思考强度（Codex 桌面版的分法，档位名统一用英文）：
    Off / Minimal / Low / Medium / High / XHigh / Ultra。
    真实只落到 3 个 API 强度上（第 2–3 档 → low、第 4–5 档 → high、第 6–7 档 → max），
@@ -14738,13 +14970,6 @@ function settingsHtml() {
     '<div class="set-row"><label>小数位数</label><select data-sel="round">' + [0, 1, 2, 3, 4, 5, 6].map(n => '<option value="' + n + '"' + (SET.round === n ? ' selected' : '') + '>' + n + ' 位</option>').join('') + '</select></div>' +
     '<div class="set-row"><label>角度单位</label><select data-sel="angleUnit"><option value="deg"' + (SET.angleUnit === 'deg' ? ' selected' : '') + '>度 (°)</option><option value="rad"' + (SET.angleUnit === 'rad' ? ' selected' : '') + '>弧度</option></select></div>' +
     '</div>' +
-    /* AI 接口：用你自己的 DeepSeek Key。只存 localStorage，不写进文件。 */
-    '<div class="set-group"><h3>AI 接口</h3>' +
-    '<div class="set-row"><label>API Key<span class="sublabel">仅保存在本机浏览器，不会写入文件或上传</span></label><input type="password" data-ai="key" autocomplete="off" spellcheck="false" placeholder="sk-..." value="' + esc(AI_CONF.key) + '"></div>' +
-    '<div class="set-row"><label>API 地址</label><input type="text" data-ai="url" spellcheck="false" placeholder="https://api.deepseek.com/chat/completions" value="' + esc(AI_CONF.url) + '"></div>' +
-    '<div class="set-row"><label>模型<span class="sublabel">例如 deepseek-flash、deepseek-chat</span></label><input type="text" data-ai="model" spellcheck="false" placeholder="deepseek-flash" value="' + esc(AI_CONF.model) + '"></div>' +
-    '<div class="set-row"><label>连接测试<span class="sublabel" id="aiTestOut">用当前配置发一条最小请求，确认 Key 可用</span></label><button class="btn" id="aiTestBtn">测试</button></div>' +
-    '</div>' +
     '<div class="set-group"><h3>绘图区</h3>' +
     sw('grid', '显示网格') + sw('axes', '显示坐标轴') + sw('showGridNumbers', '坐标轴刻度数字') + sw('showMinor', '次要网格线') + sw('boldGrid', '加粗网格线') +
     sw('snap', '吸附到网格') + sw('snapToObjects', '吸附到已有对象') +
@@ -14773,40 +14998,6 @@ function bindSettings() {
     if (k === 'theme') applyTheme();
     recomputeAll();
   }));
-  /* AI 接口：输入即保存到 localStorage，下一轮对话 / 联网检索立刻生效 */
-  b.querySelectorAll('[data-ai]').forEach(el => el.addEventListener('input', () => {
-    const k = el.dataset.ai;
-    AI_CONF[k] = el.value.trim();
-    saveAIConf();
-    const out = b.querySelector('#aiTestOut');
-    if (out) { out.textContent = '已保存到本机浏览器'; out.style.color = 'var(--text-3)'; }
-  }));
-  const testBtn = b.querySelector('#aiTestBtn');
-  if (testBtn) testBtn.addEventListener('click', testAIConnection);
-}
-/* 设置页的「测试」：发一条最小请求，只报通 / 不通，不落任何对话内容 */
-async function testAIConnection() {
-  const out = $('#settingsBody').querySelector('#aiTestOut');
-  const say = (t, color) => { if (out) { out.textContent = t; out.style.color = color; } };
-  if (!AI_CONF.key) { say('请先填写 API Key', 'var(--danger)'); return; }
-  if (!AI_CONF.url) { say('请先填写 API 地址', 'var(--danger)'); return; }
-  say('正在测试…', 'var(--text-3)');
-  try {
-    const res = await fetch(AI_CONF.url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json; charset=utf-8', 'Authorization': 'Bearer ' + AI_CONF.key },
-      body: JSON.stringify({ model: AI_CONF.model, messages: [{ role: 'user', content: 'ping' }], max_tokens: 1, stream: false }),
-    });
-    if (!res.ok) {
-      let detail = '';
-      try { const j = await res.json(); detail = (j.error && (j.error.message || j.error.type)) || JSON.stringify(j); } catch (e) { detail = await res.text().catch(() => ''); }
-      say('连接失败：' + (detail || ('HTTP ' + res.status)), 'var(--danger)');
-      return;
-    }
-    say('连接成功 · ' + AI_CONF.model, 'var(--ok)');
-  } catch (e) {
-    say('连接失败：' + ((e && e.message) || e), 'var(--danger)');
-  }
 }
 /* ══ 单个对象的详细设置（代数栏齿轮 / 右键「对象设置」）══
    分四组：外观（颜色 / 线宽 / 线型 / 点大小）、填充、标签、文字专属。
@@ -18011,7 +18202,6 @@ function init() {
     /* 同一个模态两种用途：全局设置 / 单个对象设置 */
     if (objSetTarget && getObj(objSetTarget.id)) { resetObjectStyle(objSetTarget); return; }
     Object.assign(SET, { round: 2, grid: true, axes: true, labels: true, snap: false, snapToObjects: true, pointSize: 4, lineWidth: 3.2, fontSize: 12, showMinor: false, boldGrid: false, showGridNumbers: true, angleUnit: 'deg' });
-    Object.assign(AI_CONF, AI_DEFAULT); saveAIConf();
     bindSettingsRefresh(); recomputeAll(); toast('已恢复默认设置');
   };
   function bindSettingsRefresh() { $('#settingsBody').innerHTML = settingsHtml(); bindSettings(); }
@@ -20959,7 +21149,7 @@ async function runUITest() {
 async function runAITest() {
   const q = new URLSearchParams(location.search);
   if (q.get('effort')) state.aiEffort = q.get('effort');
-  const R = { model: AI_CONF.model, effort: state.aiEffort, ok: false, reasoningLen: 0, content: '', cmds: [], err: null };
+  const R = { model: AI_MODEL, effort: state.aiEffort, ok: false, reasoningLen: 0, content: '', cmds: [], err: null };
   try {
     const msgs = [{ role: 'system', content: AI_SYSTEM },
       { role: 'user', content: '在画布上画一个单位圆并标出圆心。只输出一个 geogebra 代码块，不要任何解释。' }];
@@ -23100,6 +23290,8 @@ async function aiHttpError(res, what) {
 }
 /* 两个接口都是普通 JSON POST，共用超时、外部中断与错误处理 */
 async function aiWebPost(url, payload, what, signal) {
+  await aiKeyReady;
+  if (!AI_CONF.key) throw new Error('请先在 AI 输入框左侧的钥匙里填入 DeepSeek API Key');
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), WEB_TIMEOUT_MS);
   let stopped = false;
@@ -23803,6 +23995,34 @@ function bindAI() {
   });
   document.addEventListener('keydown', e => { if (e.key === 'Escape') effOpen(false); });
 
+  /* DeepSeek API Key：点钥匙展开；输入后自动加密保存，失焦 / 回车立即提交 */
+  (function bindApiKey() {
+    const btn = $('#aiKeyBtn'), pop = $('#apiPop');
+    if (!btn || !pop) return;
+    btn.addEventListener('click', e => { e.stopPropagation(); setApiPop(!pop.classList.contains('on')); });
+    const close = $('#apiPopClose');
+    if (close) close.addEventListener('click', () => setApiPop(false));
+    const inp = $('#dsKeyInput');
+    if (inp) {
+      inp.addEventListener('input', aiQueueKeySave);
+      inp.addEventListener('blur', () => { clearTimeout(aiKeyTimer); aiSaveKey(inp.value); });
+      inp.addEventListener('keydown', e => {
+        if (e.key === 'Enter') { e.preventDefault(); clearTimeout(aiKeyTimer); aiSaveKey(inp.value); }
+      });
+    }
+    const clr = $('#dsKeyClear');
+    if (clr) clr.addEventListener('click', aiClearKey);
+    document.addEventListener('pointerdown', e => {
+      if (!pop.classList.contains('on')) return;
+      if (pop.contains(e.target) || btn.contains(e.target)) return;
+      setApiPop(false);
+    });
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape' && pop.classList.contains('on')) setApiPop(false);
+    });
+    aiSyncKeyUI();
+  })();
+
   /* 灵动岛：点角色展开回完整对话；状态条上的深度文字只切档，不展开；
      右侧停止键只中止当前生成，不触发展开 */
   const isl = $('#aiIsland');
@@ -24275,14 +24495,14 @@ function buildCanvasContext() {
 }
 function stopAI() { if (state.aiAbort) state.aiAbort.abort(); }
 async function callAI(messages, eff, onDelta) {
-  if (!AI_CONF.key) throw new Error('请先在「设置 → AI 接口」里填写自己的 DeepSeek API Key');
-  if (!AI_CONF.url) throw new Error('请先在「设置 → AI 接口」里填写 API 地址');
+  await aiKeyReady;
+  if (!AI_CONF.key) throw new Error('请先在 AI 输入框左侧的钥匙里填入 DeepSeek API Key');
   const ctrl = new AbortController();
   state.aiAbort = ctrl;
-  const body = { model: AI_CONF.model, messages, stream: true };
+  const body = { model: AI_MODEL, messages, stream: true };
   if (eff.api) { body.thinking = { type: 'enabled' }; body.reasoning_effort = eff.effort; }
   else { body.thinking = { type: 'disabled' }; }
-  const res = await fetch(AI_CONF.url, {
+  const res = await fetch(AI_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json; charset=utf-8', 'Authorization': 'Bearer ' + AI_CONF.key },
     body: JSON.stringify(body),
@@ -24325,6 +24545,12 @@ async function aiSend() {
   const text = inp.value.trim();
   const imgs = (state.aiImages || []).slice();
   if ((!text && !imgs.length) || state.aiBusy) return;
+  await aiKeyReady;
+  if (!AI_CONF.key) {
+    setApiPop(true);
+    toast('请先填入 DeepSeek API Key（输入框左侧的钥匙）', 'err', 3200);
+    return;
+  }
   inp.value = ''; inp.dispatchEvent(new Event('input', { bubbles: true }));
   const box0 = inp.closest('.ai-box'); if (box0) box0.classList.remove('grow');
   toggleAISheet(true);
