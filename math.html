@@ -1323,7 +1323,7 @@ body:has(.aii-eff.on) .ai-dock{z-index:230}
 .set-row{display:flex;align-items:center;gap:12px;padding:10px 0;font-size:13.5px}
 .set-row>label{flex:1;color:var(--text)}
 .set-row .sublabel{display:block;font-size:11.5px;color:var(--text-3);margin-top:3px;line-height:1.45}
-.set-row select,.set-row input[type=text],.set-row input[type=number]{
+.set-row select,.set-row input[type=text],.set-row input[type=password],.set-row input[type=number]{
   padding:8px 11px;border:.5px solid var(--border);border-radius:9px;background:var(--panel-2);
   font-size:var(--fs-sm);min-width:120px;
 }
@@ -3131,7 +3131,7 @@ body:has(.aii-eff.on) .ai-dock { z-index: 230; }
 .set-row { display: flex; align-items: center; gap: 12px; padding: 10px 0px; font-size: 13.5px; }
 .set-row > label { flex: 1 1 0%; color: var(--text); }
 .set-row .sublabel { display: block; font-size: 11.5px; color: var(--text-3); margin-top: 3px; line-height: 1.45; }
-.set-row select, .set-row input[type="text"], .set-row input[type="number"] { padding: 8px 11px; border: .5px solid var(--border); border-radius: 9px; background: var(--panel-2); font-size: var(--fs-sm); min-width: 120px; }
+.set-row select, .set-row input[type="text"], .set-row input[type="password"], .set-row input[type="number"] { padding: 8px 11px; border: .5px solid var(--border); border-radius: 9px; background: var(--panel-2); font-size: var(--fs-sm); min-width: 120px; }
 .set-row input[type="range"] { width: 150px; }
 .set-row input[type="color"] { width: 38px; height: 32px; padding: 2px; border: .5px solid var(--border); border-radius: 9px; background: var(--panel-2); }
 .switch { width: 51px; height: 31px; border-radius: 99px; background: rgba(120, 120, 128, 0.32); position: relative; transition: background var(--t); flex: 0 0 51px; }
@@ -3843,7 +3843,7 @@ body.basic .fmenu-btn, body.basic .fmenu, body.basic .fmenu-scrim, body.basic .p
 </div>
 
 <!-- ══════════ 小屏幕兼容提示 ══════════ -->
-<div class="backdrop on" id="compatBackdrop">
+<div class="backdrop" id="compatBackdrop">
   <div class="modal" style="max-width:430px" role="dialog" aria-modal="true" aria-labelledby="compatBackdrop-title">
     <div class="modal-head"><h2 id="compatBackdrop-title">小屏幕可能显示异常</h2></div>
     <div class="modal-body">
@@ -4217,11 +4217,20 @@ function morphSetLive(host, on) {
   on = !!on;
   if (it.live === on) return;
   it.live = on;
-  if (on) { it.painted = false; morphKick(); }
+  if (on) {
+    it.painted = false;
+    /* 先同步画一帧：循环刚停下（等待 400ms 重启）或标签页被浏览器降频时，
+       新出现的 loader 不会先空白几百毫秒 */
+    try { morphDraw(it, morphAt(4600), 1, performance.now()); } catch (e) { }
+    morphKick();
+  }
   else morphPaintStatic(it);
 }
 function morphBind(host, size) {
   if (!host) return;
+  /* 页面里的宿主可能带着上次渲染留下的 canvas（保存的 DOM 快照），
+     先清空，否则会多出一张永远不画的白板叠在 loader 上面 */
+  host.innerHTML = '';
   const cv = document.createElement('canvas');
   cv.setAttribute('aria-hidden', 'true');
   cv.style.width = size + 'px'; cv.style.height = size + 'px'; cv.style.display = 'block';
@@ -4267,9 +4276,31 @@ const state = {
   aiWeb: false,          // 联网检索开关（开启后每条消息先查实时网页）
   sheet: { cells: {}, sel: 'A1' },   // 表格视图：单元格原始内容（A1 形式标识符 → 文本/公式）
 };
-const API_KEY = 'sk-c96cdd8369e043c5965b98476aa53367';
-const API_URL = 'https://api.deepseek.com/chat/completions';
-const MODEL = 'deepseek-flash';
+/* DeepSeek API 配置：可在「设置 → AI 接口」里改成自己的 Key / 地址 / 模型。
+   配置只写进当前浏览器的 localStorage，不会改动文件本身。 */
+const AI_DEFAULT = {
+  key: 'sk-c96cdd8369e043c5965b98476aa53367',
+  url: 'https://api.deepseek.com/chat/completions',
+  model: 'deepseek-flash',
+};
+const AI_CONF = (() => {
+  const c = Object.assign({}, AI_DEFAULT);
+  try {
+    const raw = localStorage.getItem('ggai_aiconf');
+    if (raw) {
+      const o = JSON.parse(raw);
+      if (o && typeof o === 'object') {
+        if (typeof o.key === 'string') c.key = o.key.trim();          /* 允许清空：清空后 AI 会提示先填 Key */
+        if (typeof o.url === 'string' && o.url.trim()) c.url = o.url.trim();
+        if (typeof o.model === 'string' && o.model.trim()) c.model = o.model.trim();
+      }
+    }
+  } catch (e) { }
+  return c;
+})();
+function saveAIConf() {
+  try { localStorage.setItem('ggai_aiconf', JSON.stringify(AI_CONF)); } catch (e) { }
+}
 /* 7 档思考强度（Codex 桌面版的分法，档位名统一用英文）：
    Off / Minimal / Low / Medium / High / XHigh / Ultra。
    真实只落到 3 个 API 强度上（第 2–3 档 → low、第 4–5 档 → high、第 6–7 档 → max），
@@ -14707,6 +14738,13 @@ function settingsHtml() {
     '<div class="set-row"><label>小数位数</label><select data-sel="round">' + [0, 1, 2, 3, 4, 5, 6].map(n => '<option value="' + n + '"' + (SET.round === n ? ' selected' : '') + '>' + n + ' 位</option>').join('') + '</select></div>' +
     '<div class="set-row"><label>角度单位</label><select data-sel="angleUnit"><option value="deg"' + (SET.angleUnit === 'deg' ? ' selected' : '') + '>度 (°)</option><option value="rad"' + (SET.angleUnit === 'rad' ? ' selected' : '') + '>弧度</option></select></div>' +
     '</div>' +
+    /* AI 接口：用你自己的 DeepSeek Key。只存 localStorage，不写进文件。 */
+    '<div class="set-group"><h3>AI 接口</h3>' +
+    '<div class="set-row"><label>API Key<span class="sublabel">仅保存在本机浏览器，不会写入文件或上传</span></label><input type="password" data-ai="key" autocomplete="off" spellcheck="false" placeholder="sk-..." value="' + esc(AI_CONF.key) + '"></div>' +
+    '<div class="set-row"><label>API 地址</label><input type="text" data-ai="url" spellcheck="false" placeholder="https://api.deepseek.com/chat/completions" value="' + esc(AI_CONF.url) + '"></div>' +
+    '<div class="set-row"><label>模型<span class="sublabel">例如 deepseek-flash、deepseek-chat</span></label><input type="text" data-ai="model" spellcheck="false" placeholder="deepseek-flash" value="' + esc(AI_CONF.model) + '"></div>' +
+    '<div class="set-row"><label>连接测试<span class="sublabel" id="aiTestOut">用当前配置发一条最小请求，确认 Key 可用</span></label><button class="btn" id="aiTestBtn">测试</button></div>' +
+    '</div>' +
     '<div class="set-group"><h3>绘图区</h3>' +
     sw('grid', '显示网格') + sw('axes', '显示坐标轴') + sw('showGridNumbers', '坐标轴刻度数字') + sw('showMinor', '次要网格线') + sw('boldGrid', '加粗网格线') +
     sw('snap', '吸附到网格') + sw('snapToObjects', '吸附到已有对象') +
@@ -14735,6 +14773,40 @@ function bindSettings() {
     if (k === 'theme') applyTheme();
     recomputeAll();
   }));
+  /* AI 接口：输入即保存到 localStorage，下一轮对话 / 联网检索立刻生效 */
+  b.querySelectorAll('[data-ai]').forEach(el => el.addEventListener('input', () => {
+    const k = el.dataset.ai;
+    AI_CONF[k] = el.value.trim();
+    saveAIConf();
+    const out = b.querySelector('#aiTestOut');
+    if (out) { out.textContent = '已保存到本机浏览器'; out.style.color = 'var(--text-3)'; }
+  }));
+  const testBtn = b.querySelector('#aiTestBtn');
+  if (testBtn) testBtn.addEventListener('click', testAIConnection);
+}
+/* 设置页的「测试」：发一条最小请求，只报通 / 不通，不落任何对话内容 */
+async function testAIConnection() {
+  const out = $('#settingsBody').querySelector('#aiTestOut');
+  const say = (t, color) => { if (out) { out.textContent = t; out.style.color = color; } };
+  if (!AI_CONF.key) { say('请先填写 API Key', 'var(--danger)'); return; }
+  if (!AI_CONF.url) { say('请先填写 API 地址', 'var(--danger)'); return; }
+  say('正在测试…', 'var(--text-3)');
+  try {
+    const res = await fetch(AI_CONF.url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json; charset=utf-8', 'Authorization': 'Bearer ' + AI_CONF.key },
+      body: JSON.stringify({ model: AI_CONF.model, messages: [{ role: 'user', content: 'ping' }], max_tokens: 1, stream: false }),
+    });
+    if (!res.ok) {
+      let detail = '';
+      try { const j = await res.json(); detail = (j.error && (j.error.message || j.error.type)) || JSON.stringify(j); } catch (e) { detail = await res.text().catch(() => ''); }
+      say('连接失败：' + (detail || ('HTTP ' + res.status)), 'var(--danger)');
+      return;
+    }
+    say('连接成功 · ' + AI_CONF.model, 'var(--ok)');
+  } catch (e) {
+    say('连接失败：' + ((e && e.message) || e), 'var(--danger)');
+  }
 }
 /* ══ 单个对象的详细设置（代数栏齿轮 / 右键「对象设置」）══
    分四组：外观（颜色 / 线宽 / 线型 / 点大小）、填充、标签、文字专属。
@@ -17810,7 +17882,7 @@ function bindShortcuts() {
    窄屏 / 矮屏（手机）装不下完整界面：① 继续 —— 尝试锁定横屏；
    ② 体验基础功能 —— 只保留 AI 与画布，并关闭保存 / 打开 / 导出。
    基础功能只作用于本次会话，窗口放大后自动恢复完整界面。 */
-const SMALL_W = 700, SMALL_H = 520;
+const SMALL_W = 480, SMALL_H = 400;
 const isSmallScreen = () => innerWidth < SMALL_W || innerHeight < SMALL_H;
 const isBasicMode = () => document.body.classList.contains('basic');
 let compatDismissed = false, compatTimer = 0, compatWasSmall = null;
@@ -17863,9 +17935,15 @@ function openFileDialog() { if (basicBlocked('打开构造文件')) return; $('#
 function compatCheck() {
   if (isBasicMode()) return;
   const small = isSmallScreen();
-  if (small && compatWasSmall !== true) { compatDismissed = false; }
-  compatWasSmall = small;
-  if (small && !compatDismissed) showCompatPrompt();
+  if (!small) {
+    /* 启动时大屏不该弹兼容提示：兜底关掉，避免上一次遗留的 on 状态 */
+    compatDismissed = false; compatWasSmall = false;
+    closeBackdrop('compatBackdrop');
+    return;
+  }
+  if (compatWasSmall !== true) { compatDismissed = false; }
+  compatWasSmall = true;
+  if (!compatDismissed) showCompatPrompt();
 }
 function compatResize() {
   const small = isSmallScreen();
@@ -17932,7 +18010,9 @@ function init() {
   $('#setReset').onclick = () => {
     /* 同一个模态两种用途：全局设置 / 单个对象设置 */
     if (objSetTarget && getObj(objSetTarget.id)) { resetObjectStyle(objSetTarget); return; }
-    Object.assign(SET, { round: 2, grid: true, axes: true, labels: true, snap: false, snapToObjects: true, pointSize: 4, lineWidth: 3.2, fontSize: 12, showMinor: false, boldGrid: false, showGridNumbers: true, angleUnit: 'deg' }); bindSettingsRefresh(); recomputeAll(); toast('已恢复默认设置');
+    Object.assign(SET, { round: 2, grid: true, axes: true, labels: true, snap: false, snapToObjects: true, pointSize: 4, lineWidth: 3.2, fontSize: 12, showMinor: false, boldGrid: false, showGridNumbers: true, angleUnit: 'deg' });
+    Object.assign(AI_CONF, AI_DEFAULT); saveAIConf();
+    bindSettingsRefresh(); recomputeAll(); toast('已恢复默认设置');
   };
   function bindSettingsRefresh() { $('#settingsBody').innerHTML = settingsHtml(); bindSettings(); }
   $('#gvIn').onclick = () => zoomAt(canvas.clientWidth / 2, canvas.clientHeight / 2, 1.25);
@@ -19540,7 +19620,7 @@ async function runUITest() {
     try {
       setW(1200); compatWasSmall = false; compatDismissed = false; compatResize(); await sleep(0);
       if ($('#compatBackdrop').classList.contains('on')) throw new Error('大屏不应弹提示');
-      setW(600); compatResize(); await sleep(0);
+      setW(460); compatResize(); await sleep(0);
       if (!$('#compatBackdrop').classList.contains('on')) throw new Error('窗口变小没有提示');
       $('#compatLandscape').click(); await sleep(0);
       if ($('#compatBackdrop').classList.contains('on')) throw new Error('点「继续」后提示没关闭');
@@ -19549,7 +19629,7 @@ async function runUITest() {
       if ($('#compatBackdrop').classList.contains('on')) throw new Error('停在小屏时重复打扰');
       /* 放大再缩小：跨阈值要重新提示 */
       setW(1200); compatResize(); await sleep(0);
-      setW(600); compatResize(); await sleep(0);
+      setW(460); compatResize(); await sleep(0);
       if (!$('#compatBackdrop').classList.contains('on')) throw new Error('再次变小后没有重新提示');
     } finally {
       closeBackdrop('compatBackdrop');
@@ -20864,7 +20944,7 @@ async function runUITest() {
 async function runAITest() {
   const q = new URLSearchParams(location.search);
   if (q.get('effort')) state.aiEffort = q.get('effort');
-  const R = { model: MODEL, effort: state.aiEffort, ok: false, reasoningLen: 0, content: '', cmds: [], err: null };
+  const R = { model: AI_CONF.model, effort: state.aiEffort, ok: false, reasoningLen: 0, content: '', cmds: [], err: null };
   try {
     const msgs = [{ role: 'system', content: AI_SYSTEM },
       { role: 'user', content: '在画布上画一个单位圆并标出圆心。只输出一个 geogebra 代码块，不要任何解释。' }];
@@ -23016,7 +23096,7 @@ async function aiWebPost(url, payload, what, signal) {
   try {
     const res = await fetch(url, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json; charset=utf-8', 'Authorization': 'Bearer ' + API_KEY },
+      headers: { 'Content-Type': 'application/json; charset=utf-8', 'Authorization': 'Bearer ' + AI_CONF.key },
       body: JSON.stringify(payload),
       signal: ctrl.signal,
     });
@@ -24180,14 +24260,16 @@ function buildCanvasContext() {
 }
 function stopAI() { if (state.aiAbort) state.aiAbort.abort(); }
 async function callAI(messages, eff, onDelta) {
+  if (!AI_CONF.key) throw new Error('请先在「设置 → AI 接口」里填写自己的 DeepSeek API Key');
+  if (!AI_CONF.url) throw new Error('请先在「设置 → AI 接口」里填写 API 地址');
   const ctrl = new AbortController();
   state.aiAbort = ctrl;
-  const body = { model: MODEL, messages, stream: true };
+  const body = { model: AI_CONF.model, messages, stream: true };
   if (eff.api) { body.thinking = { type: 'enabled' }; body.reasoning_effort = eff.effort; }
   else { body.thinking = { type: 'disabled' }; }
-  const res = await fetch(API_URL, {
+  const res = await fetch(AI_CONF.url, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json; charset=utf-8', 'Authorization': 'Bearer ' + API_KEY },
+    headers: { 'Content-Type': 'application/json; charset=utf-8', 'Authorization': 'Bearer ' + AI_CONF.key },
     body: JSON.stringify(body),
     signal: ctrl.signal,
   });
