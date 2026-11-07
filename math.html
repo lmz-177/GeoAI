@@ -19559,9 +19559,20 @@ async function runUITest() {
     const oldSpos = Object.assign({}, sv.def.spos || {});
     sv.def.spos = { x: 28, y: 42 }; recomputeAll(); draw(); await sleep(0);
     const gTop = sliderGeom(sv);
-    if (gTop.y < 60) throw new Error('滑动条没有让开浮动菜单键：y=' + gTop.y);
-    const et = document.elementFromPoint(rect.left + gTop.kx, rect.top + gTop.y);
-    if (et && et !== cv && !cv.contains(et)) throw new Error('滑动条落点被浮层盖住：' + (et.id || et.tagName));
+    /* 只有菜单键真的横向压住轨道时才要求下移：窄屏侧栏展开时菜单键被推到侧栏右侧，
+       此时轨道在画布左缘并不与它重叠，不该强求 y>=60 */
+    const mb = document.getElementById('fmenuBtn');
+    const mr = mb ? mb.getBoundingClientRect() : null;
+    const overlapsKey = mr && mr.width && mr.height &&
+      gTop.x0 + gTop.w > (mr.left - rect.left) - 8 && gTop.x0 < (mr.right - rect.left) + 8;
+    if (overlapsKey && gTop.y < 60) throw new Error('滑动条没有让开浮动菜单键：y=' + gTop.y);
+    /* 窄屏侧栏是盖在画布上的抽屉：抽屉开着时画布本来就点不到，
+       这不是滑动条被别的浮层挡住，跳过落点可点性检查 */
+    const sbOverlay = innerWidth <= 820 && !$('#sidebar').classList.contains('hidden');
+    if (!sbOverlay) {
+      const et = document.elementFromPoint(rect.left + gTop.kx, rect.top + gTop.y);
+      if (et && et !== cv && !cv.contains(et)) throw new Error('滑动条落点被浮层盖住：' + (et.id || et.tagName));
+    }
     sv.def.spos = oldSpos; recomputeAll(); draw();
   });
   await A('快捷键:Ctrl+M 网格', async () => {
@@ -20674,9 +20685,13 @@ async function runUITest() {
     for (const sh of document.styleSheets) { try { walk(sh.cssRules); } catch (e) { } }
     /* 自检：抓不到规则的话下面几条断言会「全绿但没查任何东西」，所以先确认抓全了 */
     if (flat.length < 300) throw new Error('样式规则没抓全（只拿到 ' + flat.length + ' 条），后面的断言会失去意义');
+    /* 宿主（Trae 浏览器 / 预览器）会往页面里注入自己的样式表（.trae-*），
+       它们不归本文件管，也不该把「字号台阶」的断言带偏 */
+    const HOST_CSS = /\.trae-|data-trae/i;
     const bad = [];
     for (const r of flat) {
       if (!r.selectorText || r.selectorText === ':root') continue;
+      if (HOST_CSS.test(r.selectorText)) continue;
       /* 字号只许走 --fs-* 台阶，或者落在既有台阶的那几个值上：
          小字 10.5 / 11.5 / 12.5 / 13.5，正文 14，标题 15 / 16，品牌 16.5。
          凭空冒出的第五、第六档（13px、11px、12px 这类）会让同一层级的两处文字差 0.5px，
