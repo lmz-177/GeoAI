@@ -687,6 +687,50 @@ body.tool-folded .tool-head{padding-bottom:0}
   padding:0 6px;border-radius:99px;line-height:1.7;min-width:16px;text-align:center}
 .ai-dock.hist-fold .ai-chat{display:none}
 .ai-dock.hist-fold .ai-chat-wrap{display:none}
+/* 折叠态：整条历史头收掉，只留工具排里的一枚小键，不再占一整行 */
+.ai-dock.hist-fold .ai-sheet{display:none}
+.ai-hist-mini{display:none}
+.ai-dock.hist-fold .ai-hist-mini{display:flex;align-items:center}
+/* 展开态：工具排里留「收起历史」；折叠态：换成「展开历史」，入口位置不变 */
+.ai-dock.hist-fold .ai-hist-open{display:none}
+.ai-dock:not(.hist-fold) .ai-hist-open{display:flex;align-items:center}
+.ai-hist-mini .ai-tool{position:relative}
+/* 等待确认：独立澄清卡，浮在输入条上方，不展开历史对话 */
+.ask-pop{
+  position:absolute;left:0;right:0;bottom:calc(100% + 10px);z-index:44;display:none;
+  padding:14px 16px 12px;border-radius:18px;
+  background:var(--glass-2);border:.5px solid var(--glass-brd);
+  box-shadow:var(--shadow-lg),var(--hi-strong);
+  -webkit-backdrop-filter:var(--glass-blur);backdrop-filter:var(--glass-blur);
+}
+.ask-pop.on{display:block;animation:apiPopIn .22s var(--ease-out) both}
+.ask-pop-q{font-size:var(--fs-sm);font-weight:600;line-height:1.6;color:var(--text)}
+.ask-pop-opts{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.ask-pop-foot{display:flex;align-items:center;gap:10px;margin-top:12px}
+.ask-pop-skip{font-size:var(--fs-xs);font-weight:600;color:var(--accent);padding:4px 0}
+.ask-pop-close{margin-left:auto;font-size:var(--fs-xs);color:var(--text-3);padding:4px 0}
+.ask-pop-close:hover{color:var(--text)}
+/* 上下文用量：一枚小胶囊，迷你进度条 + 百分比，和联网 / 图片同一行 */
+.ai-ctx{
+  flex:0 0 auto;display:flex;align-items:center;gap:6px;height:32px;padding:0 10px;
+  border-radius:99px;background:var(--panel-2);border:.5px solid var(--border);
+  color:var(--text-2);transition:var(--t-ui);
+}
+.ai-ctx:hover{color:var(--accent);border-color:var(--accent);background:var(--accent-dim)}
+.ai-ctx:active{transform:scale(.96)}
+.ai-ctx-bar{position:relative;flex:0 0 26px;width:26px;height:5px;border-radius:99px;background:var(--panel-3);overflow:hidden}
+.ai-ctx-bar i{position:absolute;left:0;top:0;bottom:0;width:0;border-radius:99px;background:var(--accent);transition:width .3s var(--ease)}
+.ai-ctx-txt{font-size:var(--fs-3xs);font-weight:700;letter-spacing:.1px;font-variant-numeric:tabular-nums}
+.ai-ctx.warn{color:var(--warn);border-color:var(--warn)}
+.ai-ctx.warn .ai-ctx-bar i{background:var(--warn)}
+.ai-ctx.full{color:var(--danger);border-color:var(--danger)}
+.ai-ctx.full .ai-ctx-bar i{background:var(--danger)}
+.ai-hist-cnt{
+  position:absolute;top:-3px;right:-3px;min-width:14px;height:14px;padding:0 3px;border-radius:99px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:var(--fs-3xs);font-weight:700;line-height:1;color:#fff;background:var(--accent);
+  box-shadow:0 0 0 1.5px var(--panel);
+}
 /* ── 对话消息导航：右侧一列圆点，每个用户提问一枚，点按跳到那一轮 ──
    面板矮、消息多时才有意义；只有两轮以内不显示，免得挡正文。 */
 .ai-chat-wrap{position:relative;flex:1 1 auto;min-height:0;display:flex;flex-direction:column}
@@ -957,9 +1001,9 @@ body.dark .eff-warn{color:#c39bff}
   color:var(--text-2);line-height:1.65;
 }
 /* 澄清卡片：AI 拿不准时先问一句，选项可点（点了直接填进输入框） */
-.ask-card{margin:9px 0;padding:10px 12px;border-radius:14px;border:.5px solid rgba(0,122,255,.38);background:var(--accent-dim)}
+.ask-card{margin:9px 0;padding:9px 12px;border-radius:14px;border:.5px solid rgba(0,122,255,.38);background:var(--accent-dim)}
 .ask-card .ask-ttl{font-size:var(--fs-2xs);font-weight:700;letter-spacing:.4px;color:var(--accent)}
-.ask-card .ask-q{margin-top:3px;font-size:var(--fs-sm);font-weight:600;line-height:1.65;color:var(--text)}
+.ask-card .ask-q{font-size:var(--fs-sm);font-weight:600;line-height:1.65;color:var(--text)}
 .ask-card .ask-opts{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
 .ask-opt{padding:5px 11px;border-radius:99px;background:var(--panel);border:.5px solid var(--border);font-size:var(--fs-xs);color:var(--text-2);cursor:pointer;transition:var(--t-ui)}
 .ask-opt:hover{border-color:var(--accent);color:var(--accent);transform:translateY(-1px)}
@@ -3676,7 +3720,6 @@ body.basic .fmenu-btn, body.basic .fmenu, body.basic .fmenu-scrim, body.basic .p
               <span class="ai-sh-cnt" id="aiMsgCount" title="历史条数">1</span>
             </button>
             <span class="spacer"></span>
-            <button class="icon-btn" id="aiClear" title="清空历史记录" aria-label="清空历史记录"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9 7V4.5h6V7M6.5 7l1 13h9l1-13"></path><path d="M10.5 11v5.5M13.5 11v5.5"></path></svg></button>
           </div>
           <div class="ai-chat-wrap">
             <div class="ai-chat" id="aiChat"><div class="msg ai"><div class="rail"><span class="dot"></span></div><div class="body"><div class="meta"><span class="who">AI 助手</span><span class="t">18:25</span></div><div class="bubble"><div class="md-p">我是画板里的 AI 助手。看图、解题、作图，都可以交给我。</div><div class="md-p">说出你的想法，我会一边推理，一边把它画到画布上。</div><div class="md-p">也可以轻点左下角「图片」，或粘贴、拖入一张截图——手写题、函数图像，都能还原。</div><div class="md-p">例如：画出 y=x²-2x-3，并标出顶点与零点。</div></div></div></div></div>
@@ -3707,9 +3750,29 @@ body.basic .fmenu-btn, body.basic .fmenu, body.basic .fmenu-scrim, body.basic .p
             <a class="api-link" href="https://platform.deepseek.com/api_keys" target="_blank" rel="noopener noreferrer">获取 API Key <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17 17 7M9 7h8v8"></path></svg></a>
             <div class="api-pop-note">Key 加密存储在本机，不会上传或写入文件</div>
           </div>
+          <!-- 等待确认：单独一张澄清卡，浮在输入条上方，不展开历史对话 -->
+          <div class="ask-pop" id="aiAskPop" role="dialog" aria-label="需要你补充"></div>
           <!-- 工具排：Key / 联网 / 图片 / 思考强度，右侧是关闭键 -->
           <div class="ai-tools" id="aiTools">
+            <div class="ai-hist-mini" id="aiHistMini">
+              <button class="ai-tool" id="aiHistBtn" title="展开历史记录" aria-label="展开历史记录" aria-expanded="false" aria-controls="aiChat">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6.5h16M4 12h16M4 17.5h10"></path></svg>
+                <span class="ai-hist-cnt" id="aiHistCnt" aria-hidden="true">1</span>
+              </button>
+            </div>
+            <!-- 历史记录展开时，工具排里也留一枚「收起历史」键：折叠入口始终在同一处 -->
+            <div class="ai-hist-mini ai-hist-open" id="aiHistOpen">
+              <button class="ai-tool on" id="aiHistBtnOpen" title="收起历史记录" aria-label="收起历史记录" aria-expanded="true" aria-controls="aiChat">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6.5h16M4 12h16M4 17.5h10"></path></svg>
+                <span class="ai-hist-cnt" id="aiHistCntOpen" aria-hidden="true">1</span>
+              </button>
+            </div>
             <button class="ai-tool" id="aiKeyBtn" title="DeepSeek API Key：未配置，点此填入" aria-label="DeepSeek API Key" aria-haspopup="dialog" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="12" r="4"></circle><path d="M12 12h9M17.5 12v3M20.5 12v2"></path></svg></button>
+            <!-- 上下文用量：与联网 / 图片并排，显示已用多少（上限 100 万） -->
+            <button class="ai-ctx" id="aiCtx" title="上下文用量：点按清空上下文（保留对话历史）" aria-label="上下文用量">
+              <span class="ai-ctx-bar" aria-hidden="true"><i id="aiCtxFill"></i></span>
+              <span class="ai-ctx-txt" id="aiCtxTxt">0%</span>
+            </button>
             <!-- 点思考强度按钮后展开的 Codex 风格面板：标题 / 重置 + 一条滑条 -->
             <div class="eff-pop" id="effPop" role="dialog" aria-label="思考强度">
               <div class="eff-pop-head">
@@ -3742,7 +3805,7 @@ body.basic .fmenu-btn, body.basic .fmenu, body.basic .fmenu-scrim, body.basic .p
           <div class="ai-box">
             <span class="ai-ttl" id="aiHeadIcon" title="AI 助手"><canvas aria-hidden="true" style="width: 20px; height: 20px; display: block;"></canvas></span>
             <textarea id="aiInput" placeholder="描述你要画的图形、要解的题，或粘贴 / 拖入一张图片…" spellcheck="false" style="height: 34px;"></textarea>
-            <button class="ai-fold-btn ai-fold-in" id="aiFold" title="展开 / 收起对话" aria-label="展开 / 收起对话"><span id="aiFoldIc"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 14.5 12 8.5l6 6"></path></svg></span></button>
+            <button class="ai-fold-btn ai-fold-in" id="aiFold" title="收起对话（只留输入框）" aria-label="收起对话"><span id="aiFoldIc"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 14.5 12 8.5l6 6"></path></svg></span></button>
             <button class="ai-send" id="aiSend"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12 20 4l-6.5 16-2.4-6.2z" fill="currentColor" opacity=".2"></path><path d="M4 12 20 4l-6.5 16-2.4-6.2z"></path></svg><span>发送</span></button>
           </div>
           <input type="file" id="aiImgFile" accept="image/png,image/jpeg,image/webp,image/gif" multiple="" style="display:none">
@@ -4354,6 +4417,7 @@ const state = {
   aiOpen: true,          // 悬浮输入条是否显示
   aiSheet: false,        // 对话区是否展开（默认折叠，只留一条输入框）
   aiHistory: [],
+  aiCtxTokens: 0,        // 当前上下文已用 token（估算，上限 AI_CTX_MAX）
   aiEffort: 'low',
   aiBusy: false,
   aiAbort: null,
@@ -4371,6 +4435,8 @@ const state = {
    CryptoKey 的形式放进 IndexedDB；环境不允许时退回本机随机密钥，仍不存明文。 */
 const AI_URL = 'https://api.deepseek.com/chat/completions';
 const AI_MODEL = 'deepseek-flash';
+/* 上下文窗口上限：工具排上的用量胶囊按这个数算百分比 */
+const AI_CTX_MAX = 1000000;
 const AI_STORE = 'ggai_ds_key_v1';
 const AI_WRAP = 'ggai_ds_wrap_v1';
 const AI_DB = 'ggai_secure_store';
@@ -18308,10 +18374,9 @@ function init() {
   if (aiLogoHost) { aiLogoHost.innerHTML = ''; morphBind(aiLogoHost, 20); }
   morphBind($('#brandLogo'), 22);
   morphBind($('#aiiThink'), 22);
-  $('#aiClear').innerHTML = ICON.trash;
   const fIc = $('#aiFoldIc'); if (fIc) fIc.innerHTML = ICON.chevUp;
   const hChev = $('#aiHistChev'); if (hChev) hChev.innerHTML = ICON.chevDown;
-  $('#aiFold').title = '展开 / 收起对话';
+  $('#aiFold').title = '收起对话（只留输入框）';
   $('#kbToggle').innerHTML = ICON.kb;
   $('#btnEnter').innerHTML = ICON.enter;
   $('#inputPrefix').innerHTML = ICON.code;
@@ -18519,7 +18584,7 @@ async function runUITest() {
     if (innerWidth <= 820) { setPersp('graphics'); await sleep(380); }
     toggleAI(true); await sleep(0);
     toggleAISheet(true); await sleep(380);   /* 对话区展开带动画，等它落定再量 */
-    const sel = '#fmenuBtn, #persp button, #toolFold, #toolbar .ttrigger, #panelTabs button, #gvIn, #gvOut, #gvHome, #gvPlay, #btnEnter, #kbToggle, #aiSend, #aiClear, #effortBox, #aiFold';
+    const sel = '#fmenuBtn, #persp button, #toolFold, #toolbar .ttrigger, #panelTabs button, #gvIn, #gvOut, #gvHome, #gvPlay, #btnEnter, #kbToggle, #aiSend, #aiCtx, #effortBox, #aiFold';
     const bad = [];
     for (const el of document.querySelectorAll(sel)) {
       if (el.disabled) continue;
@@ -19156,6 +19221,8 @@ async function runUITest() {
     const aHtml = renderAIContent('```ask\n画哪个三角形？\n等边三角形\n直角三角形\n```');
     if (aHtml.indexOf('ask-card') < 0) throw new Error('澄清块没有渲染成卡片');
     if (aHtml.indexOf('画哪个三角形') < 0 || aHtml.indexOf('ask-opt') < 0) throw new Error('澄清卡片缺问题或选项');
+    /* 卡片只显示「需要补充」的那一句：标题与提示语都不再出现 */
+    if (aHtml.indexOf('ask-ttl') >= 0 || aHtml.indexOf('ask-hint') >= 0) throw new Error('澄清卡片还带着多余的标题 / 提示语');
     /* 点选项把答案填进输入框 */
     const chat = $('#aiChat');
     chat.innerHTML = aHtml;
@@ -19282,13 +19349,32 @@ async function runUITest() {
     /* 点角色才是展开对话 */
     $('#aiiBot').click(); await sleep(0);
     if (dock.classList.contains('mini')) throw new Error('点角色没有展开对话');
-    /* 历史记录单独折叠：只收消息列表，输入条留在原地 */
+    /* 历史记录单独折叠：整条历史头收掉，只在工具排里留一枚小键，输入条留在原地 */
     $('#aiHistFold').click(); await sleep(0);
     if (!dock.classList.contains('hist-fold')) throw new Error('历史记录没有单独折叠');
     if ($('#aiChat').getBoundingClientRect().height > 2) throw new Error('折叠后消息列表还占着高度');
+    if ($('#aiSheet').getBoundingClientRect().height > 2) throw new Error('折叠后历史头仍占着一整行');
     if (!$('#aiInput').getBoundingClientRect().height) throw new Error('折叠历史不该把输入框一起收掉');
+    const hb = $('#aiHistBtn');
+    if (!hb || !hb.getBoundingClientRect().width) throw new Error('折叠后工具排里没有历史小键');
+    if (hb.closest('#aiTools') !== $('#aiTools')) throw new Error('历史小键没有并进工具排');
+    if (hb.getBoundingClientRect().top < $('#aiTools').getBoundingClientRect().top - 1) throw new Error('历史小键没有和工具排同一行');
+    if ($('#aiHistBtnOpen').getBoundingClientRect().width) throw new Error('折叠态不该同时显示「收起历史」键');
+    hb.click(); await sleep(0);
+    if (dock.classList.contains('hist-fold')) throw new Error('历史小键没有展开历史记录');
+    /* 展开态：工具排里换成「收起历史」，入口位置不变 */
+    const ho = $('#aiHistBtnOpen');
+    if (!ho || !ho.getBoundingClientRect().width) throw new Error('展开后工具排里没有「收起历史」键');
+    if (hb.getBoundingClientRect().width) throw new Error('展开态不该同时显示「展开历史」键');
+    ho.click(); await sleep(0);
+    if (!dock.classList.contains('hist-fold')) throw new Error('「收起历史」键没有折叠历史');
+    if ($('#aiFold').title.indexOf('收起对话') < 0) throw new Error('输入框折叠键的说明不清楚：' + $('#aiFold').title);
+    /* 历史头里的折叠键：展开态点它收起，再点它展开 */
+    if (dock.classList.contains('hist-fold')) { $('#aiHistBtn').click(); await sleep(0); }
     $('#aiHistFold').click(); await sleep(0);
-    if (dock.classList.contains('hist-fold')) throw new Error('历史记录没有展开回来');
+    if (!dock.classList.contains('hist-fold')) throw new Error('历史头折叠键没有收起历史');
+    $('#aiHistFold').click(); await sleep(0);
+    if (dock.classList.contains('hist-fold')) throw new Error('历史头折叠键没有展开回来');
     /* AI 输入条左侧与品牌图标都换成同一套 Gemini 形变 loader（canvas 绘制） */
     if (!$('#aiHeadIcon canvas')) throw new Error('AI 输入条左侧没有换成 Gemini loader');
     if (!document.querySelector('#brandLogo canvas')) throw new Error('菜单品牌图标没有换成 Gemini loader');
@@ -19333,7 +19419,8 @@ async function runUITest() {
     if (isl.getAttribute('aria-hidden') !== 'false') throw new Error('胶囊 aria 未展开');
     aiMini(false); await sleep(0);
     if (dock.classList.contains('mini')) throw new Error('没有展开回对话');
-    if (!dock.classList.contains('sheet-open')) throw new Error('展开后对话面板没有打开');
+    /* 历史记录折叠着时，展开只恢复输入区，不强行展开对话面板 */
+    if (!dock.classList.contains('hist-fold') && !dock.classList.contains('sheet-open')) throw new Error('展开后对话面板没有打开');
     /* 生成中：展开对话再折起来，仍然回到灵动岛 */
     state.aiBusy = true;
     aiMini(true); await sleep(0);
@@ -19377,10 +19464,48 @@ async function runUITest() {
       aiMini(false); await sleep(0);
     }
   });
-  await A('AI:清空对话', async () => { $('#aiClear').click(); await sleep(0); if (!$('#aiChat').children.length) throw new Error('清空后未恢复欢迎语'); });
+  /* 清空上下文：只清模型记忆，屏幕上的对话历史必须原样保留 */
+  await A('AI:清空上下文保留历史', async () => {
+    const chat = $('#aiChat');
+    const before = chat.children.length;
+    state.aiHistory = [{ role: 'user', content: '你好' }, { role: 'assistant', content: '在的' }];
+    aiCtxSync();
+    if (!$('#aiCtxTxt').textContent || $('#aiCtxTxt').textContent === '0%') throw new Error('上下文用量没有显示');
+    if (!$('#aiCtx').title.includes('1,000,000')) throw new Error('用量提示没有写上限 100 万');
+    $('#aiCtx').click(); await sleep(0);
+    if (!$('#confirmBackdrop').classList.contains('on')) throw new Error('清空上下文没有先弹确认');
+    if (!state.aiHistory.length) throw new Error('确认前就清空了上下文');
+    $('#confirmCancel').click(); await sleep(0);
+    if (!state.aiHistory.length) throw new Error('取消后上下文不该被清空');
+    $('#aiCtx').click(); await sleep(0);
+    $('#confirmOk').click(); await sleep(0);
+    if (state.aiHistory.length) throw new Error('确认后没有清空上下文');
+    if (chat.children.length !== before) throw new Error('清空上下文不该删掉对话历史');
+    if ($('#aiCtxTxt').textContent !== '0%') throw new Error('清空后用量没有归零：' + $('#aiCtxTxt').textContent);
+    if ($('#aiClear')) throw new Error('历史头里的删除键应已移除');
+  });
+  /* 等待确认：单独一张澄清卡，不展开历史对话 */
+  await A('AI:等待确认用独立卡片', async () => {
+    const dock = $('#aiPanel');
+    toggleAI(true); toggleAISheet(true); await sleep(0);
+    setHistFold(true); await sleep(0);
+    aiAskPop('画哪个三角形？\n等边三角形\n直角三角形');
+    const pop = $('#aiAskPop');
+    if (!pop.classList.contains('on')) throw new Error('澄清卡没有弹出');
+    if (!dock.classList.contains('hist-fold')) throw new Error('等待确认不该展开历史对话');
+    if (pop.querySelector('.ask-opt').textContent !== '等边三角形') throw new Error('澄清卡选项不对');
+    pop.querySelector('.ask-pop-close').click(); await sleep(0);
+    if (pop.classList.contains('on')) throw new Error('澄清卡关不掉');
+    /* 折叠状态下发消息 / 出结果，都不该替用户把历史记录展开 */
+    aiPush('user', '测试消息');
+    if (!dock.classList.contains('hist-fold')) throw new Error('发消息时历史记录被强行展开了');
+    aiMini(false);
+    if (!dock.classList.contains('hist-fold')) throw new Error('展开输入区时历史记录被强行展开了');
+    setHistFold(false);
+  });
   await A('AI:例子一次只显示一个', async () => {
     if (document.querySelector('.ai-badge')) throw new Error('界面不应显示模型名');
-    $('#aiClear').click(); await sleep(0);
+    $('#aiChat').innerHTML = ''; aiWelcome(); await sleep(0);
     if ($('#aiChat').textContent.includes('deepseek')) throw new Error('欢迎语不应提到模型名');
     showAbout(); await sleep(0);
     if ($('#settingsBody').textContent.includes('deepseek')) throw new Error('关于对话框不应显示模型名');
@@ -23792,7 +23917,8 @@ function aiMini(on) {
   if (isl) isl.setAttribute('aria-hidden', 'true');
   if (ts) ts.style.bottom = '96px';   /* 展开态输入条同样压着底部中线，与 mini 一致抬高提示条 */
   morphKick();                        /* 头部图标重新露脸：空闲定妆帧补画一次 */
-  toggleAISheet(true);
+  /* 只展开输入区，不强行展开历史记录：历史是否展开由用户自己的折叠状态决定 */
+  if (!dock.classList.contains('hist-fold')) toggleAISheet(true);
   const c = $('#aiChat'); if (c) c.scrollTop = c.scrollHeight;
 }
 
@@ -24195,7 +24321,9 @@ function bindAI() {
   const isl = $('#aiIsland');
   if (isl) isl.addEventListener('click', e => {
     if (e.target.closest('#aiiStop') || e.target.closest('#aiiLabel') || e.target.closest('#aiiEff')) return;
+    /* 用户主动点角色：这次要看到对话，历史记录一并展开 */
     aiMini(false);
+    setHistFold(false);
   });
   const islStop = $('#aiiStop');
   if (islStop) islStop.addEventListener('click', e => {
@@ -24250,17 +24378,22 @@ function bindAI() {
     });
     document.addEventListener('keydown', e => { if (e.key === 'Escape') aiiEffMenu(false); });
   }
-  /* 历史记录单独折叠：只收消息列表，输入条留在原地 */
-  const histFold = $('#aiHistFold');
+  /* 历史记录单独折叠：折叠后整条历史头收掉，只在工具排里留一枚小键 */
+  const histFold = $('#aiHistFold'), histBtn = $('#aiHistBtn');
   if (histFold) histFold.addEventListener('click', e => {
     e.stopPropagation();
     const dock = $('#aiPanel'); if (!dock) return;
-    const folded = !dock.classList.contains('hist-fold');
-    dock.classList.toggle('hist-fold', folded);
-    histFold.setAttribute('aria-expanded', folded ? 'false' : 'true');
-    histFold.title = folded ? '展开历史记录' : '折叠历史记录（只收历史，输入框还在）';
-    aiNavBuild();
-    if (!folded) { const c = $('#aiChat'); if (c) c.scrollTop = c.scrollHeight; }
+    setHistFold(!dock.classList.contains('hist-fold'));
+  });
+  if (histBtn) histBtn.addEventListener('click', e => {
+    e.stopPropagation();
+    const dock = $('#aiPanel'); if (!dock) return;
+    setHistFold(!dock.classList.contains('hist-fold'));
+  });
+  const histOpen = $('#aiHistBtnOpen');
+  if (histOpen) histOpen.addEventListener('click', e => {
+    e.stopPropagation();
+    setHistFold(true);
   });
 
   /* 联网检索开关：状态记在 localStorage，开启后每条消息都会先检索（搜到即计费） */
@@ -24289,7 +24422,10 @@ function bindAI() {
   $('#aiFold').onclick = () => toggleAISheet();
   /* 整块对话的收起由输入胶囊里的折叠键承担（#aiFold）；收起后仍可点画布底部的
      角色重新展开，所以不再单独占一个「收起为角色」的按钮。 */
-  $('#aiClear').onclick = () => { state.aiHistory = []; state.aiImages = []; renderAiAttach(); $('#aiChat').innerHTML = ''; toggleAISheet(true); toast('对话已清空'); aiWelcome(); };
+  /* 清空上下文（原「清空历史」）：只清模型记忆，屏幕上的对话历史保留 */
+  const ctxBtn = $('#aiCtx');
+  if (ctxBtn) ctxBtn.onclick = () => aiClearContext();
+  aiCtxSync();
   const inp = $('#aiInput');
   const fitInput = () => {
     const empty = !inp.value.trim();
@@ -24402,7 +24538,9 @@ function aiWelcome(noExpand) {
   aiPush('assistant', '我是画板里的 AI 助手。看图、解题、作图，都可以交给我。\n\n说出你的想法，我会一边推理，一边把它画到画布上。\n\n也可以轻点左下角「图片」，或粘贴、拖入一张截图——手写题、函数图像，都能还原。\n\n例如：画出 y=x²-2x-3，并标出顶点与零点。', { noExpand: !!noExpand });
 }
 function aiPush(role, text, opts) {
-  if (!(opts && opts.noExpand)) toggleAISheet(true);   // 有新消息就展开，保证看得见回复
+  /* 有新消息时展开对话区；但用户把历史记录折叠着，就别替他展开 */
+  const dock = $('#aiPanel');
+  if (!(opts && opts.noExpand) && !(dock && dock.classList.contains('hist-fold'))) toggleAISheet(true);
   const chat = $('#aiChat');
   /* 用户往上翻看历史时不抢滚动位置；只有本来就在底部附近才跟随新消息 */
   const atBottom = chat.scrollHeight - chat.scrollTop - chat.clientHeight < 48;
@@ -24419,6 +24557,8 @@ function aiPush(role, text, opts) {
   chat.appendChild(wrap);
   if (atBottom) chat.scrollTop = chat.scrollHeight;
   const cnt = $('#aiMsgCount'); if (cnt) cnt.textContent = String(chat.children.length);
+  const cnt2 = $('#aiHistCnt'); if (cnt2) cnt2.textContent = String(chat.children.length);
+  const cnt3 = $('#aiHistCntOpen'); if (cnt3) cnt3.textContent = String(chat.children.length);
   aiNavBuild();
   return wrap.querySelector('.bubble');
 }
@@ -24592,10 +24732,38 @@ function mdText(src) {
 function askCardHtml(code) {
   const lines = String(code).split(/\r?\n/).map(s => s.trim()).filter(Boolean);
   const q = lines.shift() || '需要你补充一点信息';
-  return '<div class="ask-card"><div class="ask-ttl">需要你确认</div>' +
-    '<div class="ask-q">' + esc(q) + '</div>' +
+  /* 只显示「需要补充」的那一句：标题与提示语都收掉，卡片里只留问题与选项 */
+  return '<div class="ask-card"><div class="ask-q">' + esc(q) + '</div>' +
     (lines.length ? '<div class="ask-opts">' + lines.map(o => '<span class="ask-opt">' + esc(o) + '</span>').join('') + '</div>' : '') +
-    '<div class="ask-hint">直接回答即可，我会接着做</div></div>';
+    '</div>';
+}
+/* 等待确认：单独一张浮在输入条上方的澄清卡，不展开历史对话。
+   点选项 → 填进输入框并直接发送；点「自己补充」→ 只把焦点给输入框。 */
+function aiAskPop(code) {
+  const pop = $('#aiAskPop');
+  if (!pop) return;
+  const lines = String(code || '').split(/\r?\n/).map(s => s.trim()).filter(Boolean);
+  const q = lines.shift() || '需要你补充一点信息';
+  pop.innerHTML = '<div class="ask-pop-q">' + esc(q) + '</div>' +
+    (lines.length ? '<div class="ask-pop-opts">' + lines.map(o => '<button class="ask-opt" type="button">' + esc(o) + '</button>').join('') + '</div>' : '') +
+    '<div class="ask-pop-foot"><button class="ask-pop-skip" type="button">自己补充</button>' +
+    '<button class="ask-pop-close" type="button" aria-label="关闭">关闭</button></div>';
+  pop.classList.add('on');
+  const close = () => pop.classList.remove('on');
+  pop.querySelectorAll('.ask-opt').forEach(b => b.addEventListener('click', () => {
+    const inp = $('#aiInput');
+    inp.value = b.textContent.trim();
+    inp.dispatchEvent(new Event('input', { bubbles: true }));
+    close();
+    aiSend();
+  }));
+  const skip = pop.querySelector('.ask-pop-skip');
+  if (skip) skip.addEventListener('click', () => {
+    close();
+    const inp = $('#aiInput'); if (inp) inp.focus();
+  });
+  const cl = pop.querySelector('.ask-pop-close');
+  if (cl) cl.addEventListener('click', close);
 }
 /* 流式输出到一半时围栏可能还没收尾：先补一个收尾，
    否则最后半截代码会连同 ``` 一起按正文原样显示出来。 */
@@ -24661,6 +24829,77 @@ function buildCanvasContext() {
   return '【当前画布】共 ' + list.length + ' 个对象：\n' + lines.join('\n');
 }
 function stopAI() { if (state.aiAbort) state.aiAbort.abort(); }
+/* ── 上下文用量 ──
+   估算规则：中文约 1 字 1 token，其它字符约 4 个 1 token；图片按固定值计。
+   只用于工具排上的进度胶囊，不参与计费。 */
+function aiTextTokens(s) {
+  const t = String(s == null ? '' : s);
+  let cjk = 0;
+  for (let i = 0; i < t.length; i++) { const c = t.charCodeAt(i); if (c > 0x2e80) cjk++; }
+  return Math.round(cjk + (t.length - cjk) / 4);
+}
+function aiMsgTokens(m) {
+  if (!m) return 0;
+  const c = m.content;
+  if (typeof c === 'string') return aiTextTokens(c);
+  if (Array.isArray(c)) return c.reduce((n, p) => n + (p && p.type === 'image_url' ? 800 : aiTextTokens(p && p.text)), 0);
+  return 0;
+}
+function aiCtxUsed() {
+  return state.aiHistory.reduce((n, m) => n + aiMsgTokens(m), 0);
+}
+function aiCtxSync() {
+  const used = aiCtxUsed();
+  state.aiCtxTokens = used;
+  const pct = Math.min(100, used / AI_CTX_MAX * 100);
+  const fill = $('#aiCtxFill'), txt = $('#aiCtxTxt'), box = $('#aiCtx');
+  if (fill) fill.style.width = Math.max(pct, used ? 2 : 0).toFixed(1) + '%';
+  if (txt) txt.textContent = pct < 1 && used ? '<1%' : Math.round(pct) + '%';
+  if (box) {
+    box.classList.toggle('warn', pct >= 70 && pct < 90);
+    box.classList.toggle('full', pct >= 90);
+    box.title = '上下文已用约 ' + used.toLocaleString('en-US') + ' / ' + AI_CTX_MAX.toLocaleString('en-US') +
+      ' tokens（' + Math.round(pct) + '%）· 点按清空上下文（保留对话历史）';
+  }
+}
+/* 历史记录折叠 / 展开：折叠后整条历史头收掉，只在工具排里留一枚小键 */
+function setHistFold(folded) {
+  const dock = $('#aiPanel'); if (!dock) return;
+  folded = !!folded;
+  dock.classList.toggle('hist-fold', folded);
+  const histFold = $('#aiHistFold'), histBtn = $('#aiHistBtn'), histOpen = $('#aiHistBtnOpen');
+  if (histFold) {
+    histFold.setAttribute('aria-expanded', folded ? 'false' : 'true');
+    histFold.title = folded ? '展开历史记录' : '折叠历史记录（只收历史，输入框还在）';
+  }
+  if (histBtn) {
+    histBtn.setAttribute('aria-expanded', folded ? 'false' : 'true');
+    histBtn.title = '展开历史记录';
+  }
+  if (histOpen) {
+    histOpen.setAttribute('aria-expanded', folded ? 'false' : 'true');
+    histOpen.title = '收起历史记录';
+  }
+  aiNavBuild();
+  if (!folded) { const c = $('#aiChat'); if (c) c.scrollTop = c.scrollHeight; }
+}
+/* 清空上下文：只丢发给模型的对话记忆，屏幕上的历史记录原样保留。
+   破坏性操作，先弹应用内确认框。 */
+function aiClearContext() {
+  if (!state.aiHistory.length) { toast('上下文已经是空的'); return; }
+  const used = aiCtxUsed();
+  confirmDialog({
+    title: '清空上下文？',
+    body: '将丢弃当前约 ' + used.toLocaleString('en-US') + ' tokens 的对话记忆，之后的提问不再带上之前的对话。<br>屏幕上的历史记录会保留。',
+    okText: '清空',
+    danger: true,
+  }).then(ok => {
+    if (!ok) return;
+    state.aiHistory = [];
+    aiCtxSync();
+    toast('已清空上下文，对话历史保留');
+  });
+}
 async function callAI(messages, eff, onDelta) {
   await aiKeyReady;
   if (!AI_CONF.key) throw new Error('请先在 AI 输入框左侧的钥匙里填入 DeepSeek API Key');
@@ -24714,7 +24953,9 @@ async function aiSend() {
   if ((!text && !imgs.length) || state.aiBusy) return;
   inp.value = ''; inp.dispatchEvent(new Event('input', { bubbles: true }));
   const box0 = inp.closest('.ai-box'); if (box0) box0.classList.remove('grow');
-  toggleAISheet(true);
+  /* 历史记录折叠着就保持折叠：只发消息，不替用户展开对话 */
+  const dock0 = $('#aiPanel');
+  if (!(dock0 && dock0.classList.contains('hist-fold'))) toggleAISheet(true);
   aiPush('user', text || '（图片）', imgs.length ? { images: imgs } : undefined);
   state.aiImages = []; renderAiAttach();
   const eff = aiEffort();
@@ -24951,6 +25192,7 @@ async function aiSend() {
     state.aiHistory.push({ role: 'user', content: ask });
     state.aiHistory.push({ role: 'assistant', content: r.content || '' });
     if (state.aiHistory.length > 24) state.aiHistory.splice(0, state.aiHistory.length - 24);
+    aiCtxSync();
     return r.content || '';
   };
 
@@ -25019,6 +25261,7 @@ async function aiSend() {
     state.aiHistory.push({ role: 'user', content: userContent });
     state.aiHistory.push({ role: 'assistant', content: stripBlock(curContent, 'search') });
     if (state.aiHistory.length > 24) state.aiHistory.splice(0, state.aiHistory.length - 24);
+    aiCtxSync();
 
     /* 模型选择了先问清楚：把终态改成「等待确认」，别报成「完成」 */
     const asked = extractBlockList(curContent, 'ask').length > 0;
@@ -25054,11 +25297,17 @@ async function aiSend() {
          失败保留红色提示，因为具体哪几条失败需要展开对话才看得到 */
       if (badN) toast('有 ' + badN + ' 条命令未执行成功' + (rounds ? '（已自动重试 ' + rounds + ' 次）' : ''), 'err', 3200);
     }
-    /* 终态：错误 / 等待确认 / 完成各给一段停留时间，再自动展开完整对话 */
+    /* 终态：历史记录保持用户自己的折叠状态；等待确认则单独弹澄清卡 */
     const webNote = (webHits + extraHits) ? ' · 联网 ' + (webHits + extraHits) + ' 条' : '';
-    if (asked && !badTotal) aiIslandSettle('done', '等待确认', 'AI 想先问清楚再继续' + webNote + ' · 点按查看', 1800);
-    else if (badTotal) aiIslandSettle('error', '作图未完全完成', doneSub + webNote + ' · 点按查看', 2200);
-    else aiIslandSettle('done', '完成', doneSub + webNote, 1400);
+    if (asked && !badTotal) {
+      /* 等待确认：不展开历史对话，单独弹一张澄清卡，答完再继续 */
+      aiIslandSettle('done', '等待确认', 'AI 想先问清楚再继续' + webNote, 0);
+      aiAskPop(extractBlockList(curContent, 'ask')[0] || '');
+    } else if (badTotal) {
+      aiIslandSettle('error', '作图未完全完成', doneSub + webNote + ' · 点按查看', 2200);
+    } else {
+      aiIslandSettle('done', '完成', doneSub + webNote, 1400);
+    }
   } catch (e) {
     stopPaint();
     if (e.name === 'AbortError') {
