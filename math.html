@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#f2f2f7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="format-detection" content="telephone=no">
+<title>GeoAI · 动态数学画板</title>
+<style>
+/* ===================================================================
+   主题变量
+   =================================================================== */
+/* iOS 26 液态玻璃（Liquid Glass）：系统色 / 半透明材质 / 高光描边 / 大圆角 */
+:root{
+  --accent:#007aff; --accent-h:#0a6fd8; --accent-dim:rgba(0,122,255,.12);
+  --accent-soft:rgba(0,122,255,.18);
+  --bg:#eaeef5; --chrome:rgba(255,255,255,.50); --panel:rgba(255,255,255,.74); --panel-2:rgba(255,255,255,.56);
+  --panel-3:rgba(120,120,128,.14); --hover:rgba(120,120,128,.13); --active:rgba(0,122,255,.14);
+  --border:rgba(60,60,67,.13); --border-2:rgba(60,60,67,.26);
+  --text:#1c1c1e; --text-2:#5b5b60; --text-3:#8a8a8f;
+  --canvas:#ffffff; --grid:#e8edf4; --grid-sub:#f3f6fa; --axis:#b3b3b8;
+  --danger:#ff3b30; --ok:#34c759; --warn:#ff9500; --purple:#af52de;
+  --sel:rgba(0,122,255,.22);
+  --shadow:0 1px 2px rgba(16,24,40,.05),0 10px 26px rgba(16,24,40,.08);
+  --shadow-lg:0 26px 70px rgba(16,24,40,.22);
+  /* —— 液态玻璃材质 —— */
+  --glass:rgba(255,255,255,.46);
+  --glass-2:rgba(255,255,255,.62);
+  --glass-brd:rgba(255,255,255,.62);
+  --glass-blur:blur(30px) saturate(190%);
+  --hi:inset 0 .5px 0 rgba(255,255,255,.85), inset 0 -.5px 0 rgba(255,255,255,.22);
+  --hi-strong:inset 0 1px 0 rgba(255,255,255,.95), inset 0 -1px 1px rgba(255,255,255,.35);
+  --r:10px; --r-lg:14px; --r-xl:20px;
+  --sb-w:302px;
+  /* 字号台阶：小字集中在 10.5 / 11.5 / 12.5 / 13.5 四档，别再造第五个值，
+     否则同一层级的两处文字会差 0.5px，放大后看着发飘。 */
+  --fs-3xs:10.5px;   /* 角标、计数、极小的辅助信息 */
+  --fs-2xs:11.5px;   /* 次级说明、单位、行内元信息 */
+  --fs-xs:12.5px;    /* 按钮、胶囊、正文以外的控件标签 */
+  --fs-sm:13.5px;    /* 菜单项、对话框按钮、列表主标签 */
+  --fs-ios-input:16px; /* 仅 iOS 输入框（焦点防缩放），桌面端不使用 */
+  --fs-code:24px;      /* 在线分享的 8 位标识码（唯一的展示级大字） */
+  --font:-apple-system,BlinkMacSystemFont,'SF Pro Text','SF Pro Display','PingFang SC','HarmonyOS Sans SC','Microsoft YaHei',system-ui,sans-serif;
+  --mono:'SF Mono',ui-monospace,'Cascadia Code','JetBrains Mono',Consolas,monospace;
+  /* 动效：统一缓动曲线 + 三档时长。曲线按「用途」选，不按手感随手挑：
+     —— 进场 / 按压反馈用强 ease-out（起步快，第一帧就动，界面才显得跟手）；
+     —— 屏内位移用 ease-in-out；抽屉用 iOS 那条 (0.32,.72,0,1)；
+     —— 颜色 / 悬停用普通 ease，180ms 上下。 */
+  --ease:cubic-bezier(.32,.72,0,1);            /* iOS 抽屉 / 面板滑入 */
+  --ease-out:cubic-bezier(.23,1,.32,1);        /* 强 ease-out：进场、按压 */
+  --ease-in-out:cubic-bezier(.77,0,.175,1);    /* 屏内位移 */
+  --t-quick:.14s var(--ease);   /* 小面板弹出、色板展开 */
+  --t:.22s var(--ease);         /* 通用交互过渡 */
+  --t-slow:.3s var(--ease);     /* 模态、整块区域进场 */
+  /* 交互控件统一过渡：明确列出属性，不再用 all（all 会把 width/height 也算进去，
+     布局一变就跟着抖，而且改一个属性得连带重排全部）。 */
+  --t-ui:background-color .18s ease,color .18s ease,border-color .18s ease,
