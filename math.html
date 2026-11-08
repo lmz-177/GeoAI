@@ -689,11 +689,12 @@ body.tool-folded .tool-head{padding-bottom:0}
 .ai-dock.hist-fold .ai-chat-wrap{display:none}
 /* 折叠态：整条历史头收掉，只留工具排里的一枚小键，不再占一整行 */
 .ai-dock.hist-fold .ai-sheet{display:none}
+/* 工具排里的历史键跟着「历史是否真的可见」走（hist-on），不再只看折叠标记：
+   对话面板关着但没折叠时，也必须给出可用的「展开历史」。 */
 .ai-hist-mini{display:none}
-.ai-dock.hist-fold .ai-hist-mini{display:flex;align-items:center}
-/* 展开态：工具排里留「收起历史」；折叠态：换成「展开历史」，入口位置不变 */
-.ai-dock.hist-fold .ai-hist-open{display:none}
-.ai-dock:not(.hist-fold) .ai-hist-open{display:flex;align-items:center}
+.ai-dock:not(.hist-on) .ai-hist-mini{display:flex;align-items:center}
+.ai-dock.hist-on .ai-hist-open{display:flex;align-items:center}
+.ai-dock:not(.hist-on) .ai-hist-open{display:none}
 .ai-hist-mini .ai-tool{position:relative}
 /* 等待确认：独立澄清卡，浮在输入条上方，不展开历史对话 */
 .ask-pop{
@@ -757,12 +758,10 @@ body.tool-folded .tool-head{padding-bottom:0}
 .ai-fold-btn:hover{color:var(--accent);background:var(--accent-dim)}
 .ai-fold-btn:active{transform:scale(.96)}
 .ai-fold-btn svg{width:13px;height:13px;transition:transform var(--t)}
-.ai-dock.sheet-open .ai-fold-btn svg{transform:rotate(180deg)}
-.ai-dock.sheet-open .ai-fold-btn{color:var(--accent);background:var(--accent-dim)}
-/* 胶囊里的折叠键：纯图标圆钮，和发送键同一行，不再占上方工具排 */
+/* 这枚键只做一件事：把整块 AI 收成画布底部的角色。图标固定朝下，
+   不再随对话区开合翻转，免得和「展开 / 折叠历史」混成同一个手势。 */
 .ai-fold-in{width:32px;height:32px;flex:0 0 32px;padding:0;border-radius:50%;justify-content:center;background:transparent}
 .ai-fold-in svg{width:16px;height:16px}
-.ai-dock.sheet-open .ai-fold-in{color:var(--accent);background:var(--accent-dim)}
 .ai-ttl{flex:0 0 22px;width:22px;height:22px;align-self:center;display:flex;align-items:center;justify-content:center;color:var(--accent)}
 .ai-ttl svg{width:16px;height:16px}
 /* ── 思考强度：底部只留一个小按钮，点开才展开大滑条 ──
@@ -2789,11 +2788,8 @@ body.tool-folded .tool-head { padding-bottom: 0px; }
 .ai-fold-btn:hover { color: var(--accent); background: var(--accent-dim); }
 .ai-fold-btn:active { transform: scale(0.96); }
 .ai-fold-btn svg { width: 13px; height: 13px; transition: transform var(--t); }
-.ai-dock.sheet-open .ai-fold-btn svg { transform: rotate(180deg); }
-.ai-dock.sheet-open .ai-fold-btn { color: var(--accent); background: var(--accent-dim); }
 .ai-fold-in { width: 32px; height: 32px; flex: 0 0 32px; padding: 0px; border-radius: 50%; justify-content: center; background: transparent; }
 .ai-fold-in svg { width: 16px; height: 16px; }
-.ai-dock.sheet-open .ai-fold-in { color: var(--accent); background: var(--accent-dim); }
 .ai-ttl { flex: 0 0 22px; width: 22px; height: 22px; align-self: center; display: flex; align-items: center; justify-content: center; color: var(--accent); }
 .ai-ttl svg { width: 16px; height: 16px; }
 .effort { position: relative; flex: 0 0 auto; display: flex; align-items: center; gap: 6px; height: 28px; padding: 0px 9px 0px 8px; border-radius: 99px; background: var(--panel-2); color: var(--text-2); border: .5px solid var(--border); transition: border-color var(--t); }
@@ -3805,7 +3801,7 @@ body.basic .fmenu-btn, body.basic .fmenu, body.basic .fmenu-scrim, body.basic .p
           <div class="ai-box">
             <span class="ai-ttl" id="aiHeadIcon" title="AI 助手"><canvas aria-hidden="true" style="width: 20px; height: 20px; display: block;"></canvas></span>
             <textarea id="aiInput" placeholder="描述你要画的图形、要解的题，或粘贴 / 拖入一张图片…" spellcheck="false" style="height: 34px;"></textarea>
-            <button class="ai-fold-btn ai-fold-in" id="aiFold" title="收起对话（只留输入框）" aria-label="收起对话"><span id="aiFoldIc"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 14.5 12 8.5l6 6"></path></svg></span></button>
+            <button class="ai-fold-btn ai-fold-in" id="aiFold" title="收起为底部角色（点角色再展开）" aria-label="收起为底部角色"><span id="aiFoldIc"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9.5 12 15.5l6-6"></path></svg></span></button>
             <button class="ai-send" id="aiSend"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12 20 4l-6.5 16-2.4-6.2z" fill="currentColor" opacity=".2"></path><path d="M4 12 20 4l-6.5 16-2.4-6.2z"></path></svg><span>发送</span></button>
           </div>
           <input type="file" id="aiImgFile" accept="image/png,image/jpeg,image/webp,image/gif" multiple="" style="display:none">
@@ -15699,31 +15695,35 @@ function toggleAI(force) {
     return;
   }
   state.aiOpen = true;
-  const d = $('#aiPanel'); if (d) { d.classList.remove('hidden', 'mini', 'hist-fold'); }
-  const hf = $('#aiHistFold');
-  if (hf) { hf.setAttribute('aria-expanded', 'true'); hf.title = '折叠历史记录（只收历史，输入框还在）'; }
+  const d = $('#aiPanel'); if (d) d.classList.remove('hidden', 'mini');
   const isl = $('#aiIsland'); if (isl) isl.setAttribute('aria-hidden', 'true');
   if (state.aiIslandTimer) { clearTimeout(state.aiIslandTimer); state.aiIslandTimer = 0; }
   const b = $('#btnAI'); if (b) b.classList.add('on');
   morphKick();   /* 头部图标从 mini 态回来时补一次定妆帧 */
   /* AI 条常驻在画布底部（工具行 + 输入框约 70px），提示条不抬上去就会压住 Low 档胶囊与工具键 */
   const ts = $('#toasts'); if (ts) ts.style.bottom = '96px';
+  /* 展开只恢复输入条；历史记录按用户上一次的折叠偏好走，不再强行铺开 */
+  aiSyncFoldUI();
   setTimeout(() => { const i = $('#aiInput'); if (i) i.focus(); }, 80);
 }
-/* 展开 / 收起对话区（折叠时只留一条输入框，不挡画布） */
+/* 展开 / 收起对话区：on=true 一定让历史记录真的出现在屏幕上（会清掉折叠），
+   on=false 把整块收成画布底部的角色。界面上的折叠入口都走 setHistFold，
+   这里只是给内部调用与自测留的一个原子操作。 */
 function toggleAISheet(force) {
-  const on = force !== undefined ? force : !state.aiSheet;
-  state.aiSheet = on;
-  const d = $('#aiPanel'); if (d) d.classList.toggle('sheet-open', on);
-  const f = $('#aiFold'); if (f) f.classList.toggle('on', on);
-  aiNavBuild();
-  if (on) {
-    if (d) d.classList.remove('mini');
-    const c = $('#aiChat'); if (c) c.scrollTop = c.scrollHeight; return on;
+  const dock = $('#aiPanel');
+  const on = force !== undefined ? force : !aiHistoryVisible();
+  if (!on) {
+    if (dock && !dock.classList.contains('mini')) aiMini(true);
+    else aiSyncFoldUI();
+    return false;
   }
-  /* 收起对话：不管在不在生成，整块都收成画布底部的 Grok 角色 */
-  if (d && !d.classList.contains('mini')) aiMini(true);
-  return on;
+  if (!dock) return true;
+  dock.classList.remove('mini', 'hist-fold');
+  state.aiOpen = true;
+  const isl = $('#aiIsland'); if (isl) isl.setAttribute('aria-hidden', 'true');
+  if (state.aiIslandTimer) { clearTimeout(state.aiIslandTimer); state.aiIslandTimer = 0; }
+  aiSyncFoldUI();
+  return true;
 }
 function switchPanel(p) {
   state.panel = p;
@@ -16050,7 +16050,15 @@ function bindShare() {
 function exportPng() {
   if (basicBlocked('导出图片')) return;
   const prev = state.selection; state.selection = []; draw();
-  canvas.toBlob(blob => { downloadBlob(blob, '绘图-' + stamp() + '.png'); toast('已导出 PNG', 'ok'); state.selection = prev; draw(); }, 'image/png');
+  canvas.toBlob(blob => {
+    downloadBlob(blob, '绘图-' + stamp() + '.png'); toast('已导出 PNG', 'ok');
+    /* 编码是异步的：期间用户可能已经改了选区，甚至删掉了对象。
+       只在当前仍为空时还原，且丢掉已不存在的 id，别把新选择覆盖回旧值。 */
+    if (!state.selection.length) {
+      state.selection = (prev || []).filter(id => state.objects.some(o => o.id === id));
+    }
+    draw();
+  }, 'image/png');
 }
 function exportCmd() {
   if (basicBlocked('导出命令脚本')) return;
@@ -18374,9 +18382,9 @@ function init() {
   if (aiLogoHost) { aiLogoHost.innerHTML = ''; morphBind(aiLogoHost, 20); }
   morphBind($('#brandLogo'), 22);
   morphBind($('#aiiThink'), 22);
-  const fIc = $('#aiFoldIc'); if (fIc) fIc.innerHTML = ICON.chevUp;
+  const fIc = $('#aiFoldIc'); if (fIc) fIc.innerHTML = ICON.chevDown;
   const hChev = $('#aiHistChev'); if (hChev) hChev.innerHTML = ICON.chevDown;
-  $('#aiFold').title = '收起对话（只留输入框）';
+  $('#aiFold').title = '收起为底部角色（点角色再展开）';
   $('#kbToggle').innerHTML = ICON.kb;
   $('#btnEnter').innerHTML = ICON.enter;
   $('#inputPrefix').innerHTML = ICON.code;
@@ -19368,7 +19376,30 @@ async function runUITest() {
     if (hb.getBoundingClientRect().width) throw new Error('展开态不该同时显示「展开历史」键');
     ho.click(); await sleep(0);
     if (!dock.classList.contains('hist-fold')) throw new Error('「收起历史」键没有折叠历史');
-    if ($('#aiFold').title.indexOf('收起对话') < 0) throw new Error('输入框折叠键的说明不清楚：' + $('#aiFold').title);
+    if ($('#aiFold').title.indexOf('收起为底部角色') < 0) throw new Error('输入框折叠键的说明不清楚：' + $('#aiFold').title);
+    if ($('#aiFold').title.indexOf('历史') >= 0) throw new Error('输入框折叠键不该被理解成「展开历史」：' + $('#aiFold').title);
+    /* 展开历史键必须始终有反馈：折叠后（甚至此前收成过角色）点它要真的把历史打出来 */
+    aiMini(false); await sleep(0);
+    setHistFold(true); await sleep(0);
+    const eb = $('#aiHistBtn');
+    if (!eb.getBoundingClientRect().width) throw new Error('折叠历史后找不到「展开历史」键');
+    eb.click(); await sleep(380);
+    if (!dock.classList.contains('sheet-open')) throw new Error('点「展开历史」没有真正打开对话区');
+    if (dock.classList.contains('hist-fold')) throw new Error('点「展开历史」后折叠标记还在');
+    /* 前面的用例可能清空过消息列表，这里只验证「对话区真的打开了」，不依赖消息条数 */
+    const wrapEl = $('.ai-chat-wrap');
+    if (getComputedStyle(wrapEl).display === 'none' || $('#aiSheet').getBoundingClientRect().height < 40) {
+      throw new Error('点「展开历史」后对话区仍不可见：' + JSON.stringify({
+        cls: dock.className,
+        sheet: Math.round($('#aiSheet').getBoundingClientRect().height),
+        wrapDisplay: getComputedStyle(wrapEl).display,
+      }));
+    }
+    /* 收成角色后再点角色 = 打开完整对话（含历史），不能只剩一条输入框 */
+    setHistFold(true); aiMini(true); await sleep(350);
+    $('#aiiBot').click(); await sleep(350);
+    if (dock.classList.contains('mini')) throw new Error('点角色没有恢复对话');
+    if (!dock.classList.contains('sheet-open') || dock.classList.contains('hist-fold')) throw new Error('点角色没有把历史一起展开');
     /* 历史头里的折叠键：展开态点它收起，再点它展开 */
     if (dock.classList.contains('hist-fold')) { $('#aiHistBtn').click(); await sleep(0); }
     $('#aiHistFold').click(); await sleep(0);
@@ -23889,7 +23920,9 @@ function aiMini(on) {
   const isl = $('#aiIsland');
   const ts = $('#toasts');
   if (on) {
-    state.aiOpen = false; state.aiSheet = false;
+    state.aiOpen = false;
+    /* 用户手动收起就作废「完成后自动展开」的定时器，别过一会儿又自己弹回来 */
+    if (state.aiIslandTimer) { clearTimeout(state.aiIslandTimer); state.aiIslandTimer = 0; }
     dock.classList.remove('hidden', 'sheet-open');
     dock.classList.add('mini');
     morphKick();
@@ -23907,7 +23940,7 @@ function aiMini(on) {
     }
     /* 角色占着画布底部，提示条上移一档，免得红字提示压住角色 */
     if (ts) ts.style.bottom = '96px';
-    aiNavBuild();
+    aiSyncFoldUI();
     return;
   }
   state.aiOpen = true;
@@ -23917,8 +23950,8 @@ function aiMini(on) {
   if (isl) isl.setAttribute('aria-hidden', 'true');
   if (ts) ts.style.bottom = '96px';   /* 展开态输入条同样压着底部中线，与 mini 一致抬高提示条 */
   morphKick();                        /* 头部图标重新露脸：空闲定妆帧补画一次 */
-  /* 只展开输入区，不强行展开历史记录：历史是否展开由用户自己的折叠状态决定 */
-  if (!dock.classList.contains('hist-fold')) toggleAISheet(true);
+  /* 只恢复输入区：历史记录是否展开仍由用户自己的折叠状态决定 */
+  aiSyncFoldUI();
   const c = $('#aiChat'); if (c) c.scrollTop = c.scrollHeight;
 }
 
@@ -24321,7 +24354,7 @@ function bindAI() {
   const isl = $('#aiIsland');
   if (isl) isl.addEventListener('click', e => {
     if (e.target.closest('#aiiStop') || e.target.closest('#aiiLabel') || e.target.closest('#aiiEff')) return;
-    /* 用户主动点角色：这次要看到对话，历史记录一并展开 */
+    /* 点角色是明确的「打开对话」：恢复输入条并把历史一并铺开 */
     aiMini(false);
     setHistFold(false);
   });
@@ -24387,8 +24420,7 @@ function bindAI() {
   });
   if (histBtn) histBtn.addEventListener('click', e => {
     e.stopPropagation();
-    const dock = $('#aiPanel'); if (!dock) return;
-    setHistFold(!dock.classList.contains('hist-fold'));
+    setHistFold(false);
   });
   const histOpen = $('#aiHistBtnOpen');
   if (histOpen) histOpen.addEventListener('click', e => {
@@ -24419,9 +24451,9 @@ function bindAI() {
 
   $('#aiSend').innerHTML = ICON.send + '<span>发送</span>';
   $('#aiSend').onclick = () => { if (state.aiBusy) stopAI(); else aiSend(); };
-  $('#aiFold').onclick = () => toggleAISheet();
-  /* 整块对话的收起由输入胶囊里的折叠键承担（#aiFold）；收起后仍可点画布底部的
-     角色重新展开，所以不再单独占一个「收起为角色」的按钮。 */
+  $('#aiFold').onclick = () => toggleAI();
+  /* 整块对话的收起由输入胶囊里的折叠键承担（#aiFold，收成画布底部的角色）；
+     历史列表的折叠只走工具排那枚键与历史头箭头，两件事不再混用同一条说明。 */
   /* 清空上下文（原「清空历史」）：只清模型记忆，屏幕上的对话历史保留 */
   const ctxBtn = $('#aiCtx');
   if (ctxBtn) ctxBtn.onclick = () => aiClearContext();
@@ -24738,8 +24770,9 @@ function askCardHtml(code) {
     '</div>';
 }
 /* 等待确认：单独一张浮在输入条上方的澄清卡，不展开历史对话。
-   点选项 → 填进输入框并直接发送；点「自己补充」→ 只把焦点给输入框。 */
-function aiAskPop(code) {
+   点选项 → 填进输入框并直接发送；点「自己补充」→ 只把焦点给输入框。
+   prevFold 是弹卡前的历史折叠状态：卡片关掉后原样恢复，不篡改用户的选择。 */
+function aiAskPop(code, prevFold) {
   const pop = $('#aiAskPop');
   if (!pop) return;
   const lines = String(code || '').split(/\r?\n/).map(s => s.trim()).filter(Boolean);
@@ -24749,12 +24782,16 @@ function aiAskPop(code) {
     '<div class="ask-pop-foot"><button class="ask-pop-skip" type="button">自己补充</button>' +
     '<button class="ask-pop-close" type="button" aria-label="关闭">关闭</button></div>';
   pop.classList.add('on');
-  const close = () => pop.classList.remove('on');
+  const close = () => {
+    pop.classList.remove('on');
+    if (prevFold !== undefined && prevFold !== null) setHistFold(!!prevFold);
+  };
   pop.querySelectorAll('.ask-opt').forEach(b => b.addEventListener('click', () => {
     const inp = $('#aiInput');
-    inp.value = b.textContent.trim();
-    inp.dispatchEvent(new Event('input', { bubbles: true }));
+    const val = b.textContent.trim();
     close();
+    inp.value = val;
+    inp.dispatchEvent(new Event('input', { bubbles: true }));
     aiSend();
   }));
   const skip = pop.querySelector('.ask-pop-skip');
@@ -24862,26 +24899,53 @@ function aiCtxSync() {
       ' tokens（' + Math.round(pct) + '%）· 点按清空上下文（保留对话历史）';
   }
 }
-/* 历史记录折叠 / 展开：折叠后整条历史头收掉，只在工具排里留一枚小键 */
+/* 对话区此刻是否真的可见：整块没收回角色，历史列表也没折起来。
+   这是「展开 / 折叠」唯一的事实来源，所有入口都按它渲染。 */
+function aiHistoryVisible() {
+  const dock = $('#aiPanel');
+  return !!dock && !dock.classList.contains('mini') && !dock.classList.contains('hist-fold');
+}
+/* 把可见状态同步到每一个入口：工具排的展开 / 收起键、历史头箭头、
+   输入胶囊里的折叠键、消息导航。任何入口改完类名都调一次，避免出现
+   「键显示收起、列表其实已经关了」这种点不动的状态。 */
+function aiSyncFoldUI() {
+  const dock = $('#aiPanel'); if (!dock) return;
+  const vis = aiHistoryVisible();
+  state.aiSheet = vis;
+  dock.classList.toggle('sheet-open', vis);
+  dock.classList.toggle('hist-on', vis);
+  const hf = $('#aiHistFold');
+  if (hf) {
+    hf.setAttribute('aria-expanded', vis ? 'true' : 'false');
+    hf.title = vis ? '折叠历史记录（只收历史，输入框还在）' : '展开历史记录';
+  }
+  const hb = $('#aiHistBtn');
+  if (hb) { hb.setAttribute('aria-expanded', vis ? 'true' : 'false'); hb.title = '展开历史记录'; }
+  const ho = $('#aiHistBtnOpen');
+  if (ho) { ho.setAttribute('aria-expanded', vis ? 'true' : 'false'); ho.title = '收起历史记录'; }
+  aiNavBuild();
+  if (vis) { const c = $('#aiChat'); if (c) c.scrollTop = c.scrollHeight; }
+}
+/* 历史记录折叠 / 展开。展开时顺手把对话区真正打开 —— 否则点了「展开历史」
+   却因为对话面板关着而毫无反应（旧版最容易卡住的地方）。 */
 function setHistFold(folded) {
   const dock = $('#aiPanel'); if (!dock) return;
   folded = !!folded;
   dock.classList.toggle('hist-fold', folded);
-  const histFold = $('#aiHistFold'), histBtn = $('#aiHistBtn'), histOpen = $('#aiHistBtnOpen');
-  if (histFold) {
-    histFold.setAttribute('aria-expanded', folded ? 'false' : 'true');
-    histFold.title = folded ? '展开历史记录' : '折叠历史记录（只收历史，输入框还在）';
+  if (!folded) {
+    /* 展开历史一定让用户看见：整块收着就先恢复输入条，对话面板也一并打开 */
+    const wasMini = dock.classList.contains('mini');
+    dock.classList.remove('mini');
+    state.aiOpen = true;
+    const isl = $('#aiIsland'); if (isl) isl.setAttribute('aria-hidden', 'true');
+    if (state.aiIslandTimer) { clearTimeout(state.aiIslandTimer); state.aiIslandTimer = 0; }
+    /* 头部图标是从角色态回来：补一次定妆帧，避免露脸瞬间是空白画布 */
+    if (wasMini) morphKick();
+    /* 手动展开历史时，浮层澄清卡收掉：问题本身就在消息里，不再叠一层 */
+    const ap = $('#aiAskPop'); if (ap) ap.classList.remove('on');
+    const c = $('#aiChat'); if (c) c.scrollTop = c.scrollHeight;
   }
-  if (histBtn) {
-    histBtn.setAttribute('aria-expanded', folded ? 'false' : 'true');
-    histBtn.title = '展开历史记录';
-  }
-  if (histOpen) {
-    histOpen.setAttribute('aria-expanded', folded ? 'false' : 'true');
-    histOpen.title = '收起历史记录';
-  }
-  aiNavBuild();
-  if (!folded) { const c = $('#aiChat'); if (c) c.scrollTop = c.scrollHeight; }
+  aiSyncFoldUI();
 }
 /* 清空上下文：只丢发给模型的对话记忆，屏幕上的历史记录原样保留。
    破坏性操作，先弹应用内确认框。 */
@@ -25300,9 +25364,14 @@ async function aiSend() {
     /* 终态：历史记录保持用户自己的折叠状态；等待确认则单独弹澄清卡 */
     const webNote = (webHits + extraHits) ? ' · 联网 ' + (webHits + extraHits) + ' 条' : '';
     if (asked && !badTotal) {
-      /* 等待确认：不展开历史对话，单独弹一张澄清卡，答完再继续 */
-      aiIslandSettle('done', '等待确认', 'AI 想先问清楚再继续' + webNote, 0);
-      aiAskPop(extractBlockList(curContent, 'ask')[0] || '');
+      /* 等待确认：不展开历史对话，只把输入条 + 一张澄清卡交给用户；
+         卡片关掉 / 答完后把历史折叠状态原样还回去 */
+      const dockA = $('#aiPanel');
+      const prevFold = !!(dockA && dockA.classList.contains('hist-fold'));
+      setHistFold(true);
+      aiMini(false);
+      aiIsland('done', '等待确认', 'AI 想先问清楚再继续' + webNote, { busy: false });
+      aiAskPop(extractBlockList(curContent, 'ask')[0] || '', prevFold);
     } else if (badTotal) {
       aiIslandSettle('error', '作图未完全完成', doneSub + webNote + ' · 点按查看', 2200);
     } else {
