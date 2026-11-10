@@ -7564,14 +7564,51 @@ function intersectObjects(A, B) {
   if (lb && ca) return GEO.interLineQ(lb, conicQ(ca)).filter(p => inRange(B, p));
   if (A.type === 'circle' && B.type === 'circle') return GEO.interCC(A.data.c, A.data.r, B.data.c, B.data.r);
   if (ca && cb) { const pa = outlinePolys(A), pb = outlinePolys(B); const out = []; for (const x of pa) for (const y of pb) out.push(...GEO.interPoly(x, y)); return dedupe(out); }
-  if (A.type === 'function' && la) { const out = []; const polys = outlinePolys(A); for (const poly of polys) for (const p of GEO.interLineQ(la, { A: 0, B: 0, C: 0, D: 0, E: 0, F: 0 })) { void p; } const segs = GEO.fnContour((x, y) => (A.fn(x) - y), { x0: toWorldX(0), x1: toWorldX(canvas.clientWidth), y0: toWorldY(canvas.clientHeight), y1: toWorldY(0) }, 90); for (const poly of outlinePolys(B)) out.push(...GEO.interPoly(segs2poly(segs), poly)); return dedupe(out); }
-  if (A.type === 'function' && B.type === 'function') { let best = null, bd = 1e18; const x0 = toWorldX(0), x1 = toWorldX(canvas.clientWidth); for (let i = 0; i <= 2000; i++) { const x = x0 + (x1 - x0) * i / 2000; let d; try { d = A.fn(x) - B.fn(x); } catch (e) { continue; } if (!isNum(d)) continue; if (Math.abs(d) < bd) { bd = Math.abs(d); best = x; } } if (best !== null && bd < 1e-3) return [{ x: best, y: A.fn(best) }]; return []; }
+  if (A.type === 'function' || B.type === 'function') {
+    const f = A.type === 'function' ? A : B;
+    const other = A.type === 'function' ? B : A;
+    /* 函数 × 函数：找 f(x) - g(x) 在可视区间内的全部变号点（旧实现只取最近的一点，
+       两个交点时会把另一个漏掉，还会把「很接近但不交」误判成相交）。 */
+    if (other.type === 'function') return fnRootsOf(f.fn, other.fn).filter(p => inRange(f, p) && inRange(other, p));
+    const L = lineOf(other);
+    if (L) {
+      let pts;
+      if (Math.abs(L.b) > 1e-9) pts = fnRootsOf(f.fn, x => -(L.a * x + L.c) / L.b);
+      else { const x = -L.c / L.a, y = f.fn(x); pts = isNum(y) ? [{ x, y }] : []; }
+      return pts.filter(p => inRange(f, p) && inRange(other, p));
+    }
+  }
   const pa = outlinePolys(A), pb = outlinePolys(B); const out = [];
   for (const x of pa) for (const y of pb) out.push(...GEO.interPoly(x, y));
   return dedupe(out);
 }
 function segs2poly(segs) { if (!segs.length) return []; const polys = []; const used = new Array(segs.length).fill(false); for (let i = 0; i < segs.length; i++) { if (used[i]) continue; const poly = [segs[i][0], segs[i][1]]; used[i] = true; let changed = true; while (changed) { changed = false; for (let j = 0; j < segs.length; j++) { if (used[j]) continue; const s = segs[j]; const e = poly[poly.length - 1]; if (Math.hypot(e.x - s[0].x, e.y - s[0].y) < 1e-6) { poly.push(s[1]); used[j] = true; changed = true; } else if (Math.hypot(e.x - s[1].x, e.y - s[1].y) < 1e-6) { poly.push(s[0]); used[j] = true; changed = true; } } } if (poly.length > 1) polys.push(poly); } return polys; }
 function dedupe(pts) { const out = []; for (const p of pts) { if (!out.some(q => Math.hypot(q.x - p.x, q.y - p.y) < 1e-6)) out.push(p); } return out; }
+/* 两个函数在可视横向区间内的全部交点：扫描变号 → 二分细化。
+   之前只取「离得最近的一个点」，两交点题会漏掉一个，也会把接近但不交误判成相交。 */
+function fnRootsOf(fa, fb) {
+  const x0 = toWorldX(0) - 2, x1 = toWorldX(canvas.clientWidth) + 2;
+  const N = 1600, xs = [];
+  const df = x => { try { const d = fa(x) - fb(x); return isNum(d) ? d : NaN; } catch (e) { return NaN; } };
+  let px = x0, pd = null;
+  for (let i = 0; i <= N; i++) {
+    const x = x0 + (x1 - x0) * i / N;
+    const d = df(x);
+    if (!isNum(d)) { px = x; pd = null; continue; }
+    if (pd !== null && (d === 0 || pd * d < 0)) {
+      let lo = px, hi = x, flo = pd;
+      for (let k = 0; k < 60; k++) {
+        const m = (lo + hi) / 2, fm = df(m);
+        if (!isNum(fm)) break;
+        if (flo * fm <= 0) hi = m; else { lo = m; flo = fm; }
+      }
+      const r = (lo + hi) / 2;
+      if (!xs.some(q => Math.abs(q - r) < 1e-6)) xs.push(r);
+    }
+    px = x; pd = d;
+  }
+  return xs.map(x => { let y; try { y = fa(x); } catch (e) { y = NaN; } return { x, y }; }).filter(p => isNum(p.y));
+}
 /* 从一批交点里挑出本对象该用的那一个。
    交点可能有 0 / 1 / 2… 个，而且求交结果的分支顺序会随位置变化：
    若死按 def.index 取，拖动时点会在两支之间来回跳。
@@ -8905,6 +8942,17 @@ function makePoint(v, label, extra) {
   return o;
 }
 function mkObj(type, props) { const o = createObject(type, props); addObject(o, true); return o; }
+/* 内置坐标轴对象：只在脚本引用 xAxis / yAxis 时才建，隐藏且不参与绘制。
+   范围取 ±1e4，函数 / 圆锥曲线求交都按解析式算，不依赖这条辅助线的长度。 */
+function ensureAxisLine(name) {
+  let o = getObjByLabel(name);
+  if (o) return o;
+  const isX = /^x/i.test(name);
+  const p1 = makePoint({ x: isX ? -1e4 : 0, y: isX ? 0 : -1e4 }, '', { aux: true, visible: false });
+  const p2 = makePoint({ x: isX ? 1e4 : 0, y: isX ? 0 : 1e4 }, '', { aux: true, visible: false });
+  o = mkObj('line', { kind: 'twoPoints', parents: [p1.id, p2.id], aux: true, visible: false, label: name });
+  return o;
+}
 function ensurePoint(a, hidden) {
   if (a && a.obj && a.obj.type === 'point') return a.obj;
   const v = a ? a.val : null;
@@ -8943,6 +8991,14 @@ function ensureObj(a, types) {
   if (!o) throw new Error('此处需要一个对象');
   if (types && !types.includes(o.type)) throw new Error('对象 ' + o.label + ' 类型不匹配（需要 ' + types.map(t => TYPENAME[t]).join('/') + '）');
   return o;
+}
+/* 样式类命令支持「一次传一组对象」：SetLineStyle({a,b,c}, 1)。
+   GeoGebra 也接受列表，模型很爱这么写；逐个套用即可。 */
+function eachObjArg(a, fn) {
+  const os = (a && a.objs && a.objs.length) ? a.objs : null;
+  if (os) { os.forEach(fn); return []; }
+  fn(ensureObj(a));
+  return [];
 }
 function hydrate(o) {
   try {
@@ -9143,6 +9199,18 @@ function resolveArg(s) {
   if (/^[A-Za-z_\u4e00-\u9fa5][\w\u4e00-\u9fa5]*$/.test(t)) {
     const o = getObjByLabel(t);
     if (o) return { obj: o, val: o.value !== undefined ? o.value : NaN, src: t };
+    /* 坐标轴别名：GeoGebra 脚本里 xAxis / yAxis 是内置对象，模型几乎必写。
+       这里按需建一条隐藏的辅助直线（aux 不参与绘制 / 代数面板），
+       Intersect(f, xAxis)、Distance(P, yAxis) 这类写法就能直接用。 */
+    const axis = /^(xaxis|x轴)$/i.test(t) ? 'xAxis' : (/^(yaxis|y轴)$/i.test(t) ? 'yAxis' : '');
+    if (axis) return { obj: ensureAxisLine(axis), val: NaN, src: t };
+  }
+  /* {A,B,C} 这种「对象集合」：全部是已存在的标签时按对象列表返回，
+     样式命令（SetColor / SetLineStyle …）就能一次设置一组对象。 */
+  if (/^\{[\s\S]*\}$/.test(t)) {
+    const parts = splitTopLevel(t.slice(1, -1).trim(), ',');
+    const obs = parts.map(p => /^[A-Za-z_\u4e00-\u9fa5][\w\u4e00-\u9fa5]*$/.test(p.trim()) ? getObjByLabel(p.trim()) : null);
+    if (parts.length && obs.every(Boolean)) return { obj: null, objs: obs, val: obs.map(o => o.value), src: t };
   }
   /* 嵌套命令：Intersect(c, Segment(A,B)) 这类写法自动先建内层对象 */
   const c = parseCall(t);
@@ -9399,12 +9467,12 @@ C('PerpendicularLine', 'PerpendicularLine(点, 直线)', '过点作垂线', (a, 
   const p = ensurePoint(a[0]); const l = ensureObj(a[1]);
   if (!lineOf(l)) throw new Error('第二个参数需要是直线、线段或射线');
   return [mkObj('line', { kind: 'perp', parents: [p.id, l.id], label: ctx.label })];
-}, ['垂线', 'OrthogonalLine']);
+}, ['垂线', 'Perpendicular', 'OrthogonalLine', '垂直线']);
 C('ParallelLine', 'ParallelLine(点, 直线)', '过点作平行线', (a, ctx) => {
   const p = ensurePoint(a[0]); const l = ensureObj(a[1]);
   if (!lineOf(l)) throw new Error('第二个参数需要是直线、线段或射线');
   return [mkObj('line', { kind: 'parallel', parents: [p.id, l.id], label: ctx.label })];
-}, ['平行线']);
+}, ['平行线', 'Parallel', '平行']);
 C('PerpendicularBisector', 'PerpendicularBisector(点1, 点2)', '中垂线', (a, ctx) => {
   if (a.length === 1 && a[0].obj && a[0].obj.type === 'segment') return [mkObj('line', { kind: 'perpBisector', parents: [a[0].obj.id], label: ctx.label })];
   const p1 = ensurePoint(a[0]), p2 = ensurePoint(a[1]);
@@ -12026,7 +12094,13 @@ C('Delete', 'Delete(对象)', '删除对象及其后代', (a) => {
   return [];
 }, ['删除']);
 C('DeleteAll', 'DeleteAll()', '清空所有对象', () => { clearAll(); return []; }, ['清空']);
-C('SetColor', 'SetColor(对象, "#ff0000")', '设置颜色', (a) => { const o = ensureObj(a[0]); const c = String(a[1].val ?? a[1].src).replace(/"/g, ''); if (/^#[0-9a-f]{6}$/i.test(c)) { o.color = c; delete o.dynColor; (a[2] ? [a[2]] : []).forEach(x => { const y = x.obj; if (y) { y.color = c; delete y.dynColor; } }); } return []; });
+C('SetColor', 'SetColor(对象, "#ff0000")', '设置颜色', (a) => {
+  const c = String(a[1].val ?? a[1].src).replace(/"/g, '');
+  if (!/^#[0-9a-f]{6}$/i.test(c)) return [];
+  eachObjArg(a[0], o => { o.color = c; delete o.dynColor; });
+  (a[2] ? [a[2]] : []).forEach(x => { const y = x.obj; if (y) { y.color = c; delete y.dynColor; } });
+  return [];
+});
 C('SetDynamicColor', 'SetDynamicColor(对象, 红, 绿, 蓝)', '按数值 / 滑动条动态设置颜色（0~255）', (a) => {
   const o = ensureObj(a[0]);
   const pick = x => (x && x.obj && (x.obj.type === 'number' || x.obj.type === 'slider'))
@@ -12036,7 +12110,8 @@ C('SetDynamicColor', 'SetDynamicColor(对象, 红, 绿, 蓝)', '按数值 / 滑�
   if (!BATCH) draw();
   return [];
 }, ['动态颜色']);
-C('SetVisible', 'SetVisible(对象, true)', '显示 / 隐藏对象', (a) => { ensureObj(a[0]).visible = !!(a[1].val ?? true); return []; });
+C('SetVisible', 'SetVisible(对象, true)', '显示 / 隐藏对象', (a) => eachObjArg(a[0], o => { o.visible = !!(a[1].val ?? true); }), ['显示对象']);
+C('SetVisibleInView', 'SetVisibleInView(对象, 视图, true|false)', '兼容 GeoGebra 写法：单个二维视图里本应用总是显示，直接忽略', () => [], ['视图可见']);
 /* ── 界面级命令：滑动条位置 / 长度 / 方向、标签偏移、文本位置 ──
    GeoGebra 里这些都能用脚本控制；之前 AI 只画得出滑动条，却挪不动它。
    滑动条位置记在 def.spos（屏幕像素），与导入 <slider absoluteScreenLocation> 同一套坐标。 */
@@ -12090,21 +12165,19 @@ C('SetConditionToShowObject', 'SetConditionToShowObject(对象, 条件)', '条�
   if (!BATCH) { refreshAlgebra(); draw(); }
   return [];
 }, ['条件显示', 'SetConditionToShow']);
-C('SetLineThickness', 'SetLineThickness(对象, 5)', '线宽', (a) => { ensureObj(a[0]).lineWidth = clamp(AN(a[1]), 1, 20); return []; });
-C('SetLineStyle', 'SetLineStyle(对象, 1)', '线型 0实线 1虚线 2点线 3点划线', (a) => { ensureObj(a[0]).lineStyle = clamp(Math.round(AN(a[1])), 0, 3); return []; });
+C('SetLineThickness', 'SetLineThickness(对象, 5)', '线宽', (a) => eachObjArg(a[0], o => { o.lineWidth = clamp(AN(a[1]), 1, 20); }));
+C('SetLineStyle', 'SetLineStyle(对象, 1)', '线型 0实线 1虚线 2点线 3点划线', (a) => eachObjArg(a[0], o => { o.lineStyle = clamp(Math.round(AN(a[1])), 0, 3); }));
 C('SetDecoration', 'SetDecoration(线段, 0~6)', '线段装饰：1~3 中点短斜线，4~6 中点箭头', (a) => {
-  const o = ensureObj(a[0]);
-  o.decoration = clamp(Math.round(AN(a[1])), 0, 6);
+  eachObjArg(a[0], o => { o.decoration = clamp(Math.round(AN(a[1])), 0, 6); });
   if (!BATCH) draw();
   return [];
 }, ['装饰']);
-C('SetPointSize', 'SetPointSize(对象, 6)', '点大小', (a) => { ensureObj(a[0]).pointSize = clamp(AN(a[1]), 1, 16); return []; });
-C('SetFilling', 'SetFilling(对象, 0.4)', '填充透明度', (a) => { const o = ensureObj(a[0]); o.fill = true; o.fillOpacity = clamp(AN(a[1]), 0, 1); return []; });
-C('SetLabelVisible', 'SetLabelVisible(对象, true)', '是否显示标签', (a) => { ensureObj(a[0]).showLabel = !!(a[1].val ?? true); return []; });
-C('SetFixed', 'SetFixed(对象, true)', '固定对象（禁止拖动）', (a) => { ensureObj(a[0]).fixed = !!(a[1].val ?? true); return []; });
+C('SetPointSize', 'SetPointSize(对象, 6)', '点大小', (a) => eachObjArg(a[0], o => { o.pointSize = clamp(AN(a[1]), 1, 16); }));
+C('SetFilling', 'SetFilling(对象, 0.4)', '填充透明度', (a) => eachObjArg(a[0], o => { o.fill = true; o.fillOpacity = clamp(AN(a[1]), 0, 1); }));
+C('SetLabelVisible', 'SetLabelVisible(对象, true)', '是否显示标签', (a) => eachObjArg(a[0], o => { o.showLabel = !!(a[1].val ?? true); }));
+C('SetFixed', 'SetFixed(对象, true)', '固定对象（禁止拖动）', (a) => eachObjArg(a[0], o => { o.fixed = !!(a[1].val ?? true); }));
 C('ShowLabel', 'ShowLabel(对象, true)', '显示 / 隐藏标签', (a) => {
-  const o = ensureObj(a[0]);
-  o.showLabel = !!(a[1] ? (a[1].val ?? true) : true);
+  eachObjArg(a[0], o => { o.showLabel = !!(a[1] ? (a[1].val ?? true) : true); });
   if (!BATCH) { refreshAlgebra(); draw(); }
   return [];
 }, ['显示标签']);
@@ -12119,20 +12192,22 @@ C('SetTrace', 'SetTrace(对象, true)', '打开 / 关闭拖影（移动对象时
 C('UpdateConstruction', 'UpdateConstruction()', '按当前依赖重新计算所有对象', () => { recomputeAll(); return []; }, ['更新作图']);
 /* 标题 / 标签模式 / 悬停提示：GeoGebra 里同一套标签系统的三块 */
 C('SetCaption', 'SetCaption(对象, "标题")', '设置显示标题（标签切到「标题」模式）', (a) => {
-  const o = ensureObj(a[0]);
   let txt = '';
   if (a[1]) txt = a[1].obj ? String(a[1].obj.value ?? '') : String(a[1].val ?? a[1].src ?? '').replace(/^["']|["']$/g, '');
-  if (txt) { o.caption = txt; o.labelMode = 3; o.showLabel = true; }
-  else { delete o.caption; if (o.labelMode === 3) o.labelMode = 0; }
+  eachObjArg(a[0], o => {
+    if (txt) { o.caption = txt; o.labelMode = 3; o.showLabel = true; }
+    else { delete o.caption; if (o.labelMode === 3) o.labelMode = 0; }
+  });
   if (!BATCH) { refreshAlgebra(); draw(); }
   return [];
 }, ['设置标题', '标题']);
 C('SetLabelMode', 'SetLabelMode(对象, 0~3)', '标签模式：0名称 1名称和值 2值 3标题', (a) => {
-  const o = ensureObj(a[0]);
   const m = clamp(Math.round(AN(a[1])), 0, 3);
-  o.labelMode = m;
-  if (m > 0) o.showLabel = true;
-  if (m === 3 && !o.caption) o.caption = o.label;
+  eachObjArg(a[0], o => {
+    o.labelMode = m;
+    if (m > 0) o.showLabel = true;
+    if (m === 3 && !o.caption) o.caption = o.label;
+  });
   if (!BATCH) { refreshAlgebra(); draw(); }
   return [];
 }, ['标签模式']);
@@ -12143,9 +12218,10 @@ C('SetTooltipMode', 'SetTooltipMode(对象, 0|1|2)', '悬停提示：0关 1自�
   return [];
 }, ['提示模式']);
 C('SetPointStyle', 'SetPointStyle(点, 0~10)', '点样式：0实心圆 1叉号 2空心圆 3加号 4实心菱形 5空心菱形 6上三角 7下三角 8右三角 9左三角', (a) => {
-  const o = ensureObj(a[0]);
-  if (o.type !== 'point') throw new Error('SetPointStyle 的第一个参数需要是点');
-  o.pointStyle = clamp(Math.round(AN(a[1])), 0, 10);
+  eachObjArg(a[0], o => {
+    if (o.type !== 'point') throw new Error('SetPointStyle 的第一个参数需要是点');
+    o.pointStyle = clamp(Math.round(AN(a[1])), 0, 10);
+  });
   if (!BATCH) draw();
   return [];
 }, ['点样式']);
