@@ -23656,7 +23656,10 @@ const AI_SYSTEM = `你是嵌入在「GeoAI」中的数学助手。这个应用�
 
 【输出规则 —— 必须遵守】
 1. 用简体中文回答，讲解简洁、准确、有条理，面向中学生与教师。
-2. 需要作图或新建对象时，把命令写在 \`\`\`geogebra 代码块里，每行一条命令，控件会自动执行。
+2. 需要作图或新建对象时，把命令写在 \`\`\`geogebra 代码块里，每行一条命令，控件会在流式输出中逐块执行。
+   · 必须分步画：一步一个代码块，每块只放 1~4 条相关命令，块外用一句话说明这一步在做什么；简单图形至少 2 步，复杂图形拆成 3~6 步。
+   · 不要把命令一股脑塞进一个代码块，也不要提前写出后面步骤的命令；后一步可以直接引用前面已建好的对象名，但已经执行过的命令不要重复输出。
+   · 顺序要对：先建点 / 基础对象，再连线、圆、多边形，最后加标注与度量。画布会边写边更新，用户看到的是逐步长出来的图。
 3. 讲解文字写在代码块外面；不要输出 JSON，不要输出多余的命令格式说明。
 4. 用户只是问概念或要求解题时，直接回答，不必输出代码块。
 5. 若用户要求清空画布，在代码块里写 DeleteAll()。
@@ -25129,6 +25132,7 @@ async function aiSend() {
   const AI_FIX_MAX = 2;   /* 作图命令执行失败时，回传 AI 重新生成的次数上限 */
   const SEARCH_MAX_ROUNDS = 2;   /* AI 自己发起「再联网检索」的次数上限，避免无限自搜 */
   let paintTimer = 0, paintedR = '', paintedC = '', pendingR = '', pendingC = '';
+  let streamExec = null;   /* 流式作图：每个完整的 geogebra 代码块一到就执行（定义在 runCmds 之后） */
   const flushPaint = () => {
     paintTimer = 0;
     let changed = false;
@@ -25152,6 +25156,8 @@ async function aiSend() {
         bubble.innerHTML = renderAIContent(pendingC);
         /* 正文流式到达：胶囊显示最近一句，让人知道它正在写什么 */
         aiIsland('write', '正在输出', aiIslandPreview(pendingC) || '正在整理答案…', { busy: true });
+        /* 出现完整的代码块就立刻画，不等整段回答写完 */
+        if (streamExec) streamExec(pendingC);
       }
       changed = true;
     }
@@ -25192,6 +25198,38 @@ async function aiSend() {
     host.className = 'exec-list';
     host.innerHTML = rs.map(r => '<div class="exec ' + (r.ok ? 'ok' : 'bad') + '"><span class="st">' + (r.ok ? ICON.check : ICON.warn) + '</span><span class="tx">' + esc(r.line) + '</span>' + (r.ok ? (r.label ? '<span class="er" style="color:var(--text-3)">' + esc(r.label) + '</span>' : '') : '<span class="er">' + esc(r.err) + '</span>') + '</div>').join('');
     body.appendChild(host); keepBottom();
+  };
+  /* ── 边写边画 ──
+     模型按「一步一个代码块」输出。这里只处理已经闭合的块：每凑齐一块就立刻执行、
+     立刻入画，再继续等下一块。execCount 保证同一块只跑一次；pushUndo 推迟到第一块
+     真正执行前，整轮作图仍是一步撤销。 */
+  let execCount = 0, streamResults = [], undoPushed = false, turnBefore = null;
+  const geoBlocks = (s) => {
+    const src = String(s).replace(/```(search|ask)\s*\n?[\s\S]*?```/gi, '');
+    const out = [];
+    const re = /```(?:geogebra|GeoGebra|ggb|ggbscript|ggbcode|)\s*([\s\S]*?)```/gi;
+    let m;
+    while ((m = re.exec(src)) !== null) out.push(m[1]);
+    return out;
+  };
+  const execOneBlock = (text) => {
+    const cmds = text.split(/\r?\n/).map(l => l.trim())
+      .filter(t => t && !t.startsWith('//') && !t.startsWith('#'))
+      .map(t => t.replace(/^[-*•]\s*/, ''));
+    if (!cmds.length) return;
+    if (!undoPushed) { pushUndo(); undoPushed = true; turnBefore = new Set(state.objects.map(o => o.id)); }
+    const rs = runCmds(cmds);
+    streamResults.push(...rs);
+    recomputeAll(); refreshAlgebra();
+    renderExec(rs);   /* 每步单独一条执行结果，画布同步更新 */
+  };
+  let lastExecLen = -1;
+  streamExec = (full) => {
+    const s = String(full);
+    if (s.length === lastExecLen) return;
+    lastExecLen = s.length;
+    const blocks = geoBlocks(s);
+    for (; execCount < blocks.length; execCount++) execOneBlock(blocks[execCount]);
   };
   const noteFix = (n, cnt, extra) => {
     const el = document.createElement('div');
@@ -25234,7 +25272,7 @@ async function aiSend() {
     const lines = bad.map(r => '  · ' + r.line + '   →   ' + r.err).join('\n');
     const ask = '你刚才那段 geogebra 命令里有 ' + bad.length + ' 条执行失败（这些行没有被建到画布上）：\n' + lines +
       '\n\n' + buildCanvasContext() +
-      '\n\n请重新输出一份完整的 ```geogebra 代码块，把这次作图做对：\n' +
+      '\n\n请重新输出一份完整、可执行的 geogebra 作图（仍然按步骤分块写），把这次作图做对：\n' +
       '· 画布上已有的对象直接写它们的名字复用，不要重复定义；\n' +
       '· 只输出代码块，不要写解释文字。';
     const hist = [{ role: 'system', content: AI_SYSTEM }].concat(state.aiHistory.map(h => ({ role: h.role, content: h.content })));
@@ -25330,33 +25368,36 @@ async function aiSend() {
     /* 模型选择了先问清楚：把终态改成「等待确认」，别报成「完成」 */
     const asked = extractBlockList(curContent, 'ask').length > 0;
 
-    /* 执行作图命令；有失败就回传 AI 修正，最多 AI_FIX_MAX 轮 */
-    let cmds = extractGeoCommands(curContent);
+    /* 补齐最后一帧可能还没执行的代码块（例如整段一次性返回的情况） */
+    streamExec(curContent);
+
+    /* 作图：流式阶段已经一步一块地画完；这里只处理没成功的命令，回传 AI 修正 */
+    let results = streamResults;
     let badTotal = 0, doneSub = '回答已就绪';
-    if (cmds.length) {
-      pushUndo();
-      let results = [], rounds = 0;
-      for (let round = 0; round <= AI_FIX_MAX; round++) {
-        rounds = round;
-        const before = new Set(state.objects.map(o => o.id));
-        results = runCmds(cmds);
-        const bad = results.filter(r => !r.ok);
-        if (!bad.length || round === AI_FIX_MAX) break;   /* 成功，或已经用光重试次数：保留这一轮的结果 */
-        state.objects = state.objects.filter(o => before.has(o.id));   /* 要重试：先撤掉这一轮，免得重发时重复建对象 */
-        noteFix(round + 1, bad.length);
+    if (results.length) {
+      let bad = results.filter(r => !r.ok);
+      let rounds = 0;
+      while (bad.length && rounds < AI_FIX_MAX) {
+        rounds++;
+        /* 自动修复会让 AI 重发一份完整作图：先撤掉本轮建出来的对象，免得重复命名 */
+        if (turnBefore) state.objects = state.objects.filter(o => turnBefore.has(o.id));
+        noteFix(rounds, bad.length);
         /* 错误 → 再输出：胶囊变暖色，说明正在重写而不是已经失败 */
-        aiIsland('correct', '修正中 ' + (round + 1) + '/' + AI_FIX_MAX,
+        aiIsland('correct', '修正中 ' + rounds + '/' + AI_FIX_MAX,
           bad.length + ' 条命令未成功 · 正在重写', { busy: true });
-        curContent = await aiCorrect(bad, round + 1);
-        cmds = extractGeoCommands(curContent);
-        if (!cmds.length) { noteFix(round + 1, bad.length, 'AI 这次没返回可用的命令块，先停在这里'); break; }
+        curContent = await aiCorrect(bad, rounds);
+        const fixCmds = extractGeoCommands(curContent);
+        if (!fixCmds.length) { noteFix(rounds, bad.length, 'AI 这次没返回可用的命令块，先停在这里'); break; }
+        results = runCmds(fixCmds);
+        recomputeAll(); refreshAlgebra();
+        renderExec(results);
+        bad = results.filter(r => !r.ok);
       }
-      renderExec(results);
-      recomputeAll(); refreshAlgebra();
-      const badN = results.filter(r => !r.ok).length;
+      const badN = bad.length;
+      const okN = results.filter(r => r.ok).length;
       badTotal = badN;
       doneSub = badN ? badN + ' 条命令未成功'
-        : (rounds ? '已自动修正 · 完成 ' + results.length + ' 步作图' : '已作图 ' + results.length + ' 步 · 画布已更新');
+        : (rounds ? '已自动修正 · 完成 ' + okN + ' 步作图' : '已作图 ' + okN + ' 步 · 画布已更新');
       /* 成功不再弹绿色提示：灵动岛已经报过「完成 · 已作图 N 步」；
          失败保留红色提示，因为具体哪几条失败需要展开对话才看得到 */
       if (badN) toast('有 ' + badN + ' 条命令未执行成功' + (rounds ? '（已自动重试 ' + rounds + ' 次）' : ''), 'err', 3200);
