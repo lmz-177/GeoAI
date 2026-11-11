@@ -308,8 +308,11 @@ body.dark .app::before{
    飞出的同族工具（例如各种画圆）仍然用点击 / 悬停展开。 */
 .toolwrap{
   position:sticky;top:0;z-index:30;padding:7px 9px 8px;
-  background:var(--chrome);border-bottom:.5px solid var(--border);
-  -webkit-backdrop-filter:var(--glass-blur);backdrop-filter:var(--glass-blur);
+  /* 这里**不能**再叠一层 backdrop-filter：外层侧栏已经是玻璃，粘性元素内部还要滚动，
+     Chromium 在这种嵌套模糊 + 内滚的组合下会在滚动时残留上一层像素（看起来像一块
+     蓝色半透明「鬼影」）。改成不透明一档的底色，视觉上没有差别，重绘也干净。 */
+  background:var(--panel);
+  border-bottom:.5px solid var(--border);
   user-select:none;
 }
 .tool-head{display:flex;align-items:center;justify-content:space-between;gap:6px;padding:0 2px 7px}
@@ -358,7 +361,15 @@ body.dark .app::before{
   color:var(--text);transition:var(--t-ui);
 }
 .flyout button:hover{background:var(--hover)}
-.flyout button:active{transform:scale(.95);background:var(--active)}
+/* 触屏没有「悬停」这回事：不限制在 hover 设备上，点过的格子会一直保留悬停底色，
+   叠在选中蓝底旁边就像一块多余的影子。按压只留缩放，不再叠第二层蓝色。 */
+.flyout button:active{transform:scale(.95)}
+.flyout button:active:not(.on){background:var(--hover)}
+.flyout button:focus:not(:focus-visible){background:transparent}
+@media (hover:none){
+  .flyout button:hover{background:transparent}
+  .flyout button.on:hover{background:var(--accent-dim)}
+}
 .flyout button svg{width:23px;height:23px;flex:0 0 23px;color:var(--text-2);transition:var(--t-ui)}
 /* 名字允许两行（「显示/隐藏标签」「过三点的圆锥曲线」这类不缩成半个词） */
 .fl-name{font-size:var(--fs-3xs);line-height:1.18;font-weight:500;text-align:center;color:var(--text-2);
@@ -371,6 +382,19 @@ body.dark .app::before{
 /* 面板独占一个页签：工具网格撑满面板，下面不再留一大片空白 */
 #paneTools{display:flex;flex-direction:column}
 #paneTools .toolwrap{flex:1;display:flex;flex-direction:column;min-height:0;position:static}
+/* AI 作图期间的工具区提示：常驻在搜索框下方一条，用暖色（warn）而不是报错红，
+   是「建议」不是「禁止」；收起动画靠 max-height，避免顶着工具网格跳一下 */
+.ai-draw-tip{
+  display:flex;align-items:center;gap:7px;margin:0 10px 8px;padding:7px 10px;border-radius:11px;
+  background:rgba(255,149,0,.12);border:.5px solid rgba(255,149,0,.3);
+  color:#b26a00;font-size:var(--fs-2xs);line-height:1.35;font-weight:600;
+  animation:tipIn .22s var(--ease-out) both;
+}
+body.dark .ai-draw-tip{color:#ffb340;background:rgba(255,159,10,.14);border-color:rgba(255,159,10,.28)}
+.ai-draw-tip[hidden]{display:none}
+.ai-draw-tip .adt-ic{display:flex;flex:0 0 auto}
+.ai-draw-tip .adt-ic svg{width:13px;height:13px}
+@keyframes tipIn{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}
 .tsep{width:1px;height:26px;background:var(--border);margin:0 7px;flex:0 0 1px}
 /* 工具栏悬停提示：显示功能名字（组内工具按钮共用） */
 .tipbox{
@@ -1221,7 +1245,7 @@ body.dark .eff-warn{color:#c39bff}
 .think summary .spin{width:11px;height:11px;border:1.5px solid var(--border-2);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
 .think[open] summary{color:var(--text-2);background:var(--hover);border-bottom:.5px solid var(--border)}
-.think .body{padding:2px 12px 11px;color:var(--text-3);white-space:pre-wrap;font-family:var(--mono);font-size:12px;line-height:1.65;max-height:240px;overflow-y:auto;overscroll-behavior:contain}
+.think .body{padding:2px 12px 11px;color:var(--text-3);white-space:pre-wrap;font-family:var(--mono);font-size:var(--fs-xs);line-height:1.65;max-height:240px;overflow-y:auto;overscroll-behavior:contain}
 .exec-list{margin-top:8px;display:flex;flex-direction:column;gap:4px}
 .exec{display:flex;align-items:center;gap:8px;font-family:var(--mono);font-size:var(--fs-xs);padding:6px 10px;border-radius:10px;background:var(--panel-2)}
 .exec .st{width:15px;height:15px;flex:0 0 15px;display:flex;align-items:center;justify-content:center}
@@ -2029,6 +2053,10 @@ body.dark .modal,body.dark .cmd-search,body.dark .toolwrap{
             <input class="tool-search" id="toolSearch" placeholder="搜索工具" aria-label="搜索工具" autocomplete="off">
             <button class="icon-btn th-fold" id="toolFold" title="收起绘图工具" aria-label="收起绘图工具"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 14.5 12 8.5l6 6"></path></svg></button>
           </div>
+          <div class="ai-draw-tip" id="aiDrawTip" role="status" hidden>
+            <span class="adt-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v5"/><path d="M12 16.2v.1"/></svg></span>
+            <span>AI 正在作图，建议先别手动改画布</span>
+          </div>
           <div class="toolgrid" id="toolbar"></div>
         </div>
       </div>
@@ -2642,6 +2670,45 @@ const ICON = {
   inspect: S('<rect x="3" y="4" width="18" height="16" rx="2.6"/><path d="M6 15.5c2.4 0 2.8-7 5-7s2.6 7 5 7" /><circle cx="11" cy="8.5" r="1.5" fill="currentColor" stroke="none"/>'),
   vectorFromPoint: S('<path d="M5 19 19 6"/><path d="M19 6l-4.4.5M19 6l-.5 4.4"/><circle cx="5" cy="19" r="2" fill="currentColor" stroke="none"/><path d="M5 19h4M5 19v-4" opacity=".35" stroke-width="1.2"/>'),
 };
+/* ── GeoGebra 同款构图的核心绘图图标 ──
+   参照 GGB 计算器工具面板的画法（不是照搬它的位图资源：GGB 的图标是 GPL，
+   本项目是 MIT，直接拷会传染许可证；这里按它的构图语言重绘）：
+   主对象 2px、辅助构造 1.2px 虚线、端点是实心「手柄」、多边形与角带一层极淡填充。
+   这样一列图标扫下来，先看到「画什么」再看到「怎么定」，比一堆同粗细线条更好认。 */
+(function ggbIcons() {
+  const G = s => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' + s + '</svg>';
+  const dot = (x, y, r) => '<circle cx="' + x + '" cy="' + y + '" r="' + (r || 1.9) + '" fill="currentColor" stroke="none"/>';
+  Object.assign(ICON, {
+    /* 点：手柄式圆点 + 极淡的十字准星 */
+    point: G(dot(12, 12, 3.2) + '<path d="M3.4 12h3.2M17.4 12h3.2M12 3.4v3.2M12 17.4v3.2" stroke-width="1.2" opacity=".45"/>'),
+    /* 交点：两条曲线相交处放大一颗实心点 */
+    intersect: G('<path d="M2.8 18.6C7 5.4 17 5.4 21.2 18.6" stroke-width="1.7"/><path d="M2.8 5.4c4.2 13.2 14.2 13.2 18.4 0" stroke-width="1.7" opacity=".55"/>' + dot(12, 12, 2.8)),
+    midpoint: G('<path d="M4.6 18 19.4 6" stroke-width="1.7"/>' + dot(4.6, 18) + dot(19.4, 6) + '<circle cx="12" cy="12" r="2.6" stroke-width="2" fill="var(--canvas)"/>' + dot(12, 12, 1.2)),
+    line: G('<path d="M2.6 19.6 21.4 4.4"/><path d="M2.6 19.6 21.4 4.4" stroke="none"/>' + dot(7.2, 16.1) + dot(16.8, 7.9)),
+    segment: G('<path d="M5 18 19 6" stroke-width="2.2"/>' + dot(5, 18) + dot(19, 6)),
+    segmentFix: G('<path d="M5 18 19 6" stroke-width="2.2"/>' + dot(5, 18) + dot(19, 6) + '<path d="M9.4 15.2v2.6M10.7 15.2v2.6" stroke-width="1.4"/>'),
+    ray: G('<path d="M4.6 18.6 20.6 5.2" stroke-width="2.1"/><path d="M20.6 5.2l-4.6.6M20.6 5.2l-.7 4.6" stroke-width="1.8"/>' + dot(4.6, 18.6)),
+    vector: G('<path d="M4.8 18.8 19.2 5.6" stroke-width="2.1"/><path d="M19.2 5.6l-4.8.7M19.2 5.6l-.8 4.8" stroke-width="1.8"/>' + dot(4.8, 18.8)),
+    /* 垂线：直角方块是 GGB 最好认的一处记号 */
+    perp: G('<path d="M3.4 19.6h17.2"/><path d="M12.4 19.6V4.2"/><path d="M12.4 15.2h4.4v4.4" stroke-width="1.3" opacity=".75"/>' + dot(12.4, 19.6, 1.7)),
+    parallel: G('<path d="M3.6 19.4 9.6 4.6" stroke-width="2"/><path d="M14.4 19.4 20.4 4.6" stroke-width="2"/><path d="M6.2 15.4l1.6 1.2M8.4 9.6l1.6 1.2" stroke-width="1.3" opacity=".55"/>'),
+    perpBisector: G('<path d="M4 18.4 20 5.6" stroke-width="1.7" opacity=".65"/>' + dot(4, 18.4, 1.7) + dot(20, 5.6, 1.7) + '<path d="M15.1 7.9 8.9 16.1" stroke-dasharray="2.6 2.2" stroke-width="1.5"/>'),
+    angleBisector: G('<path d="M4 19.6h16.6M4 19.6 17 4.6" stroke-width="1.8"/><path d="M4 19.6 15.3 8.5" stroke-dasharray="2.8 2.2" stroke-width="1.4"/>' + dot(4, 19.6, 1.7)),
+    tangent: G('<circle cx="11.4" cy="13.4" r="6.6" stroke-width="1.8"/><path d="M2.6 8.8 21.4 15.6" stroke-width="1.8"/>' + dot(13.1, 9.9, 2.1)),
+    polygon: G('<path d="M12 3.6 20.4 9.9 17.2 19.6H6.8L3.6 9.9z" fill="currentColor" opacity=".12"/><path d="M12 3.6 20.4 9.9 17.2 19.6H6.8L3.6 9.9z"/>' + dot(12, 3.6, 1.6) + dot(20.4, 9.9, 1.6) + dot(17.2, 19.6, 1.6) + dot(6.8, 19.6, 1.6) + dot(3.6, 9.9, 1.6)),
+    circleCP: G('<circle cx="11.6" cy="12.4" r="7.6"/><path d="M11.6 12.4 17 6.8" stroke-dasharray="2.6 2.2" stroke-width="1.3"/>' + dot(11.6, 12.4, 1.9) + dot(17, 6.8, 2)),
+    circleCR: G('<circle cx="11.6" cy="12.4" r="7.6"/><path d="M11.6 12.4h7.6" stroke-width="1.5"/>' + dot(11.6, 12.4, 1.9) + dot(19.2, 12.4, 1.7)),
+    circle3: G('<circle cx="12" cy="12.4" r="8"/><path d="M12 4.4 19.1 16.5 4.9 16.5z" stroke-width="1.2" opacity=".4"/>' + dot(12, 4.4, 1.8) + dot(19.1, 16.5, 1.8) + dot(4.9, 16.5, 1.8)),
+    /* 角：GGB 用一个很淡的扇形示意夹角，再画弧 */
+    angle: G('<path d="M3.6 19.4h16.8M3.6 19.4 17.4 4.8" stroke-width="1.9"/><path d="M13.2 19.4a9.6 9.6 0 0 0-2.1-5.9z" fill="currentColor" opacity=".14" stroke="none"/><path d="M13.2 19.4a9.6 9.6 0 0 0-2.1-5.9" stroke-width="1.5"/>'),
+    slider: G('<path d="M2.6 12h18.8" stroke-width="2.2"/><path d="M6.8 12h0M17.2 12h0" stroke-width="2.6" opacity=".35"/>' + dot(14.4, 12, 3.4)),
+    text: G('<path d="M5 5.4h14M12 5.4v13.4M9.2 18.8h5.6"/>'),
+    zeroes: G('<path d="M2.8 17.4c4 0 4.6-11 9.2-11s5.2 11 9.2 11" stroke-width="1.7"/>' + dot(7.4, 8.2, 2.1) + dot(16.6, 8.2, 2.1)),
+    extremum: G('<path d="M2.8 18.4c4.4 0 4.6-12 9.2-12s4.8 12 9.2 12" stroke-width="1.7" opacity=".8"/>' + dot(12, 6.4, 2.2)),
+    turningPoint: G('<path d="M2.8 17.6c3.6 0 4.4-8.6 9.2-8.6s5.6 8.6 9.2 8.6" stroke-width="1.7" opacity=".8"/><path d="M12 8.8V4.4" stroke-width="1.2" opacity=".4"/>' + dot(12, 9, 2.2)),
+  });
+})();
+
 
 /* ── Gemini 形变 loader（60fps shot 逐帧拟合）──
    黄四角闪 → 绿圆角三角 → 蓝绿齿轮 → 彩虹六边形。形状是同一条极坐标曲线
@@ -16881,7 +16948,7 @@ function showHelp() {
       '输入区是一枚玻璃卡片：上输入文字，下排是历史 / Key / 联网 / 图片 / 思考强度与发送圆钮，附件缩略图贴在输入行上方；点右下角箭头键可整块收起为底部角色（点角色再展开）',
       '用自然语言直接作图与解题，回复里的 <code>geogebra</code> 代码块会被自动执行并画到画布',
       '支持看图：点图片按钮、直接粘贴或把图片拖进输入框，可让它「照着这张图作图」「这道题怎么解」',
-      '<b>思考强度</b>：默认 <b>Low</b>；点按钮展开 Codex 风格的推理滑条 —— <b>4 档</b>等距（Off / Low / Medium / High，每档一色，色相从灰经蓝推进到紫罗兰，轨道上带刻度点），拖动实时跟手、松手吸附；落到 <b>High</b> 时轨道换成蓝紫流动渐变并亮起星尘，同时提示「更快消耗使用额度」；面板右上角的回转箭头一键回到默认。每次提问都会自动带上当前画布内容，AI 能直接复用已有的点、线、圆。对话与画布（图片除外）都会自动保存在本机：刷新后点开角色即可继续上次对话（历史默认展开）；重新打开网页时，画布会以一张小卡片提示恢复',
+      '<b>思考强度</b>：默认 <b>Low</b>；点按钮展开 Codex 风格的推理滑条 —— <b>4 档</b>等距（Off / Low / Medium / High，每档一色，色相从灰经蓝推进到紫罗兰，轨道上带刻度点），拖动实时跟手、松手吸附；落到 <b>High</b> 时轨道换成蓝紫流动渐变并亮起星尘，同时提示「更快消耗使用额度」；面板右上角的回转箭头一键回到默认。每次提问都会自动带上当前画布内容，AI 能直接复用已有的点、线、圆。画布上的非图片内容会自动保存在本机：重新打开网页时，会以一张小卡片询问是否恢复；对话不落盘',
       '点「联网」可先检索实时网页：结果会作为资料给 AI，回答里标出来源链接；消息里直接贴网址也会抓取正文',
       '<b>AI 自己再联网</b>：资料不够时它可以在回答里写 <code>search</code> 块（每行一个检索词），控件会真的再查一轮并把结果补给它继续写，一次回答最多补搜两轮；界面只显示「已补充检索 N 条来源」',
       '<b>AI 先问你</b>：条件不清时它写 <code>ask</code> 块，控件把问题显示成一张澄清卡片，选项可以点，点了直接填进输入框；这时它不会凭猜测作图',
@@ -17358,9 +17425,7 @@ function init() {
   bindShare();
   /* AI 面板默认：宽屏常驻，窄屏收起（否则会盖住画布） */
   toggleAI(innerWidth > 1100);
-  /* 本地记忆：上一轮对话从本机还原，宽屏把历史也一并展开（刷新后点开角色即默认展开）；
-     画布若留有自动保存，则弹出恢复卡让用户自己决定。自测模式全部跳过。 */
-  if (aiChatLogRestore() && innerWidth > 1100) toggleAISheet(true);
+  /* 本地记忆：只记画布（图片除外），重开网页时用恢复卡提示；对话一律不落盘。 */
   canvasRestorePrompt();
   /* 小屏幕兼容提示 / 基础功能模式 */
   $('#compatLandscape').onclick = () => lockLandscape();
@@ -18496,25 +18561,64 @@ async function runUITest() {
     chat.innerHTML = keep; await sleep(0);
     if (host.classList.contains('hidden') !== !!chat.querySelector('.msg')) throw new Error('恢复对话后空态状态不对');
   });
-  await A('本地记忆:对话存档的存取', async () => {
-    const KEY = 'geoai_chat_log';
-    const before = $$('#aiChat .msg').length;
-    aiPush('user', '记忆探针u', { noExpand: true });
-    aiChatLogSave(true);
-    const raw = localStorage.getItem(KEY);
-    if (!raw || raw.indexOf('记忆探针u') < 0) throw new Error('存档没有写入 localStorage');
-    localStorage.removeItem(KEY);
-    localStorage.setItem(KEY, JSON.stringify([{ r: 'u', t: '记忆探针r' }]));
-    aiChatLogRestore(true);
-    if ($('#aiChat').textContent.indexOf('记忆探针r') < 0) throw new Error('还原存档没有渲染出消息');
-    if (!state.aiHistory.some(h => h && h.content === '记忆探针r')) throw new Error('还原存档没有接回 API 上下文');
-    /* 清场：探针消息与上下文都要摘干净，别影响后面的用例 */
-    $$('#aiChat .msg').forEach(m => { if (m.textContent.indexOf('记忆探针') >= 0) m.remove(); });
-    state.aiHistory = state.aiHistory.filter(h => !(h && typeof h.content === 'string' && h.content.indexOf('记忆探针') === 0));
-    aiHelloSync(); aiNavBuild(); aiSyncFoldUI();
-    localStorage.removeItem(KEY);
-    const after = $$('#aiChat .msg').length;
-    if (after !== before) throw new Error('清场后消息数变了：' + before + ' → ' + after);
+  await A('本地记忆:画布自动保存与恢复卡', async () => {
+    /* 对话不落盘：旧版本可能留过一个存档键，先清掉，再确认没有新的写入路径 */
+    localStorage.removeItem('geoai_chat_log');
+    aiPush('user', '不该被存档', { noExpand: true });
+    await sleep(0);
+    if (localStorage.getItem('geoai_chat_log')) throw new Error('对话不该写进 localStorage');
+    $$('#aiChat .msg').forEach(m => { if (m.textContent.includes('不该被存档')) m.remove(); });
+    /* 画布自动保存：非图片对象要能存、能读回，图片必须被排除 */
+    state.objects = []; recomputeAll();
+    executeLine('A=(1,2)'); recomputeAll(); await sleep(0);
+    canvasAutoSave(true);
+    const raw = localStorage.getItem('geoai_canvas_autosave');
+    if (!raw) throw new Error('画布自动保存没有写入');
+    const rec = JSON.parse(raw);
+    let saved = null; try { saved = JSON.parse(rec.snap); } catch (e) {}
+    if (!saved || !Array.isArray(saved.o) || !saved.o.length) {
+      throw new Error('自动保存里没有对象：objs=' + state.objects.length + ' raw=' + raw.slice(0, 110));
+    }
+    if (rec.n !== state.objects.length || rec.n < 1) throw new Error('自动保存的对象计数不对：' + rec.n);
+    /* 恢复卡只在画布空且有存档时出现；点「丢弃」要清掉存档 */
+    state.objects = []; recomputeAll();
+    canvasRestorePrompt();
+    const card = $('#cvsRestore');
+    if (!card) throw new Error('有存档且画布为空时没有出现恢复卡');
+    if (!card.textContent.includes('1 个对象')) throw new Error('恢复卡没有显示对象数');
+    if (card.querySelector('.cr-ok').getBoundingClientRect().width < 20) throw new Error('恢复卡缺少恢复按钮');
+    state.objects = [{ id: 'q', type: 'point', x: 0, y: 0, layer: 0 }];
+    $('#cvsRestore').remove(); canvasRestorePrompt();
+    if ($('#cvsRestore')) throw new Error('画布已有内容时不该弹恢复卡');
+    state.objects = []; recomputeAll(); canvasRestorePrompt();
+    $('#cvsRestore .cr-ok').click();
+    if ($('#cvsRestore')) throw new Error('点恢复后卡片没有消失');
+    if (!state.objects.length) throw new Error('点恢复没有把对象放回画布');
+    if (!state.objects.some(o => o.type === 'point')) throw new Error('恢复后没有还原出点');
+    state.objects = []; recomputeAll(); localStorage.setItem('geoai_canvas_autosave', JSON.stringify({ t: Date.now(), n: 2, snap: JSON.stringify({ o: [{ id: 'z2', type: 'point', x: 0, y: 0, layer: 0 }], v: state.view, s: {}, ly: state.layers, cl: 0 }) }));
+    canvasRestorePrompt();
+    $('#cvsRestore .cr-no').click();
+    if ($('#cvsRestore')) throw new Error('点丢弃后卡片没有消失');
+    if (localStorage.getItem('geoai_canvas_autosave')) throw new Error('点丢弃后存档应被清掉');
+    state.objects = []; recomputeAll();
+  });
+  await A('AI:作图时工具区提示 / 完成后自动展开历史', async () => {
+    const tip = $('#aiDrawTip');
+    if (!tip) throw new Error('绘图工具区缺少「AI 正在作图」提示条');
+    if (!tip.hidden) throw new Error('空闲时不该显示作图提示');
+    aiMini(true); await sleep(30);
+    aiIsland('think', '思考中', '测试', { busy: true });
+    if (tip.hidden) throw new Error('AI 生成时没有显示「建议先别手动改画布」提示');
+    if (!tip.closest('#paneTools')) throw new Error('提示条没有挂在绘图工具页签里');
+    aiIsland('done', '完成', '', { busy: false });
+    if (!tip.hidden) throw new Error('AI 结束后提示条应自动收起');
+    /* 终态：胶囊停留后把对话与历史一起放出来 */
+    setHistFold(true); aiMini(true); await sleep(30);
+    aiIslandSettle('done', '完成', '测试', 10);
+    await sleep(90);
+    const dock = $('#aiPanel');
+    if (dock.classList.contains('mini')) throw new Error('完成后没有从角色展开对话');
+    if (dock.classList.contains('hist-fold')) throw new Error('完成后历史记录没有自动展开');
   });
   await A('AI:图片附件管理', async () => {
     state.aiImages = []; renderAiAttach();
@@ -22897,6 +23001,7 @@ function aiIsland(kind, label, sub, opts) {
     const st = $('#aiiStatus'); if (st) st.title = sub;
   }
   const tm = $('#aiiTime');
+  aiDrawTip(busy);
   if (!busy) {
     if (state.aiIslandTick) { clearInterval(state.aiIslandTick); state.aiIslandTick = 0; }
     if (tm) tm.textContent = '';
@@ -22913,17 +23018,26 @@ function aiIsland(kind, label, sub, opts) {
     }, 500);
   }
 }
-/* 终态：停掉计时，让胶囊停留一小会儿再自动展开，避免答案一闪而过 */
+/* 终态：停掉计时，让胶囊停留一小会儿再自动展开，避免答案一闪而过。
+   展开时连历史一起放出来 —— 用户等的是「这一轮到底画了什么」，不该只看到一条输入框。 */
 function aiIslandSettle(kind, label, sub, delay) {
   aiIsland(kind, label, sub, { busy: false });
   if (state.aiIslandTimer) clearTimeout(state.aiIslandTimer);
   state.aiIslandTimer = setTimeout(() => {
     state.aiIslandTimer = 0;
     const dock = $('#aiPanel');
-    if (dock && dock.classList.contains('mini')) aiMini(false);
+    if (!dock) return;
+    if (dock.classList.contains('mini')) aiMini(false);
+    if (kind !== 'stopped') setHistFold(false);
   }, delay == null ? 1300 : delay);
 }
-/* on=true：收起成画布底部的 Grok 角色；on=false：回到完整对话 */
+/* AI 生成期间在绘图工具顶部挂一条建议条：AI 正在按自己的计划加对象，
+   这时手动改画布容易被后续步骤覆盖，也会干扰撤销栈。只在生成时出现。 */
+function aiDrawTip(on) {
+  const el = $('#aiDrawTip'); if (!el) return;
+  if (!!on === !el.hidden) return;
+  el.hidden = !on;
+}
 function aiMini(on) {
   const dock = $('#aiPanel'); if (!dock) return;
   const isl = $('#aiIsland');
@@ -23547,9 +23661,8 @@ function bindAI() {
   inp.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); if (!state.aiBusy) aiSend(); } });
   /* 澄清单里的选项可点：点了直接填进输入框，用户改一改就能发 */
   const chatHost = $('#aiChat');
-  /* 消息增删（发送 / 重做 / 清空全部）后同步空态：只剩「一条都没有」时才露出 hello。
-     对话存档也走同一入口：任何路径改了消息列表，都重写一次 localStorage 存档。 */
-  if (chatHost && window.MutationObserver) new MutationObserver(() => { aiHelloSync(); aiChatLogSoon(); }).observe(chatHost, { childList: true });
+  /* 消息增删（发送 / 重做 / 清空全部）后同步空态：只剩「一条都没有」时才露出 hello */
+  if (chatHost && window.MutationObserver) new MutationObserver(aiHelloSync).observe(chatHost, { childList: true });
   /* 点 hello：转彩虹并重写一遍。动画由 CSS 的 animation 承担，
      重启的办法只有「摘掉 → 强制重排 → 还原」，transition 那套改 delay 的写法在这里不成立。 */
   const helloHost = $('#aiHello');
@@ -23643,39 +23756,6 @@ function aiNavGo(i) {
   if (!msg) return;
   const cr = chat.getBoundingClientRect(), r = msg.getBoundingClientRect();
   chat.scrollTo({ top: Math.max(0, chat.scrollTop + r.top - cr.top - 6), behavior: 'smooth' });
-}
-/* ── 对话存档（本地记忆的另一半） ──
-   只存纯文本（.bubble 的 innerText）：富块（思考链 / 分步卡）不落盘，
-   既省配额也避免把执行残留一并带回来。API 上下文（state.aiHistory）跟着一起还原，
-   追问时模型还记得上一轮。自测模式不读不写。 */
-const AI_CHAT_LOG_KEY = 'geoai_chat_log';
-let aiChatLogTimer = 0;
-function aiChatLogSave(force) {
-  if (TEST_MODE && !force) return;
-  try {
-    const log = [];
-    $$('#aiChat .msg').forEach(m => {
-      const b = m.querySelector('.bubble');
-      const t = b ? String(b.innerText).trim() : '';
-      if (!t) return;
-      log.push({ r: m.classList.contains('user') ? 'u' : 'a', t: t.slice(0, 4000) });
-    });
-    localStorage.setItem(AI_CHAT_LOG_KEY, JSON.stringify(log.slice(-60)));
-  } catch (e) {}
-}
-function aiChatLogSoon() { clearTimeout(aiChatLogTimer); aiChatLogTimer = setTimeout(() => aiChatLogSave(false), 400); }
-function aiChatLogRestore(force) {
-  if (TEST_MODE && !force) return false;
-  let log = [];
-  try { log = JSON.parse(localStorage.getItem(AI_CHAT_LOG_KEY) || '[]'); } catch (e) {}
-  if (!Array.isArray(log) || !log.length) return false;
-  for (const it of log) {
-    if (!it || typeof it.t !== 'string' || !it.t.trim()) continue;
-    const isUser = it.r === 'u';
-    aiPush(isUser ? 'user' : 'ai', it.t, { noExpand: true });
-    try { state.aiHistory.push({ role: isUser ? 'user' : 'assistant', content: it.t }); } catch (e) {}
-  }
-  return !!$('#aiChat .msg');
 }
 /* 空态：没有任何消息时显示手写 hello；一旦有消息就收起，清空对话后又回来。
    DOM 由 MutationObserver 盯着，不管从哪条路径清空（重做、清空全部、脚本）都能同步。 */
