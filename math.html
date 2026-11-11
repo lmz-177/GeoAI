@@ -7677,9 +7677,10 @@ function canvasAutoSave(force) {
   } catch (e) { /* 配额满 / 隐私模式：静默放弃，不影响画图 */ }
 }
 function canvasAutoSaveSoon() { if (TEST_MODE) return; clearTimeout(canvasSaveTimer); canvasSaveTimer = setTimeout(canvasAutoSave, 900); }
-/* 恢复卡：只在「真的有东西可恢复」且「当前画布是空的」时出现 */
-function canvasRestorePrompt() {
-  if (TEST_MODE) return;
+/* 恢复卡：只在「真的有东西可恢复」且「当前画布是空的」时出现。
+   force=true 供自测使用（自测模式默认不读本地存档，避免测试之间互相污染）。 */
+function canvasRestorePrompt(force) {
+  if (TEST_MODE && !force) return;
   let rec = null;
   try { rec = JSON.parse(localStorage.getItem(AI_CANVAS_KEY) || 'null'); } catch (e) {}
   if (!rec || typeof rec.snap !== 'string') return;
@@ -18582,21 +18583,21 @@ async function runUITest() {
     if (rec.n !== state.objects.length || rec.n < 1) throw new Error('自动保存的对象计数不对：' + rec.n);
     /* 恢复卡只在画布空且有存档时出现；点「丢弃」要清掉存档 */
     state.objects = []; recomputeAll();
-    canvasRestorePrompt();
+    canvasRestorePrompt(true);
     const card = $('#cvsRestore');
     if (!card) throw new Error('有存档且画布为空时没有出现恢复卡');
     if (!card.textContent.includes('1 个对象')) throw new Error('恢复卡没有显示对象数');
     if (card.querySelector('.cr-ok').getBoundingClientRect().width < 20) throw new Error('恢复卡缺少恢复按钮');
     state.objects = [{ id: 'q', type: 'point', x: 0, y: 0, layer: 0 }];
-    $('#cvsRestore').remove(); canvasRestorePrompt();
+    $('#cvsRestore').remove(); canvasRestorePrompt(true);
     if ($('#cvsRestore')) throw new Error('画布已有内容时不该弹恢复卡');
-    state.objects = []; recomputeAll(); canvasRestorePrompt();
+    state.objects = []; recomputeAll(); canvasRestorePrompt(true);
     $('#cvsRestore .cr-ok').click();
     if ($('#cvsRestore')) throw new Error('点恢复后卡片没有消失');
     if (!state.objects.length) throw new Error('点恢复没有把对象放回画布');
     if (!state.objects.some(o => o.type === 'point')) throw new Error('恢复后没有还原出点');
     state.objects = []; recomputeAll(); localStorage.setItem('geoai_canvas_autosave', JSON.stringify({ t: Date.now(), n: 2, snap: JSON.stringify({ o: [{ id: 'z2', type: 'point', x: 0, y: 0, layer: 0 }], v: state.view, s: {}, ly: state.layers, cl: 0 }) }));
-    canvasRestorePrompt();
+    canvasRestorePrompt(true);
     $('#cvsRestore .cr-no').click();
     if ($('#cvsRestore')) throw new Error('点丢弃后卡片没有消失');
     if (localStorage.getItem('geoai_canvas_autosave')) throw new Error('点丢弃后存档应被清掉');
@@ -23328,6 +23329,11 @@ function aiSyncEffort(keepValue) {
      再由 aiEffortVisual 用同一位置重画视觉 */
   aiEffortPick(i);
   aiEffortVisual(i / n);
+  /* 档位文案长度不同（Off / Medium / 思考深度 · High），胶囊宽度会跟着变，
+     而菜单是相对胶囊中心定位的 —— 同步完必须重量一次，否则菜单会留在旧位置上飘着。 */
+  if (typeof aiiEffPlace === 'function') {
+    requestAnimationFrame(() => { try { aiiEffPlace(); } catch (e) {} });
+  }
 }
 function bindAI() {
   /* 消息头的「重做」按钮：聊天区是流式插入消息的，逐条绑会漏，统一委托一次 */
@@ -23525,7 +23531,10 @@ function bindAI() {
     const apply = () => {
       raf = 0;
       const idle = dock.classList.contains('mini') && isl2.dataset.kind === 'idle' && !isl2.classList.contains('busy');
-      if (!idle) {
+      /* 思考深度面板打开时不做磁吸：拖档位是横向扫指针，球跟着指针挪会让整块
+         菜单看起来在「乱飘」，档位也点不准。面板一关自然恢复。 */
+      const effOpen = !!document.querySelector('#aiiEff.on');
+      if (!idle || effOpen) {
         /* 生成中 / 展开时把让位归零，别让球停在歪的位置上 */
         if (shx || shy) { shx = shy = 0; isl2.style.transform = ''; }
         return;
