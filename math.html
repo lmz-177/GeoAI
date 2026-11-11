@@ -318,7 +318,7 @@ body.dark .app::before{
   border-radius:12px;color:var(--text);transition:var(--t-ui);position:relative;
 }
 .ttrigger:hover{background:var(--hover)}
-.ttrigger:active{transform:scale(.96)}
+.ttrigger:active{transform:scale(.96);background:var(--active)}
 .ttrigger.on{background:var(--accent);color:#fff;box-shadow:0 2px 8px var(--accent-soft)}
 .ttrigger svg{width:24px;height:24px;flex:0 0 24px}
 /* 工具名常驻：13 组图标单看形状认不全，GGB 的工具箱也是一格一个名字 */
@@ -523,6 +523,8 @@ body.tool-folded .tool-head{padding-bottom:0}
   border:.5px solid var(--border);background:var(--panel-2);
 }
 .lp-row.cur{border-color:var(--accent);background:var(--active)}
+/* 行是「点名字切当前图层」的命中区，按下去先给灰底再谈选中 */
+.lp-row:active{background:var(--active)}
 .lp-row .lp-name{
   flex:1;min-width:0;font-size:var(--fs-xs);font-weight:600;color:var(--text);
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer;
@@ -602,7 +604,8 @@ body.tool-folded .tool-head{padding-bottom:0}
   display:flex;align-items:center;justify-content:center;transition:var(--t-ui);white-space:nowrap;overflow:hidden;
 }
 .kb-key:hover{background:var(--accent-dim);color:var(--accent)}
-.kb-key:active{transform:scale(.94)}
+/* 按压闪一下主色再弹回 —— SF 计算器按键的那种确认感，比单纯缩放更「敲下去」 */
+.kb-key:active{transform:scale(.94);background:var(--accent);color:#fff;box-shadow:none}
 /* GGB 键盘的分组页签：一排细分的胶囊，选中项用主色浅底——和上方 iOS 分段控件同一套语言，
    但更矮更轻，因为它只是键盘内部的分区，不该抢输入框的视觉重心。 */
 .kb-tabs{display:flex;gap:3px;margin-bottom:7px;overflow-x:auto;scrollbar-width:none}
@@ -924,7 +927,7 @@ body.dark .eff-warn{color:#c39bff}
   background:var(--accent);color:#fff;font-size:15px;font-weight:600;
   box-shadow:0 4px 14px var(--accent-soft);transition:var(--t-ui)}
 .api-primary:hover{background:var(--accent-h)}
-.api-primary:active{transform:scale(.985)}
+.api-primary:active{transform:scale(.97)}
 .api-primary:disabled{opacity:.4;pointer-events:none;box-shadow:none}
 .api-primary.flash{background:var(--ok);box-shadow:0 4px 14px rgba(52,199,89,.3)}
 .api-spin{display:none;width:14px;height:14px;border-radius:50%;border:2px solid rgba(255,255,255,.35);
