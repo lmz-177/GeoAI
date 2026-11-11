@@ -89,6 +89,8 @@ body{
 ::-webkit-scrollbar-track{background:transparent}
 ::-webkit-scrollbar-thumb{background:var(--border-2);border-radius:99px;border:2px solid transparent;background-clip:content-box}
 ::-webkit-scrollbar-thumb:hover{background:var(--text-3);background-clip:content-box}
+::-webkit-scrollbar-thumb:active{background:var(--text-2);background-clip:content-box}
+::-webkit-scrollbar-corner{background:transparent}
 ::selection{background:var(--sel)}
 button,input,textarea,select{font-family:inherit;font-size:inherit;color:inherit;outline:none;border:none;background:none}
 button{cursor:pointer;touch-action:manipulation}
@@ -1084,12 +1086,17 @@ body.dark .eff-warn{color:#c39bff}
 .plan-hd{font-size:var(--fs-2xs);font-weight:700;color:var(--text-3);letter-spacing:.2px;margin-bottom:4px}
 .plan-card ol{margin:0;padding-left:19px}
 .plan-card li{margin:2px 0;font-size:var(--fs-xs);line-height:1.55;color:var(--text-2)}
-.ai-step{margin-top:10px;padding-top:9px;border-top:.5px dashed var(--border)}
+.ai-step{margin-top:10px;padding:8px 10px 9px;border-radius:12px;background:var(--panel-2);border:.5px solid var(--border)}
 .ai-step-hd{display:flex;align-items:center;gap:7px;font-size:var(--fs-2xs);color:var(--text-3);margin-bottom:4px}
 .ai-step-n{flex:0 0 auto;padding:1.5px 7px;border-radius:99px;background:var(--accent-dim);color:var(--accent);font-weight:700}
 .ai-step-go{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.ai-step-tx{font-size:var(--fs-sm);line-height:1.65;color:var(--text)}
+.ai-step-tx{font-size:var(--fs-sm);line-height:1.65;color:var(--text);overflow-wrap:anywhere}
 .ai-step-tx:empty{display:none}
+/* 对话滚动区禁止滚动链：内容滚到头时不要把整个页面带着滚 */
+#aiChat{overscroll-behavior:contain}
+/* 每一步进场：轻微上滑淡入，让「画一步看一步」的节奏感更明显（减弱动效时全局规则会自动停掉） */
+.ai-step{animation:aiStepIn .22s var(--ease-out)}
+@keyframes aiStepIn{from{opacity:0;transform:translateY(3px)}to{opacity:1;transform:none}}
 /* 输入区是一列：附件 → 工具排 → 输入胶囊。只有胶囊带玻璃底，
    工具排与附件浮在它上方，视觉上不抢输入框的位置。 */
 .ai-input{
