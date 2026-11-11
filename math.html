@@ -9482,15 +9482,26 @@ C('Polyline', 'Polyline(点1, 点2, …)', '依次连接的折线', (a, ctx) => 
   if (p.length < 2) throw new Error('至少需要两个点');
   return [mkObj('polyline', { kind: 'points', parents: p.map(x => x.id), label: ctx.label })];
 }, ['折线']);
-C('PerpendicularLine', 'PerpendicularLine(点, 直线)', '过点作垂线', (a, ctx) => {
+/* 垂线 / 平行线的参数顺序 GeoGebra 是（点, 直线），但模型经常写成（直线, 点）；
+   两种顺序都认，免得只因为顺序反了整条命令失败。 */
+function orderPtLine(a) {
+  const x = a[0] && a[0].obj, y = a[1] && a[1].obj;
+  if (x && y) {
+    if (x.type === 'point' && lineOf(y)) return { p: x, l: y };
+    if (y.type === 'point' && lineOf(x)) return { p: y, l: x };
+    if (x.type === 'point') throw new Error('第二个参数需要是直线、线段或射线');
+  }
   const p = ensurePoint(a[0]); const l = ensureObj(a[1]);
   if (!lineOf(l)) throw new Error('第二个参数需要是直线、线段或射线');
-  return [mkObj('line', { kind: 'perp', parents: [p.id, l.id], label: ctx.label })];
+  return { p, l };
+}
+C('PerpendicularLine', 'PerpendicularLine(点, 直线)', '过点作垂线（参数顺序可颠倒）', (a, ctx) => {
+  const q = orderPtLine(a);
+  return [mkObj('line', { kind: 'perp', parents: [q.p.id, q.l.id], label: ctx.label })];
 }, ['垂线', 'Perpendicular', 'OrthogonalLine', '垂直线']);
-C('ParallelLine', 'ParallelLine(点, 直线)', '过点作平行线', (a, ctx) => {
-  const p = ensurePoint(a[0]); const l = ensureObj(a[1]);
-  if (!lineOf(l)) throw new Error('第二个参数需要是直线、线段或射线');
-  return [mkObj('line', { kind: 'parallel', parents: [p.id, l.id], label: ctx.label })];
+C('ParallelLine', 'ParallelLine(点, 直线)', '过点作平行线（参数顺序可颠倒）', (a, ctx) => {
+  const q = orderPtLine(a);
+  return [mkObj('line', { kind: 'parallel', parents: [q.p.id, q.l.id], label: ctx.label })];
 }, ['平行线', 'Parallel', '平行']);
 C('PerpendicularBisector', 'PerpendicularBisector(点1, 点2)', '中垂线', (a, ctx) => {
   if (a.length === 1 && a[0].obj && a[0].obj.type === 'segment') return [mkObj('line', { kind: 'perpBisector', parents: [a[0].obj.id], label: ctx.label })];
@@ -9963,10 +9974,19 @@ C('Eccentricity', 'Eccentricity(圆锥曲线)', '离心率', (a, ctx) => {
   if (!st) throw new Error('需要圆或圆锥曲线');
   return [mkObj('number', { kind: 'ecc', parents: [o.id], src: '', label: ctx.label, value: st.e })];
 }, ['离心率']);
-C('Vertex', 'Vertex(圆锥曲线)', '顶点（椭圆 / 双曲线两个，抛物线一个）', (a, ctx) => {
+C('Vertex', 'Vertex(圆锥曲线 / 函数)', '顶点（椭圆 / 双曲线两个；对函数取极值点）', (a, ctx) => {
   const o = ensureObj(a[0]);
+  /* 模型经常对函数写 Vertex(f)：GeoGebra 里那其实是 Extremum，这里直接兼容，
+     默认取当前可视区间，找不到再退回 ±20。 */
+  if (o.type === 'function') {
+    const lo = toWorldX(0), hi = toWorldX(canvas.clientWidth);
+    let r = numericExtremum(o.fn, lo, hi);
+    if (!r) r = numericExtremum(o.fn, -20, 20);
+    if (!r) throw new Error('该函数在可视范围内没有极值点');
+    return [mkObj('point', { kind: 'extremum', parents: [o.id], def: { lo, hi, max: !!r.max }, label: ctx.label })];
+  }
   const st = conicState(o);
-  if (!st) throw new Error('需要圆或圆锥曲线');
+  if (!st) throw new Error('需要圆、圆锥曲线或函数');
   if (st.kind === 'parabola') return [mkObj('point', { kind: 'conicVertex', parents: [o.id], def: { i: 0 }, label: ctx.label })];
   return [0, 1].map(i => mkObj('point', { kind: 'conicVertex', parents: [o.id], def: { i }, label: i === 0 ? ctx.label : '' }));
 }, ['顶点']);
@@ -25291,6 +25311,7 @@ async function aiSend() {
   const AI_PAINT_MS = 40;
   const AI_FIX_MAX = 2;   /* 作图命令执行失败时，回传 AI 重新生成的次数上限 */
   const AI_REACT_MAX = 10;   /* ReAct 循环的步数上限：一步一个小动作，够画完一道中考压轴题 */
+  const AI_OBJ_CAP = 60;     /* 单条命令最多允许新建的对象数，超过视为失控并整条撤回 */
   const SEARCH_MAX_ROUNDS = 2;   /* AI 自己发起「再联网检索」的次数上限，避免无限自搜 */
   let paintTimer = 0, paintedR = '', paintedC = '', pendingR = '', pendingC = '';
   let streamExec = null;   /* 流式作图：每个完整的 geogebra 代码块一到就执行（定义在 runCmds 之后） */
@@ -25344,7 +25365,18 @@ async function aiSend() {
     try {
       for (const c of list) {
         try {
+          const before = state.objects.length;
           const r = executeLine(c);
+          const grew = state.objects.length - before;
+          /* 一条命令炸出几十个对象，几乎都是把函数 / 圆和一条「线」误当成闭合多边形求交，
+             或者用了不该用的批量构造。整条回滚，别让一次失误把画布淹掉。 */
+          if (grew > AI_OBJ_CAP) {
+            const dead = new Set(state.objects.slice(before).map(o => o.id));
+            state.objects = state.objects.filter(o => !dead.has(o.id));
+            recomputeAll();
+            rs.push({ ok: false, line: c, err: '这条命令一次生成了 ' + grew + ' 个对象（上限 ' + AI_OBJ_CAP + '），已整条撤回；请改用更直接的命令，不要批量生成点' });
+            continue;
+          }
           (r.created || []).forEach(o => { try { computeObject(o); } catch (e) { } });
           rs.push({ ok: true, line: c, label: (r.created && r.created.length) ? r.created.map(o => o.label).join(', ') : '' });
         } catch (e) { rs.push({ ok: false, line: c, err: e.message }); }
