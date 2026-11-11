@@ -1063,6 +1063,26 @@ body.dark .eff-warn{color:#c39bff}
    每条记录 = 左侧轨道（竖线 + 角色色节点）+ 右侧内容（角色 · 时间 → 正文）。
    结构靠轨道表达，不再用分隔线 + 彩条堆在每行上；用户输入包一层引用块，
    AI 回复保持素排，扫一眼就能分清谁说了什么。 */
+/* ── 对话空态：手写的 hello ──
+   一条消息都没有时，会话区只留一段自己「写」出来的 hello 和一句提示；
+   发出第一条指令就收起，把对话清空后又回来。
+   笔画用 pathLength="1" 归一化，dashoffset 1→0 即写完，不必用 JS 去量每条路径的长度。 */
+.ai-hello{
+  flex:0 0 auto;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:12px;padding:26px 16px 22px;pointer-events:none;user-select:none;
+}
+.ai-hello svg{width:168px;height:auto;overflow:visible;color:var(--text)}
+.ai-hello path{
+  fill:none;stroke:currentColor;stroke-width:6;stroke-linecap:round;stroke-linejoin:round;
+  stroke-dasharray:1;stroke-dashoffset:1;
+}
+/* 只在面板真的展开时动笔：收起重开就会重写一遍，跟手写的节奏一致。
+   收起时动画整条失效、笔画回到隐藏态，不会留一幅「写完的静态图」。 */
+.ai-dock.sheet-open .ai-hello path{animation:helloInk .6s var(--ease-out) forwards;animation-delay:var(--d,0s)}
+@keyframes helloInk{to{stroke-dashoffset:0}}
+.ai-hello-txt{font-size:var(--fs-sm);font-weight:500;color:var(--text-3);letter-spacing:.1px;opacity:0}
+.ai-dock.sheet-open .ai-hello-txt{animation:helloHint .55s var(--ease-out) .95s both}
+@keyframes helloHint{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
 .ai-chat{flex:1 1 auto;min-height:0;overflow-y:auto;padding:10px 14px 14px 16px;display:flex;flex-direction:column;gap:0;scroll-behavior:smooth}
 .msg{display:grid;grid-template-columns:16px minmax(0,1fr);column-gap:12px;align-items:stretch;
   padding:9px 6px 9px 0;border-radius:10px;max-width:100%;animation:fadeUp var(--t)}
@@ -2064,12 +2084,25 @@ body.dark .modal,body.dark .cmd-search,body.dark .toolwrap{
             <button class="ai-sh-fold" id="aiHistFold" aria-expanded="true" aria-controls="aiChat" title="收起历史记录（输入框不受影响）">
               <span class="ai-sh-chev" id="aiHistChev" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9.5 12 15.5l6-6"></path></svg></span>
               <span class="ai-sh-name">历史记录</span>
-              <span class="ai-sh-cnt" id="aiMsgCount" title="历史条数">1</span>
+              <span class="ai-sh-cnt" id="aiMsgCount" title="历史条数">0</span>
             </button>
             <span class="spacer"></span>
           </div>
           <div class="ai-chat-wrap">
-            <div class="ai-chat" id="aiChat"><div class="msg ai"><div class="rail"><span class="dot"></span></div><div class="body"><div class="meta"><span class="who">AI 助手</span><span class="t">18:25</span></div><div class="bubble"><div class="md-p">我是画板里的 AI 助手。看图、解题、作图，都可以交给我。</div><div class="md-p">说出你的想法，我会一边推理，一边把它画到画布上。</div><div class="md-p">也可以轻点左下角「图片」，或粘贴、拖入一张截图——手写题、函数图像，都能还原。</div><div class="md-p">例如：画出 y=x²-2x-3，并标出顶点与零点。</div></div></div></div></div>
+            <!-- 空态：手写 hello。发出第一条指令即收起，清空全部对话后又回来 -->
+            <div class="ai-hello" id="aiHello" aria-hidden="true">
+              <svg viewBox="0 0 250 96">
+                <path pathLength="1" d="M30 74V22" style="--d:0s"></path>
+                <path pathLength="1" d="M30 52c3-10 16-15 25-8 7 5 8 18 8 30" style="--d:.16s"></path>
+                <path pathLength="1" d="M113 51c-2-10-14-14-21-7-8 7-6 22 4 27 8 3 16-2 18-9" style="--d:.42s"></path>
+                <path pathLength="1" d="M87 57h26" style="--d:.76s"></path>
+                <path pathLength="1" d="M128 74V22c0-4 2-6 6-5" style="--d:.9s"></path>
+                <path pathLength="1" d="M152 74V22c0-4 2-6 6-5" style="--d:1.04s"></path>
+                <path pathLength="1" d="M192 40c-11-1-20 8-19 19 1 12 13 18 24 15 10-3 14-15 8-24-3-4-8-8-13-10z" style="--d:1.2s"></path>
+              </svg>
+              <div class="ai-hello-txt">说一句，我把它画出来</div>
+            </div>
+            <div class="ai-chat" id="aiChat"></div>
             <div class="ai-msg-nav" id="aiMsgNav" role="navigation" aria-label="对话消息导航"></div>
           </div>
         </div>
@@ -2116,14 +2149,14 @@ body.dark .modal,body.dark .cmd-search,body.dark .toolwrap{
             <div class="ai-hist-mini" id="aiHistMini">
               <button class="ai-tool" id="aiHistBtn" title="展开历史记录" aria-label="展开历史记录" aria-expanded="false" aria-controls="aiChat">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6.5h16M4 12h16M4 17.5h10"></path></svg>
-                <span class="ai-hist-cnt" id="aiHistCnt" aria-hidden="true">1</span>
+                <span class="ai-hist-cnt" id="aiHistCnt" aria-hidden="true">0</span>
               </button>
             </div>
             <!-- 历史记录展开时，工具排里也留一枚「收起历史」键：折叠入口始终在同一处 -->
             <div class="ai-hist-mini ai-hist-open" id="aiHistOpen">
               <button class="ai-tool on" id="aiHistBtnOpen" title="收起历史记录" aria-label="收起历史记录" aria-expanded="true" aria-controls="aiChat">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6.5h16M4 12h16M4 17.5h10"></path></svg>
-                <span class="ai-hist-cnt" id="aiHistCntOpen" aria-hidden="true">1</span>
+                <span class="ai-hist-cnt" id="aiHistCntOpen" aria-hidden="true">0</span>
               </button>
             </div>
             <button class="ai-tool" id="aiKeyBtn" title="API Key：未配置，点此填入" aria-label="API Key" aria-haspopup="dialog" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="12" r="4"></circle><path d="M12 12h9M17.5 12v3M20.5 12v2"></path></svg></button>
@@ -18349,6 +18382,21 @@ async function runUITest() {
     if (document.querySelector('.ex-txt') || document.querySelector('.ex-nx')) throw new Error('建议条（试试…）残留');
     if (document.querySelector('.ex-lbl')) throw new Error('建议条标签残留');
   });
+  /* 空态：没有消息时手写 hello 在，发出第一条指令就收起，清空全部对话后回来 */
+  await A('AI:空态 hello 跟随消息增删', async () => {
+    const host = $('#aiHello'), chat = $('#aiChat');
+    if (!host) throw new Error('空态 hello 缺失');
+    if (host.querySelectorAll('path').length !== 7) throw new Error('hello 笔画数不对');
+    const keep = chat.innerHTML;
+    chat.innerHTML = ''; await sleep(0);
+    if (host.classList.contains('hidden')) throw new Error('没有消息时 hello 应显示');
+    aiPush('user', '测试一下'); await sleep(0);
+    if (!host.classList.contains('hidden')) throw new Error('发出第一条指令后 hello 应收起');
+    chat.innerHTML = ''; await sleep(0);
+    if (host.classList.contains('hidden')) throw new Error('清空全部对话后 hello 应恢复');
+    chat.innerHTML = keep; await sleep(0);
+    if (host.classList.contains('hidden') !== !!chat.querySelector('.msg')) throw new Error('恢复对话后空态状态不对');
+  });
   await A('AI:图片附件管理', async () => {
     state.aiImages = []; renderAiAttach();
     if (!$('#aiPickImg') || !$('#aiImgFile') || !$('#aiAttach')) throw new Error('图片入口缺失');
@@ -23377,6 +23425,8 @@ function bindAI() {
   inp.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); if (!state.aiBusy) aiSend(); } });
   /* 澄清单里的选项可点：点了直接填进输入框，用户改一改就能发 */
   const chatHost = $('#aiChat');
+  /* 消息增删（发送 / 重做 / 清空全部）后同步空态：只剩「一条都没有」时才露出 hello */
+  if (chatHost && window.MutationObserver) new MutationObserver(aiHelloSync).observe(chatHost, { childList: true });
   if (chatHost) chatHost.addEventListener('click', e => {
     const cp = e.target.closest('.md-copy');
     if (cp) {
@@ -23461,10 +23511,15 @@ function aiNavGo(i) {
   const cr = chat.getBoundingClientRect(), r = msg.getBoundingClientRect();
   chat.scrollTo({ top: Math.max(0, chat.scrollTop + r.top - cr.top - 6), behavior: 'smooth' });
 }
-function aiWelcome(noExpand) {
-  if ($('#aiChat').children.length) return;
-  /* 首次进入保持折叠，不抢画布空间 */
-  aiPush('assistant', '我是画板里的 AI 助手。看图、解题、作图，都可以交给我。\n\n说出你的想法，我会一边推理，一边把它画到画布上。\n\n也可以轻点左下角「图片」，或粘贴、拖入一张截图——手写题、函数图像，都能还原。\n\n例如：画出 y=x²-2x-3，并标出顶点与零点。', { noExpand: !!noExpand });
+/* 空态：没有任何消息时显示手写 hello；一旦有消息就收起，清空对话后又回来。
+   DOM 由 MutationObserver 盯着，不管从哪条路径清空（重做、清空全部、脚本）都能同步。 */
+function aiHelloSync() {
+  const host = $('#aiHello'), chat = $('#aiChat');
+  if (!host || !chat) return;
+  host.classList.toggle('hidden', !!chat.querySelector('.msg'));
+}
+function aiWelcome() {
+  aiHelloSync();
 }
 /* 「重做」：撤回最后一轮的提问 + 回复，再用同样的输入重发。
    只认最后一条 AI 消息上的按钮 —— 点历史里的旧消息不该把后面的对话一起删掉。
@@ -23511,6 +23566,7 @@ function aiPush(role, text, opts) {
     '<div class="body"><div class="meta"><span class="who">' + who + '</span><span class="t">' + time + '</span></div>' +
     '<div class="bubble">' + (role === 'user' ? esc(text) : renderAIContent(text)) + '</div>' + imgHtml + '</div>';
   chat.appendChild(wrap);
+  aiHelloSync();
   if (atBottom) chat.scrollTop = chat.scrollHeight;
   const cnt = $('#aiMsgCount'); if (cnt) cnt.textContent = String(chat.children.length);
   const cnt2 = $('#aiHistCnt'); if (cnt2) cnt2.textContent = String(chat.children.length);
