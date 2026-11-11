@@ -928,20 +928,19 @@ body.dark .eff-warn{color:#c39bff}
 /* DeepSeek API Key：极简 iOS 卡片，一次只露一个主操作 */
 .api-pop{
   position:absolute;left:0;bottom:calc(100% + 10px);width:min(348px,calc(100vw - 24px));
-  padding:0 0 16px;border-radius:20px;z-index:45;display:none;
+  padding:0 0 14px;border-radius:20px;z-index:45;display:none;
   background:var(--glass-2);border:.5px solid var(--glass-brd);
   box-shadow:var(--shadow-lg),var(--hi-strong);
   -webkit-backdrop-filter:var(--glass-blur);backdrop-filter:var(--glass-blur);
 }
 .api-pop.on{display:block;animation:apiPopIn .22s var(--ease-out) both}
 @keyframes apiPopIn{from{opacity:0;transform:translateY(10px) scale(.985)}to{opacity:1;transform:translateY(0) scale(1)}}
-.api-pop-head{display:flex;align-items:center;padding:18px 18px 0}
+.api-pop-head{display:flex;align-items:center;padding:16px 16px 10px}
 .api-pop-ttl{flex:1;font-size:16px;font-weight:700;letter-spacing:-.2px;line-height:22px;color:var(--text)}
 .api-close{flex:0 0 26px;width:26px;height:26px;border-radius:50%;display:grid;place-items:center;
   color:var(--text-3);background:var(--panel-3);transition:var(--t-ui)}
 .api-close:hover{background:var(--hover);color:var(--text)}
 .api-close svg{width:13px;height:13px}
-.api-pop-sub{padding:4px 18px 14px;font-size:var(--fs-xs);line-height:17px;color:var(--text-3)}
 /* 输入行：44pt 触控高度 + 聚焦描边（幕布要盖在上面，需要 relative） */
 .api-field{margin:0 16px;display:flex;align-items:center;height:46px;border-radius:12px;position:relative;
   background:var(--panel-2);border:.5px solid var(--border);
@@ -968,50 +967,35 @@ body.dark .eff-warn{color:#c39bff}
 .api-seal-txt{flex:1;min-width:0;font-family:var(--mono);font-size:var(--fs-sm);letter-spacing:.08em;
   color:var(--accent);white-space:nowrap;overflow:hidden;transition:color .28s ease}
 .api-seal.sealed .api-seal-txt{color:var(--ok)}
-.api-seal-alg{flex:0 0 auto;padding:2px 7px;border-radius:99px;background:var(--accent-dim);
-  font-family:var(--mono);font-size:var(--fs-3xs);font-weight:600;letter-spacing:.03em;color:var(--accent);
-  transition:background .28s ease,color .28s ease}
-.api-seal.sealed .api-seal-alg{background:var(--ok-dim,rgba(52,199,89,.14));color:var(--ok)}
-/* 已保存态：封存卡。不放任何一段真实的 Key —— 左侧加密徽章，标题下是本机
-   AES-GCM 密文的开头几位（密文本来就存在本机，露出它也不可能反推出 Key），
-   右侧「更换」小键；下沿一条账户余额行。 */
+/* 已保存态：一行封存卡 —— 盾牌 + 已加密保存 + 余额 + 刷新 + 更换。
+   不放任何一段真实的 Key，也不堆加密方式说明。 */
 .api-key-card{
-  margin:0 16px;padding:12px 13px;border-radius:14px;
-  background:var(--panel-2);border:.5px solid var(--border);
+  margin:0 16px;display:flex;align-items:center;gap:8px;height:46px;padding:0 5px 0 11px;
+  border-radius:12px;background:var(--panel-2);border:.5px solid var(--border);
   animation:apiKeyIn .3s var(--ease-out) both;
 }
 @keyframes apiKeyIn{from{opacity:0;transform:translateY(-5px) scale(.985)}to{opacity:1;transform:none}}
 .api-key-card[hidden]{display:none}
-.akc-row{display:flex;align-items:center;gap:10px}
-.akc-ic{flex:0 0 34px;width:34px;height:34px;border-radius:10px;display:grid;place-items:center;
+.akc-ic{flex:0 0 30px;width:30px;height:30px;border-radius:9px;display:grid;place-items:center;
   background:var(--accent-dim);color:var(--accent)}
-.akc-ic svg{width:18px;height:18px}
-.akc-info{flex:1;min-width:0}
-.akc-ttl{display:flex;align-items:center;gap:6px;font-size:var(--fs-sm);font-weight:600;
-  letter-spacing:-.2px;color:var(--text);white-space:nowrap}
-.akc-alg{flex:0 0 auto;padding:1.5px 6px;border-radius:99px;background:var(--panel-3);
-  font-family:var(--mono);font-size:var(--fs-3xs);font-weight:500;letter-spacing:.02em;color:var(--text-3)}
-.akc-ct{margin-top:2px;font-family:var(--mono);font-size:var(--fs-2xs);letter-spacing:.03em;
-  color:var(--text-3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.api-key-change{flex:0 0 auto;height:32px;padding:0 12px;border-radius:9px;
-  font-size:var(--fs-xs);font-weight:600;color:var(--accent);background:var(--accent-dim);transition:var(--t-ui)}
-.api-key-change:hover{background:var(--accent);color:#fff}
-.api-key-change:active{transform:scale(.95)}
-.akc-sep{margin:10px -13px;border-top:.5px solid var(--border)}
-.akc-bal{display:flex;align-items:center;gap:7px;min-height:24px}
-.akc-bal-lb{font-size:var(--fs-xs);color:var(--text-3)}
+.akc-ic svg{width:16px;height:16px}
+.akc-ttl{flex:0 0 auto;font-size:var(--fs-sm);font-weight:600;letter-spacing:-.2px;color:var(--text);white-space:nowrap}
 .akc-bal-amt{margin-left:auto;font-family:var(--mono);font-size:var(--fs-sm);font-weight:600;
   letter-spacing:-.01em;color:var(--text-3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.akc-bal[data-state="ok"] .akc-bal-amt{color:var(--text)}
-.akc-bal[data-state="warn"] .akc-bal-amt{color:var(--warn)}
-.akc-bal[data-state="err"] .akc-bal-amt{color:var(--danger)}
+.api-key-card[data-bal="ok"] .akc-bal-amt{color:var(--text)}
+.api-key-card[data-bal="warn"] .akc-bal-amt{color:var(--warn)}
+.api-key-card[data-bal="err"] .akc-bal-amt{color:var(--danger)}
 .akc-refresh{flex:0 0 28px;width:28px;height:28px;border-radius:50%;display:grid;place-items:center;
   color:var(--text-3);background:var(--panel-3);transition:var(--t-ui)}
 .akc-refresh:hover{background:var(--hover);color:var(--text)}
 .akc-refresh:active{transform:scale(.92)}
 .akc-refresh svg{width:14px;height:14px}
 .akc-refresh[disabled]{opacity:.5}
-.akc-bal[data-state="loading"] .akc-refresh svg{animation:apiSpin .7s linear infinite}
+.api-key-card[data-bal="loading"] .akc-refresh svg{animation:apiSpin .7s linear infinite}
+.api-key-change{flex:0 0 auto;height:32px;padding:0 12px;border-radius:9px;
+  font-size:var(--fs-xs);font-weight:600;color:var(--accent);background:var(--accent-dim);transition:var(--t-ui)}
+.api-key-change:hover{background:var(--accent);color:#fff}
+.api-key-change:active{transform:scale(.95)}
 /* 两态切换：编辑区展开 / 收起，display 切换 + 各自的进场动画 */
 .api-editor{display:block}
 .api-editor[hidden]{display:none}
@@ -1049,7 +1033,6 @@ body.dark .eff-warn{color:#c39bff}
   font-size:var(--fs-xs);font-weight:500;color:var(--accent);text-decoration:none;border-radius:8px}
 .api-link:hover{opacity:.72}
 .api-link svg{width:12px;height:12px}
-.api-pop-note{padding:6px 22px 0;font-size:var(--fs-2xs);line-height:1.5;color:var(--text-3);text-align:center}
 .ai-tool.needs-key{color:var(--warn);border-color:var(--warn)}
 @media (max-width:600px){
   .api-pop{left:-2px;width:calc(100vw - 24px)}
@@ -2095,38 +2078,27 @@ body.dark .modal,body.dark .cmd-search,body.dark .toolwrap{
           <div class="ai-drop">松开即可添加图片</div>
           <div class="ai-attach" id="aiAttach"></div>
           <!-- DeepSeek API Key：极简卡片，主操作始终只有一个 -->
-          <div class="api-pop" id="apiPop" role="dialog" aria-label="DeepSeek API Key">
+          <div class="api-pop" id="apiPop" role="dialog" aria-label="API Key">
             <div class="api-pop-head">
               <div class="api-pop-ttl">DeepSeek API</div>
               <button class="api-close" id="apiPopClose" title="关闭" aria-label="关闭"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6 6 18"></path></svg></button>
             </div>
-            <div class="api-pop-sub">使用你自己的 Key，仅支持 DeepSeek 官方接口</div>
-            <!-- 已保存态：封存卡。不放 Key 的任何真实字符 —— 标题下那串「密文」就是
-                 本机存下来的 AES-GCM 密文的开头几位（密文本来就存在本机，露出它也不可能
-                 反推出 Key），看得见「真的加密了」；下沿一条 DeepSeek 账户余额。 -->
+            <!-- 已保存态：一行搞定 —— 盾牌 + 已加密保存 + 余额 + 刷新 + 更换。
+                 不放 Key 的任何真实字符，也不堆加密方式的说明文字。 -->
             <div class="api-key-card" id="apiKeyCard" hidden>
-              <div class="akc-row">
-                <span class="akc-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 2.6v5.1c0 4.6-3 8.1-7 10.3-4-2.2-7-5.7-7-10.3V5.6z"></path><path d="M9.2 12.1l2 2 3.6-3.9"></path></svg></span>
-                <div class="akc-info">
-                  <div class="akc-ttl">已加密 · 仅存于本机<span class="akc-alg">AES-256-GCM</span></div>
-                  <div class="akc-ct" id="apiKeyCt">密文 —</div>
-                </div>
-                <button class="api-key-change" id="apiKeyChange" type="button">更换</button>
-              </div>
-              <div class="akc-sep" aria-hidden="true"></div>
-              <div class="akc-bal" id="apiBalance" data-state="idle">
-                <span class="akc-bal-lb">账户余额</span>
-                <span class="akc-bal-amt" id="apiBalanceAmt">—</span>
-                <button class="akc-refresh" id="apiBalanceRefresh" title="刷新余额" aria-label="刷新余额"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 1 1-2.34-5.66"></path><path d="M20 4v4.4h-4.4"></path></svg></button>
-              </div>
+              <span class="akc-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 2.6v5.1c0 4.6-3 8.1-7 10.3-4-2.2-7-5.7-7-10.3V5.6z"></path><path d="M9.2 12.1l2 2 3.6-3.9"></path></svg></span>
+              <span class="akc-ttl">已加密保存</span>
+              <span class="akc-bal-amt" id="apiBalanceAmt" title="账户余额">—</span>
+              <button class="akc-refresh" id="apiBalanceRefresh" title="刷新余额" aria-label="刷新余额"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 1 1-2.34-5.66"></path><path d="M20 4v4.4h-4.4"></path></svg></button>
+              <button class="api-key-change" id="apiKeyChange" type="button">更换</button>
             </div>
             <!-- 编辑态：输入框 + 主按钮 + 获取入口 -->
             <div class="api-editor" id="apiEditor">
               <div class="api-field" id="apiField">
-                <input type="password" id="dsKeyInput" placeholder="sk-… 粘贴 API Key" autocomplete="new-password" spellcheck="false" aria-label="DeepSeek API Key">
+                <input type="password" id="dsKeyInput" placeholder="sk-… 粘贴 API Key" autocomplete="new-password" spellcheck="false" aria-label="API Key">
                 <button class="api-eye" id="dsKeyEye" title="显示 / 隐藏" aria-label="显示 Key"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 12S6 5.8 12 5.8 21.5 12 21.5 12 18 18.2 12 18.2 2.5 12 2.5 12z"></path><circle cx="12" cy="12" r="2.6"></circle></svg></button>
                 <!-- 封存动画的「密文幕布」：盖在输入行上，字符逐位翻成密文再锁定 -->
-                <div class="api-seal" id="apiSeal" aria-hidden="true"><span class="api-seal-txt"></span><span class="api-seal-alg">AES-256-GCM</span></div>
+                <div class="api-seal" id="apiSeal" aria-hidden="true"><span class="api-seal-txt"></span></div>
               </div>
               <button class="api-primary" id="dsKeySave" disabled><span class="api-spin" aria-hidden="true"></span><span id="dsKeySaveTxt">保存并验证</span></button>
               <a class="api-link" href="https://platform.deepseek.com/api_keys" target="_blank" rel="noopener noreferrer">获取 API Key <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17 17 7M9 7h8v8"></path></svg></a>
@@ -2136,7 +2108,6 @@ body.dark .modal,body.dark .cmd-search,body.dark .toolwrap{
               <span class="api-state-txt" id="dsKeyStatus">未配置</span>
               <button class="api-clear-link" id="dsKeyClear" hidden>清除</button>
             </div>
-            <div class="api-pop-note">Key 加密存储在本机，不会上传或写入文件</div>
           </div>
           <!-- 等待确认：单独一张澄清卡，浮在输入条上方，不展开历史对话 -->
           <div class="ask-pop" id="aiAskPop" role="dialog" aria-label="需要你补充"></div>
@@ -2155,7 +2126,7 @@ body.dark .modal,body.dark .cmd-search,body.dark .toolwrap{
                 <span class="ai-hist-cnt" id="aiHistCntOpen" aria-hidden="true">1</span>
               </button>
             </div>
-            <button class="ai-tool" id="aiKeyBtn" title="DeepSeek API Key：未配置，点此填入" aria-label="DeepSeek API Key" aria-haspopup="dialog" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="12" r="4"></circle><path d="M12 12h9M17.5 12v3M20.5 12v2"></path></svg></button>
+            <button class="ai-tool" id="aiKeyBtn" title="API Key：未配置，点此填入" aria-label="API Key" aria-haspopup="dialog" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="12" r="4"></circle><path d="M12 12h9M17.5 12v3M20.5 12v2"></path></svg></button>
             <!-- 上下文用量：与联网 / 图片并排，显示已用多少（上限 100 万） -->
             <button class="ai-ctx" id="aiCtx" title="上下文用量：点按清空上下文（保留对话历史）" aria-label="上下文用量">
               <span class="ai-ctx-bar" aria-hidden="true"><i id="aiCtxFill"></i></span>
@@ -2971,28 +2942,23 @@ function aiSyncKeyUI() {
   if (btn) {
     btn.classList.toggle('on', has);
     btn.classList.toggle('needs-key', !has);
-    btn.title = has ? 'DeepSeek API Key：已加密保存' : 'DeepSeek API Key：未配置，点此填入';
+    btn.title = has ? 'API Key：已加密保存' : 'API Key：未配置，点此填入';
   }
   /* 两态：有 Key 且没点「更换」→ 显示封存卡；否则显示输入区 */
   const editing = apiEditing || !has;
-  const card = $('#apiKeyCard'), editor = $('#apiEditor'), ct = $('#apiKeyCt');
+  const card = $('#apiKeyCard'), editor = $('#apiEditor');
   if (card) card.hidden = editing;
   if (editor) editor.hidden = !editing;
-  if (ct) ct.textContent = has && AI_CONF.fp ? '密文 ' + AI_CONF.fp + '…' : '密文 —';
   if (inp) inp.placeholder = has ? '粘贴新 Key 将替换当前的' : 'sk-… 粘贴 API Key';
   if (clr) {
     clr.hidden = !has;
     if (!has) { delete clr.dataset.confirm; clr.textContent = '清除'; }
   }
-  const note = $('.api-pop-note');
-  if (note) note.textContent = (window.crypto && crypto.subtle)
-    ? 'Key 使用 AES-GCM 加密后只保存在本机，不会上传或写入文件'
-    : 'Key 加密后只保存在本机（兼容模式），不会上传或写入文件';
-  /* 已保存时状态行只说结论，掩码已经在卡片里了，不再重复一遍 */
+  /* 已保存时结论已经写在封存卡上，状态行只剩一枚绿点，不再复读一遍 */
   const map = {
     empty: ['empty', '未配置'],
     saving: ['testing', '正在加密保存…'],
-    saved: ['ok', '已加密保存 · 仅存于本机'],
+    saved: ['ok', ''],
     session: ['session', '仅本次会话有效' + (aiKeyErr ? '：' + aiKeyErr : '')],
     error: ['err', '本机密钥不可用，请重新填写'],
   };
@@ -3137,9 +3103,9 @@ function apiSealKey() {
 /* ── 账户余额：DeepSeek 官方接口，只在封存卡里展示 ── */
 let apiBalBusy = false;
 function apiBalanceSet(state, amt, tip) {
-  const row = $('#apiBalance'), el = $('#apiBalanceAmt');
-  if (row) row.dataset.state = state;
-  if (el) { el.textContent = amt; el.title = tip || ''; }
+  const card = $('#apiKeyCard'), el = $('#apiBalanceAmt');
+  if (card) card.dataset.bal = state;
+  if (el) { el.textContent = amt; el.title = tip || '账户余额'; }
 }
 async function apiBalanceRefresh() {
   if (!AI_CONF.key || apiBalBusy) return;
@@ -3200,7 +3166,7 @@ async function aiSaveAndVerify() {
   } else aiSyncKeyUI();
   apiBusy(false);
   const persist = aiKeyState === 'saved' ? '已加密保存' : '仅本次会话';
-  apiSetState('ok', (typed ? persist + ' · ' : '') + '连接正常 · ' + r.ms + ' ms');
+  apiSetState('ok', (typed ? persist + ' · ' : '连接正常 · ') + r.ms + ' ms');
   const b = $('#dsKeySave');
   if (b) { b.classList.add('flash'); setTimeout(() => b.classList.remove('flash'), 1000); }
   if (typed) { toast('API Key 已加密保存', 'ok', 2200); apiBalanceRefresh(); }
