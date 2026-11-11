@@ -25561,6 +25561,7 @@ async function aiSend() {
        没有「先列计划再照计划执行」的规划轮 —— 画一步看一步，失败了立刻换构造。 */
     const stepMode = !asked && extractGeoCommands(curContent).length > 0;
     let stepOk = 0, stepBadN = 0, stepTotal = 0, stepAborted = false;
+    let reactDone = false;   /* 模型是否用 ```done 明确收尾（收尾后中途失败不再算作未完成） */
     const stepLog = [];
 
     if (!stepMode) {
@@ -25594,7 +25595,7 @@ async function aiSend() {
           (failed ? '\n其中 ' + failed + ' 条失败：请换一种构造或改用正确的对象名，不要原样重发同一条命令。'
             : '\n继续下一步；如果整幅图已经画完，就输出 ```done 结束。');
       };
-      let actionNo = 0, reactDone = false;
+      let actionNo = 0;
       /* 第一步：首轮回复已经边流式边画上图了，把它的执行结果作为第一条 Observation 回传 */
       const firstCmds = extractGeoCommands(curContent);
       if (firstCmds.length) {
@@ -25691,10 +25692,14 @@ async function aiSend() {
     let results = streamResults;
     let badTotal = 0, doneSub = '回答已就绪';
     if (stepMode) {
-      badTotal = stepBadN;
-      doneSub = stepBadN ? stepOk + ' 条命令成功 · ' + stepBadN + ' 条未成功'
-        : '已分 ' + stepTotal + ' 步作图 · 完成 ' + stepOk + ' 条命令';
-      if (stepBadN) toast('有 ' + stepBadN + ' 条命令未执行成功', 'err', 3200);
+      /* 已经用 done 收尾就说明它自己确认图已完整：中途失败的几条多半已换构造补上，
+         不再按「未完成」处理，也不再弹红字提示（具体失败仍留在每步的执行清单里）。 */
+      badTotal = reactDone ? 0 : stepBadN;
+      doneSub = reactDone
+        ? '已分 ' + stepTotal + ' 步作图 · 完成 ' + stepOk + ' 条命令'
+        : (stepBadN ? stepOk + ' 条命令成功 · ' + stepBadN + ' 条未成功'
+          : '作图中断 · 已完成 ' + stepOk + ' 条命令');
+      if (stepBadN && !reactDone) toast('有 ' + stepBadN + ' 条命令未执行成功', 'err', 3200);
     } else if (results.length) {
       let bad = results.filter(r => !r.ok);
       let rounds = 0;
