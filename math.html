@@ -2456,6 +2456,15 @@ const ICON = {
   circumArc: S('<path d="M3.5 17a8.5 8.5 0 0 1 17 0"/><circle cx="3.5" cy="17" r="1.7" fill="currentColor" stroke="none"/><circle cx="12" cy="8.4" r="1.7" fill="currentColor" stroke="none"/><circle cx="20.5" cy="17" r="1.7" fill="currentColor" stroke="none"/>'),
   circumSector: S('<path d="M3.5 17a8.5 8.5 0 0 1 17 0z" fill="currentColor" opacity=".2"/><path d="M3.5 17a8.5 8.5 0 0 1 17 0"/><circle cx="12" cy="8.4" r="1.6" fill="currentColor" stroke="none"/>'),
   fitLine: S('<path d="M3.5 18 20.5 6" /><circle cx="7" cy="15.5" r="1.5" fill="currentColor" stroke="none"/><circle cx="13" cy="9.6" r="1.5" fill="currentColor" stroke="none"/><circle cx="16.5" cy="14" r="1.5" fill="currentColor" stroke="none"/><circle cx="19" cy="7.4" r="1.5" fill="currentColor" stroke="none"/>'),
+  /* 按函数类型选点作图（一次 / 二次 / 三次 / 指数 / 对数 / 幂 / 正弦）：
+     七个图标都画「曲线 + 参考点」，形状不同才认得出是哪一类。 */
+  fn1: S('<path d="M4 19 20 5"/><circle cx="7.5" cy="16" r="1.7" fill="currentColor" stroke="none"/><circle cx="16.5" cy="8" r="1.7" fill="currentColor" stroke="none"/>'),
+  fn2: S('<path d="M3 19c3-12 15-12 18 0"/><circle cx="6.2" cy="10.4" r="1.6" fill="currentColor" stroke="none"/><circle cx="12" cy="7" r="1.6" fill="currentColor" stroke="none"/><circle cx="17.8" cy="10.4" r="1.6" fill="currentColor" stroke="none"/>'),
+  fn3: S('<path d="M3.5 17.5c4 0 5-12 9-12s4.6 12 8 12" opacity=".9"/><circle cx="6" cy="9.8" r="1.5" fill="currentColor" stroke="none"/><circle cx="12" cy="5.5" r="1.5" fill="currentColor" stroke="none"/><circle cx="18" cy="9.8" r="1.5" fill="currentColor" stroke="none"/>'),
+  fnE: S('<path d="M3.5 19c4.5 0 7-13 17-13"/><circle cx="8" cy="12.6" r="1.6" fill="currentColor" stroke="none"/><circle cx="18" cy="6.4" r="1.6" fill="currentColor" stroke="none"/>'),
+  fnL: S('<path d="M6 19.5c0-9 4-15 14-15"/><circle cx="8.6" cy="11" r="1.6" fill="currentColor" stroke="none"/><circle cx="16" cy="5.4" r="1.6" fill="currentColor" stroke="none"/>'),
+  fnP: S('<path d="M4 20C4 13 8 8 20 8"/><circle cx="9" cy="10.6" r="1.6" fill="currentColor" stroke="none"/><circle cx="17.5" cy="8.2" r="1.6" fill="currentColor" stroke="none"/>'),
+  fnS: S('<path d="M2.5 12c3.4-7 6.6 7 9.5 0s6 7 9.5 0"/><circle cx="7" cy="7.6" r="1.5" fill="currentColor" stroke="none"/><circle cx="12" cy="16.5" r="1.5" fill="currentColor" stroke="none"/>'),
   relation: S('<circle cx="7.5" cy="12" r="4.2" opacity=".8"/><rect x="12.6" y="7.8" width="8.4" height="8.4" rx="1.6" opacity=".8"/><path d="M10.6 10.4h2.6M10.6 13.6h2.6" stroke-width="1.3"/>'),
   turning: S('<path d="M3 18c4 0 4.6-8 9-8s5 8 9 8" opacity=".8"/><circle cx="12" cy="10" r="2.1" fill="currentColor" stroke="none"/>'),
   button: S('<rect x="2.8" y="7.5" width="18.4" height="9" rx="3"/><path d="M8 12h8" opacity=".7"/>'),
@@ -11462,6 +11471,10 @@ T({ id: 'hyperbola', icon: 'hyperbola', name: '双曲线', hint: '依次点两�
 T({ id: 'parabola', icon: 'parabola', name: '抛物线', steps: [stepPt('选择焦点'), stepObj('选择准线（直线）')], run: p => execStr('Parabola(' + pickRef(p[0]) + ', ' + lb(p[1].obj) + ')') });
 T({ id: 'conic5', icon: 'conic5', name: '过五点的圆锥曲线', steps: [stepPt('点 1'), stepPt('点 2'), stepPt('点 3'), stepPt('点 4'), stepPt('点 5')], run: p => execStr('Conic(' + p.map(x => pickRef(x)).join(', ') + ')') });
 T({ id: 'curve', icon: 'curve', name: '参数曲线', hint: '创建一条示例参数曲线（椭圆 x=3cos t, y=2sin t），可在输入栏用 Curve(…) 自定义', steps: [], run: () => execStr('Curve(3*cos(t), 2*sin(t), t, 0, 2*pi)') });
+/* ── 高中常用：画函数 ──
+   照 GeoGebra 的思路把「画函数」拆开：输入表达式是一条路，按函数类型「选点」定函数是另一条。
+   选点这一路走 GGB 的拟合命令（FitPoly / FitExp / FitLog / FitPow / FitSin），
+   所以点一拖，函数跟着重新拟合 —— 不是死图。 */
 T({
   id: 'functionPlot', icon: 'fx', name: '画函数',
   hint: '输入关于 x 的表达式，例如 x^2-5x+6、sin(2x)、exp(-x)',
@@ -11473,6 +11486,14 @@ T({
     return execStr(src.includes('=') ? src : 'y = ' + src);
   }
 });
+const fitPts = p => '{' + p.map(x => pickRef(x)).join(', ') + '}';
+T({ id: 'fnLinear', icon: 'fn1', name: '一次函数', hint: '依次选 2 个点，画过这两点的直线', steps: [stepPt('选择第 1 个点'), stepPt('选择第 2 个点')], run: p => execStr('FitPoly(' + fitPts(p) + ', 1)') });
+T({ id: 'fnQuadratic', icon: 'fn2', name: '二次函数', hint: '依次选 3 个点，画过这三点的抛物线', steps: [stepPt('选择第 1 个点'), stepPt('选择第 2 个点'), stepPt('选择第 3 个点')], run: p => execStr('FitPoly(' + fitPts(p) + ', 2)') });
+T({ id: 'fnCubic', icon: 'fn3', name: '三次函数', hint: '依次选 4 个点，画过这四点的三次曲线', steps: [stepPt('选择第 1 个点'), stepPt('选择第 2 个点'), stepPt('选择第 3 个点'), stepPt('选择第 4 个点')], run: p => execStr('FitPoly(' + fitPts(p) + ', 3)') });
+T({ id: 'fnExp', icon: 'fnE', name: '指数函数', hint: '依次选 2 个点，拟合 y = a·e^(b·x)', steps: [stepPt('选择第 1 个点'), stepPt('选择第 2 个点')], run: p => execStr('FitExp(' + fitPts(p) + ')') });
+T({ id: 'fnLog', icon: 'fnL', name: '对数函数', hint: '依次选 2 个点，拟合 y = a + b·ln x', steps: [stepPt('选择第 1 个点'), stepPt('选择第 2 个点')], run: p => execStr('FitLog(' + fitPts(p) + ')') });
+T({ id: 'fnPow', icon: 'fnP', name: '幂函数', hint: '依次选 2 个点，拟合 y = a·x^b', steps: [stepPt('选择第 1 个点'), stepPt('选择第 2 个点')], run: p => execStr('FitPow(' + fitPts(p) + ')') });
+T({ id: 'fnSin', icon: 'fnS', name: '正弦函数', hint: '依次选 4 个点，拟合 y = a + b·sin(c·x + d)', steps: [stepPt('选择第 1 个点'), stepPt('选择第 2 个点'), stepPt('选择第 3 个点'), stepPt('选择第 4 个点')], run: p => execStr('FitSin(' + fitPts(p) + ')') });
 T({ id: 'angle', icon: 'angle', name: '角度', steps: [stepPt('选择边上的点'), stepPt('选择顶点'), stepPt('选择另一边上的点')], run: p => execStr('Angle(' + p.map(x => pickRef(x)).join(', ') + ')') });
 /* 图片：先单击左下角 A、再单击右下角 B；没选本地文件时先插入示例图片（可在右键菜单里更换） */
 T({
@@ -11579,7 +11600,7 @@ const TOOLGROUPS = [
   ['ellipse', 'hyperbola', 'parabola', 'conic5', 'curve'],
   ['angle', 'angleFix', 'distance', 'area', 'slope', 'relation'],
   ['reflectLine', 'reflectPoint', 'rotate', 'translate', 'dilate'],
-  ['functionPlot', 'inspect', 'zeroes', 'extremum', 'turningPoint', 'derivative', 'integral'],
+  ['functionPlot', 'fnLinear', 'fnQuadratic', 'fnCubic', 'fnExp', 'fnLog', 'fnPow', 'fnSin', 'inspect', 'zeroes', 'extremum', 'turningPoint', 'derivative', 'integral'],
   ['text', 'image', 'button', 'inputBox', 'dropdown', 'slider', 'checkbox'],
   ['locus', 'pen', 'animate', 'deleteTool'],
   ['solve', 'factor', 'expand', 'simplify'],
