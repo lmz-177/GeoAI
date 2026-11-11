@@ -670,6 +670,30 @@ body.tool-folded .tool-head{padding-bottom:0}
 .splitter::after{content:'';position:absolute;left:2.5px;top:0;bottom:0;width:1px;background:var(--border);transition:background var(--t)}
 .splitter:hover::after,.splitter.drag::after{background:var(--accent);width:2px;left:2px}
 .graphics{flex:1;position:relative;min-width:0;background:var(--canvas);overflow:hidden}
+/* 画布恢复提示卡：检测到上次的自动保存时从画布顶部落下，
+   恢复 / 丢弃二选一后消失；不自动帮用户做决定 */
+.cvs-restore{
+  position:absolute;top:14px;left:50%;transform:translateX(-50%);z-index:60;
+  display:flex;align-items:center;gap:10px;padding:8px 10px 8px 13px;border-radius:16px;
+  background:var(--glass-2);border:.5px solid var(--glass-brd);
+  box-shadow:var(--shadow-lg),var(--hi-strong);
+  -webkit-backdrop-filter:var(--glass-blur);backdrop-filter:var(--glass-blur);
+  animation:cvsIn .34s var(--ease-out) both;
+  max-width:min(420px, calc(100% - 24px));
+}
+@keyframes cvsIn{from{opacity:0;transform:translate(-50%,-10px)}to{opacity:1;transform:translate(-50%,0)}}
+.cvs-restore .cr-ic{display:flex;color:var(--accent);flex:0 0 auto}
+.cvs-restore .cr-ic svg{width:18px;height:18px}
+.cvs-restore .cr-txt{display:flex;flex-direction:column;gap:1.5px;min-width:0}
+.cvs-restore .cr-txt b{font-size:var(--fs-xs);font-weight:700;color:var(--text);letter-spacing:-.1px}
+.cvs-restore .cr-txt span{font-size:var(--fs-3xs);color:var(--text-3);font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cvs-restore button{flex:0 0 auto;height:28px;padding:0 13px;border-radius:9px;font-size:var(--fs-xs);font-weight:600;transition:var(--t-ui)}
+.cvs-restore .cr-ok{background:var(--accent);color:#fff}
+.cvs-restore .cr-ok:hover{background:var(--accent-h)}
+.cvs-restore .cr-ok:active{transform:scale(.96)}
+.cvs-restore .cr-no{color:var(--text-2);background:var(--panel-3)}
+.cvs-restore .cr-no:hover{color:var(--danger);background:rgba(255,59,48,.12)}
+.cvs-restore .cr-no:active{transform:scale(.96)}
 #canvas{display:block;width:100%;height:100%;cursor:crosshair}
 .gv-badge{
   /* 右上角已经让给「代数 / 图形」浮层，比例徽标就排在它下面一行；不用挪到左上，
@@ -1083,29 +1107,31 @@ body.dark .eff-warn{color:#c39bff}
 @keyframes helloHint{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
 .ai-chat{flex:1 1 auto;min-height:0;overflow-y:auto;padding:10px 14px 14px 16px;display:flex;flex-direction:column;gap:0;scroll-behavior:smooth}
 .msg{display:grid;grid-template-columns:16px minmax(0,1fr);column-gap:12px;align-items:stretch;
-  padding:9px 6px 9px 0;border-radius:10px;max-width:100%;animation:fadeUp var(--t)}
+  padding:7px 6px 7px 0;border-radius:10px;max-width:100%;animation:fadeUp var(--t)}
 .msg:hover{background:var(--hover)}
 /* 时间线轨道：竖线贯穿整条记录，节点圆点按角色着色；首尾条目的线在节点处收头 */
 .msg .rail{grid-column:1;position:relative;display:flex;justify-content:center}
 .msg .rail::before{content:'';position:absolute;top:0;bottom:0;width:1.5px;background:var(--border-2)}
-.msg:first-child .rail::before{top:13px}
-.msg:last-child .rail::before{bottom:auto;height:13px}
+.msg:first-child .rail::before{top:11px}
+.msg:last-child .rail::before{bottom:auto;height:11px}
 .msg:first-child:last-child .rail::before{display:none}
-.msg .dot{position:relative;z-index:1;flex:0 0 9px;width:9px;height:9px;margin-top:9px;border-radius:50%;
+.msg .dot{position:relative;z-index:1;flex:0 0 9px;width:9px;height:9px;margin-top:8px;border-radius:50%;
   background:var(--text-3);transition:transform var(--t)}
 .msg:hover .dot{transform:scale(1.25)}
 .msg.user .dot{background:var(--accent)}
 .msg.ai .dot{background:var(--purple)}
 .msg .body{grid-column:2;min-width:0}
-/* 头行：角色 + 时间（等宽字），角色色只落在文字上 */
-.msg .meta{display:flex;align-items:baseline;gap:8px;margin-bottom:3px}
+/* 头行：角色靠左，时间 / 思考强度推到右缘对齐，整列时间读起来是一条竖线 */
+.msg .meta{display:flex;align-items:center;gap:8px;margin-bottom:4px}
 .msg .who{font-size:var(--fs-2xs);font-weight:700;letter-spacing:.2px;color:var(--text-3)}
 .msg.user .who{color:var(--accent)}
 .msg.ai .who{color:var(--purple)}
-.msg .meta .t{font-weight:400;color:var(--text-3);font-size:10.5px;line-height:1.2;font-family:var(--mono);font-variant-numeric:tabular-nums}
+.msg .meta .t{margin-left:auto;font-weight:400;color:var(--text-3);font-size:10.5px;line-height:1.2;font-family:var(--mono);font-variant-numeric:tabular-nums;white-space:nowrap}
+/* AI 的强度标签（非时间戳）：小胶囊挂在头行右缘 */
+.msg.ai .meta .t{padding:1px 7px;border-radius:99px;background:var(--panel-3);font-family:var(--font);font-size:var(--fs-3xs)}
 /* 「重做」这条回复：靠右的轻量胶囊，平时淡、悬停才变主色 —— 消息头不该被一排按钮占满 */
 .msg-retry{
-  margin-left:auto;display:inline-flex;align-items:center;gap:4px;padding:2px 8px;
+  display:inline-flex;align-items:center;gap:4px;padding:2px 8px;
   border-radius:7px;font-size:var(--fs-3xs);font-weight:600;line-height:1.5;
   color:var(--text-3);transition:var(--t-ui);flex:0 0 auto;
 }
@@ -1181,17 +1207,21 @@ body.dark .eff-warn{color:#c39bff}
 .bubble .md-task.done{background:var(--accent);border-color:var(--accent);color:#fff}
 .bubble .md-task.done::after{content:'✓'}
 .bubble .md-img{max-width:100%;border-radius:10px;margin:6px 0;border:.5px solid var(--border)}
+/* 思考链：折叠时是一枚安静的胶囊；展开后摘要行压成小标题栏（有底色 + 发丝分隔线），
+   正文按等宽小字排版、240px 封顶内滚 —— 像终端记录，而不是一大段散文 */
 .think{
-  border:.5px solid var(--border);border-radius:14px;background:var(--panel-2);
+  margin:6px 0 10px;border:.5px solid var(--border);border-radius:14px;background:var(--panel-2);
   overflow:hidden;font-size:12.5px;
 }
-.think summary{padding:8px 12px;cursor:pointer;color:var(--text-3);font-weight:600;font-size:var(--fs-xs);display:flex;align-items:center;gap:7px;user-select:none;list-style:none}
+.think[open]{border-color:transparent;box-shadow:inset 0 0 0 .5px var(--border)}
+.think summary{padding:7px 11px;cursor:pointer;color:var(--text-3);font-weight:600;font-size:var(--fs-xs);display:flex;align-items:center;gap:7px;user-select:none;list-style:none;transition:color var(--t),background var(--t)}
 .think summary::-webkit-details-marker{display:none}
 .think summary::before{content:'▸';transition:transform var(--t);font-size:var(--fs-3xs)}
 .think[open] summary::before{transform:rotate(90deg)}
 .think summary .spin{width:11px;height:11px;border:1.5px solid var(--border-2);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
-.think .body{padding:0 12px 11px;color:var(--text-3);white-space:pre-wrap;font-family:var(--mono);font-size:var(--fs-xs);line-height:1.7;max-height:280px;overflow-y:auto}
+.think[open] summary{color:var(--text-2);background:var(--hover);border-bottom:.5px solid var(--border)}
+.think .body{padding:2px 12px 11px;color:var(--text-3);white-space:pre-wrap;font-family:var(--mono);font-size:12px;line-height:1.65;max-height:240px;overflow-y:auto;overscroll-behavior:contain}
 .exec-list{margin-top:8px;display:flex;flex-direction:column;gap:4px}
 .exec{display:flex;align-items:center;gap:8px;font-family:var(--mono);font-size:var(--fs-xs);padding:6px 10px;border-radius:10px;background:var(--panel-2)}
 .exec .st{width:15px;height:15px;flex:0 0 15px;display:flex;align-items:center;justify-content:center}
@@ -7560,6 +7590,59 @@ function pushUndo() {
   if (state.undo.length > 120) state.undo.shift();
   state.redo.length = 0;
   updateUndoButtons();
+  canvasAutoSaveSoon();
+}
+/* ── 画布自动保存（本地记忆的一半） ──
+   每次结构变化后 900ms 落盘一次：非图片对象 + 视图 / 表格 / 图层。
+   图片是 base64，进 localStorage 一张就爆配额，因此明确排除 —— 用户重新打开
+   网页时用恢复卡提醒，而不是自作主张直接盖上去。自测模式（uitest 等）不读不写，
+   保证测试环境确定性。 */
+const AI_CANVAS_KEY = 'geoai_canvas_autosave';
+let canvasSaveTimer = 0;
+function canvasAutoSave(force) {
+  if (TEST_MODE && !force) return;
+  try {
+    const objs = serializeAll().filter(s => s.type !== 'image');
+    localStorage.setItem(AI_CANVAS_KEY, JSON.stringify({
+      t: Date.now(), n: objs.length,
+      snap: JSON.stringify({ o: objs, v: { ...state.view }, s: { ...state.sheet.cells }, ly: state.layers, cl: state.curLayer }),
+    }));
+  } catch (e) { /* 配额满 / 隐私模式：静默放弃，不影响画图 */ }
+}
+function canvasAutoSaveSoon() { if (TEST_MODE) return; clearTimeout(canvasSaveTimer); canvasSaveTimer = setTimeout(canvasAutoSave, 900); }
+/* 恢复卡：只在「真的有东西可恢复」且「当前画布是空的」时出现 */
+function canvasRestorePrompt() {
+  if (TEST_MODE) return;
+  let rec = null;
+  try { rec = JSON.parse(localStorage.getItem(AI_CANVAS_KEY) || 'null'); } catch (e) {}
+  if (!rec || typeof rec.snap !== 'string') return;
+  let d = null;
+  try { d = JSON.parse(rec.snap); } catch (e) {}
+  if (!d || !Array.isArray(d.o) || !d.o.length) return;
+  if (state.objects.length) return;             /* 画布已有内容：不打扰 */
+  const host = $('#graphicsWrap'); if (!host) return;
+  const card = document.createElement('div');
+  card.className = 'cvs-restore'; card.id = 'cvsRestore';
+  card.setAttribute('role', 'dialog');
+  card.setAttribute('aria-label', '恢复上次的画布');
+  const w = new Date(rec.t || Date.now());
+  const pad = v => String(v).padStart(2, '0');
+  const when = (w.getMonth() + 1) + '月' + w.getDate() + '日 ' + pad(w.getHours()) + ':' + pad(w.getMinutes());
+  card.innerHTML =
+    '<span class="cr-ic">' + ICON.layers + '</span>' +
+    '<div class="cr-txt"><b>上次的画布</b><span>' + (rec.n || d.o.length) + ' 个对象 · ' + when + ' 自动保存</span></div>' +
+    '<button class="cr-ok" type="button">恢复</button>' +
+    '<button class="cr-no" type="button">丢弃</button>';
+  host.appendChild(card);
+  card.querySelector('.cr-ok').onclick = () => {
+    card.remove();
+    try { loadSnapshot(rec.snap); toast('已恢复上次的画布', 'ok'); }
+    catch (e) { toast('恢复失败：' + ((e && e.message) || e), 'err', 3200); }
+  };
+  card.querySelector('.cr-no').onclick = () => {
+    card.remove();
+    try { localStorage.removeItem(AI_CANVAS_KEY); } catch (e) {}
+  };
 }
 function loadSnapshot(json) {
   const d = JSON.parse(json);
@@ -16798,7 +16881,7 @@ function showHelp() {
       '输入区是一枚玻璃卡片：上输入文字，下排是历史 / Key / 联网 / 图片 / 思考强度与发送圆钮，附件缩略图贴在输入行上方；点右下角箭头键可整块收起为底部角色（点角色再展开）',
       '用自然语言直接作图与解题，回复里的 <code>geogebra</code> 代码块会被自动执行并画到画布',
       '支持看图：点图片按钮、直接粘贴或把图片拖进输入框，可让它「照着这张图作图」「这道题怎么解」',
-      '<b>思考强度</b>：默认 <b>Low</b>；点按钮展开 Codex 风格的推理滑条 —— <b>4 档</b>等距（Off / Low / Medium / High，每档一色，色相从灰经蓝推进到紫罗兰，轨道上带刻度点），拖动实时跟手、松手吸附；落到 <b>High</b> 时轨道换成蓝紫流动渐变并亮起星尘，同时提示「更快消耗使用额度」；面板右上角的回转箭头一键回到默认。每次提问都会自动带上当前画布内容，AI 能直接复用已有的点、线、圆',
+      '<b>思考强度</b>：默认 <b>Low</b>；点按钮展开 Codex 风格的推理滑条 —— <b>4 档</b>等距（Off / Low / Medium / High，每档一色，色相从灰经蓝推进到紫罗兰，轨道上带刻度点），拖动实时跟手、松手吸附；落到 <b>High</b> 时轨道换成蓝紫流动渐变并亮起星尘，同时提示「更快消耗使用额度」；面板右上角的回转箭头一键回到默认。每次提问都会自动带上当前画布内容，AI 能直接复用已有的点、线、圆。对话与画布（图片除外）都会自动保存在本机：刷新后点开角色即可继续上次对话（历史默认展开）；重新打开网页时，画布会以一张小卡片提示恢复',
       '点「联网」可先检索实时网页：结果会作为资料给 AI，回答里标出来源链接；消息里直接贴网址也会抓取正文',
       '<b>AI 自己再联网</b>：资料不够时它可以在回答里写 <code>search</code> 块（每行一个检索词），控件会真的再查一轮并把结果补给它继续写，一次回答最多补搜两轮；界面只显示「已补充检索 N 条来源」',
       '<b>AI 先问你</b>：条件不清时它写 <code>ask</code> 块，控件把问题显示成一张澄清卡片，选项可以点，点了直接填进输入框；这时它不会凭猜测作图',
@@ -17275,6 +17358,10 @@ function init() {
   bindShare();
   /* AI 面板默认：宽屏常驻，窄屏收起（否则会盖住画布） */
   toggleAI(innerWidth > 1100);
+  /* 本地记忆：上一轮对话从本机还原，宽屏把历史也一并展开（刷新后点开角色即默认展开）；
+     画布若留有自动保存，则弹出恢复卡让用户自己决定。自测模式全部跳过。 */
+  if (aiChatLogRestore() && innerWidth > 1100) toggleAISheet(true);
+  canvasRestorePrompt();
   /* 小屏幕兼容提示 / 基础功能模式 */
   $('#compatLandscape').onclick = () => lockLandscape();
   $('#compatBasic').onclick = () => enterBasicMode();
@@ -18408,6 +18495,26 @@ async function runUITest() {
     if (host.classList.contains('hidden')) throw new Error('清空全部对话后 hello 应恢复');
     chat.innerHTML = keep; await sleep(0);
     if (host.classList.contains('hidden') !== !!chat.querySelector('.msg')) throw new Error('恢复对话后空态状态不对');
+  });
+  await A('本地记忆:对话存档的存取', async () => {
+    const KEY = 'geoai_chat_log';
+    const before = $$('#aiChat .msg').length;
+    aiPush('user', '记忆探针u', { noExpand: true });
+    aiChatLogSave(true);
+    const raw = localStorage.getItem(KEY);
+    if (!raw || raw.indexOf('记忆探针u') < 0) throw new Error('存档没有写入 localStorage');
+    localStorage.removeItem(KEY);
+    localStorage.setItem(KEY, JSON.stringify([{ r: 'u', t: '记忆探针r' }]));
+    aiChatLogRestore(true);
+    if ($('#aiChat').textContent.indexOf('记忆探针r') < 0) throw new Error('还原存档没有渲染出消息');
+    if (!state.aiHistory.some(h => h && h.content === '记忆探针r')) throw new Error('还原存档没有接回 API 上下文');
+    /* 清场：探针消息与上下文都要摘干净，别影响后面的用例 */
+    $$('#aiChat .msg').forEach(m => { if (m.textContent.indexOf('记忆探针') >= 0) m.remove(); });
+    state.aiHistory = state.aiHistory.filter(h => !(h && typeof h.content === 'string' && h.content.indexOf('记忆探针') === 0));
+    aiHelloSync(); aiNavBuild(); aiSyncFoldUI();
+    localStorage.removeItem(KEY);
+    const after = $$('#aiChat .msg').length;
+    if (after !== before) throw new Error('清场后消息数变了：' + before + ' → ' + after);
   });
   await A('AI:图片附件管理', async () => {
     state.aiImages = []; renderAiAttach();
@@ -22422,6 +22529,9 @@ function runSelfTest() {
     }).catch(e => { pre.dataset.ggbdeflate = 'err:' + ((e && e.name) || '') + ':' + ((e && e.message) || e) + ':' + String(e && e.stack || '').slice(0, 300); });
   }
 }
+/* 自测模式（uitest / tooltest / selftest / aitest）：本地记忆不读也不写。
+   测试要的是「每次打开都一样」的确定性环境；记忆功能用普通模式人工验证。 */
+const TEST_MODE = /[?&](uitest|tooltest|selftest|aitest)=1/.test(location.search);
 window.addEventListener('DOMContentLoaded', init);
 /* ═══════════════════════ 13. AI 助手（deepseek-flash） ═══════════════════════ */
 /* ═══════════════ 联网检索（Search / Fetch API）═══════════════
@@ -23437,8 +23547,9 @@ function bindAI() {
   inp.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); if (!state.aiBusy) aiSend(); } });
   /* 澄清单里的选项可点：点了直接填进输入框，用户改一改就能发 */
   const chatHost = $('#aiChat');
-  /* 消息增删（发送 / 重做 / 清空全部）后同步空态：只剩「一条都没有」时才露出 hello */
-  if (chatHost && window.MutationObserver) new MutationObserver(aiHelloSync).observe(chatHost, { childList: true });
+  /* 消息增删（发送 / 重做 / 清空全部）后同步空态：只剩「一条都没有」时才露出 hello。
+     对话存档也走同一入口：任何路径改了消息列表，都重写一次 localStorage 存档。 */
+  if (chatHost && window.MutationObserver) new MutationObserver(() => { aiHelloSync(); aiChatLogSoon(); }).observe(chatHost, { childList: true });
   /* 点 hello：转彩虹并重写一遍。动画由 CSS 的 animation 承担，
      重启的办法只有「摘掉 → 强制重排 → 还原」，transition 那套改 delay 的写法在这里不成立。 */
   const helloHost = $('#aiHello');
@@ -23532,6 +23643,39 @@ function aiNavGo(i) {
   if (!msg) return;
   const cr = chat.getBoundingClientRect(), r = msg.getBoundingClientRect();
   chat.scrollTo({ top: Math.max(0, chat.scrollTop + r.top - cr.top - 6), behavior: 'smooth' });
+}
+/* ── 对话存档（本地记忆的另一半） ──
+   只存纯文本（.bubble 的 innerText）：富块（思考链 / 分步卡）不落盘，
+   既省配额也避免把执行残留一并带回来。API 上下文（state.aiHistory）跟着一起还原，
+   追问时模型还记得上一轮。自测模式不读不写。 */
+const AI_CHAT_LOG_KEY = 'geoai_chat_log';
+let aiChatLogTimer = 0;
+function aiChatLogSave(force) {
+  if (TEST_MODE && !force) return;
+  try {
+    const log = [];
+    $$('#aiChat .msg').forEach(m => {
+      const b = m.querySelector('.bubble');
+      const t = b ? String(b.innerText).trim() : '';
+      if (!t) return;
+      log.push({ r: m.classList.contains('user') ? 'u' : 'a', t: t.slice(0, 4000) });
+    });
+    localStorage.setItem(AI_CHAT_LOG_KEY, JSON.stringify(log.slice(-60)));
+  } catch (e) {}
+}
+function aiChatLogSoon() { clearTimeout(aiChatLogTimer); aiChatLogTimer = setTimeout(() => aiChatLogSave(false), 400); }
+function aiChatLogRestore(force) {
+  if (TEST_MODE && !force) return false;
+  let log = [];
+  try { log = JSON.parse(localStorage.getItem(AI_CHAT_LOG_KEY) || '[]'); } catch (e) {}
+  if (!Array.isArray(log) || !log.length) return false;
+  for (const it of log) {
+    if (!it || typeof it.t !== 'string' || !it.t.trim()) continue;
+    const isUser = it.r === 'u';
+    aiPush(isUser ? 'user' : 'ai', it.t, { noExpand: true });
+    try { state.aiHistory.push({ role: isUser ? 'user' : 'assistant', content: it.t }); } catch (e) {}
+  }
+  return !!$('#aiChat .msg');
 }
 /* 空态：没有任何消息时显示手写 hello；一旦有消息就收起，清空对话后又回来。
    DOM 由 MutationObserver 盯着，不管从哪条路径清空（重做、清空全部、脚本）都能同步。 */
