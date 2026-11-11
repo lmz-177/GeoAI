@@ -7577,6 +7577,15 @@ function intersectObjects(A, B) {
       else { const x = -L.c / L.a, y = f.fn(x); pts = isNum(y) ? [{ x, y }] : []; }
       return pts.filter(p => inRange(f, p) && inRange(other, p));
     }
+    /* 函数 × 圆 / 圆锥曲线：把 y = f(x) 代进隐式方程，在可视区间里找全部变号点。
+       不走折线拟合，避免曲率大时漏交点。 */
+    const Q = conicQ(other);
+    if (Q) {
+      const yAt = x => { try { const y = f.fn(x); return isNum(y) ? y : NaN; } catch (e) { return NaN; } };
+      const at = (x, y) => Q.A * x * x + Q.B * x * y + Q.C * y * y + Q.D * x + Q.E * y + Q.F;
+      const xs = scanSignRoots(x => { const y = yAt(x); return isNum(y) ? at(x, y) : NaN; });
+      return xs.map(x => ({ x, y: yAt(x) })).filter(p => isNum(p.y) && inRange(f, p) && inRange(other, p));
+    }
   }
   const pa = outlinePolys(A), pb = outlinePolys(B); const out = [];
   for (const x of pa) for (const y of pb) out.push(...GEO.interPoly(x, y));
@@ -7584,21 +7593,21 @@ function intersectObjects(A, B) {
 }
 function segs2poly(segs) { if (!segs.length) return []; const polys = []; const used = new Array(segs.length).fill(false); for (let i = 0; i < segs.length; i++) { if (used[i]) continue; const poly = [segs[i][0], segs[i][1]]; used[i] = true; let changed = true; while (changed) { changed = false; for (let j = 0; j < segs.length; j++) { if (used[j]) continue; const s = segs[j]; const e = poly[poly.length - 1]; if (Math.hypot(e.x - s[0].x, e.y - s[0].y) < 1e-6) { poly.push(s[1]); used[j] = true; changed = true; } else if (Math.hypot(e.x - s[1].x, e.y - s[1].y) < 1e-6) { poly.push(s[0]); used[j] = true; changed = true; } } } if (poly.length > 1) polys.push(poly); } return polys; }
 function dedupe(pts) { const out = []; for (const p of pts) { if (!out.some(q => Math.hypot(q.x - p.x, q.y - p.y) < 1e-6)) out.push(p); } return out; }
-/* 两个函数在可视横向区间内的全部交点：扫描变号 → 二分细化。
-   之前只取「离得最近的一个点」，两交点题会漏掉一个，也会把接近但不交误判成相交。 */
-function fnRootsOf(fa, fb) {
+/* 扫描可视区间内某个差函数的全部变号点：步进找符号变化 → 二分细化。
+   以前只取「离得最近的一个点」，两交点题会漏掉一个，也会把接近但不交误判成相交。 */
+function scanSignRoots(df) {
   const x0 = toWorldX(0) - 2, x1 = toWorldX(canvas.clientWidth) + 2;
   const N = 1600, xs = [];
-  const df = x => { try { const d = fa(x) - fb(x); return isNum(d) ? d : NaN; } catch (e) { return NaN; } };
   let px = x0, pd = null;
   for (let i = 0; i <= N; i++) {
     const x = x0 + (x1 - x0) * i / N;
-    const d = df(x);
+    let d; try { d = df(x); } catch (e) { d = NaN; }
     if (!isNum(d)) { px = x; pd = null; continue; }
     if (pd !== null && (d === 0 || pd * d < 0)) {
       let lo = px, hi = x, flo = pd;
       for (let k = 0; k < 60; k++) {
-        const m = (lo + hi) / 2, fm = df(m);
+        const m = (lo + hi) / 2;
+        let fm; try { fm = df(m); } catch (e) { fm = NaN; }
         if (!isNum(fm)) break;
         if (flo * fm <= 0) hi = m; else { lo = m; flo = fm; }
       }
@@ -7607,7 +7616,12 @@ function fnRootsOf(fa, fb) {
     }
     px = x; pd = d;
   }
-  return xs.map(x => { let y; try { y = fa(x); } catch (e) { y = NaN; } return { x, y }; }).filter(p => isNum(p.y));
+  return xs;
+}
+/* 两个函数在可视横向区间内的全部交点 */
+function fnRootsOf(fa, fb) {
+  const df = x => { try { const d = fa(x) - fb(x); return isNum(d) ? d : NaN; } catch (e) { return NaN; } };
+  return scanSignRoots(df).map(x => { let y; try { y = fa(x); } catch (e) { y = NaN; } return { x, y }; }).filter(p => isNum(p.y));
 }
 /* 从一批交点里挑出本对象该用的那一个。
    交点可能有 0 / 1 / 2… 个，而且求交结果的分支顺序会随位置变化：
@@ -8950,7 +8964,12 @@ function ensureAxisLine(name) {
   const isX = /^x/i.test(name);
   const p1 = makePoint({ x: isX ? -1e4 : 0, y: isX ? 0 : -1e4 }, '', { aux: true, visible: false });
   const p2 = makePoint({ x: isX ? 1e4 : 0, y: isX ? 0 : 1e4 }, '', { aux: true, visible: false });
-  o = mkObj('line', { kind: 'twoPoints', parents: [p1.id, p2.id], aux: true, visible: false, label: name });
+  /* data 必须当场写上：命令行里的 Perpendicular(P, xAxis) 会立刻读 lineOf()，
+     这时整批命令还没 recompute，只有 parents 是拿不到直线的。 */
+  o = mkObj('line', {
+    kind: 'twoPoints', parents: [p1.id, p2.id], aux: true, visible: false, label: name,
+    data: { p: { x: p1.value.x, y: p1.value.y }, q: { x: p2.value.x, y: p2.value.y }, L: isX ? { a: 0, b: 1, c: 0 } : { a: 1, b: 0, c: 0 } }
+  });
   return o;
 }
 function ensurePoint(a, hidden) {
@@ -23746,12 +23765,13 @@ const AI_SYSTEM = `你是嵌入在「GeoAI」中的数学助手。这个应用�
 
 【输出规则 —— 必须遵守】
 1. 用简体中文回答，讲解简洁、准确、有条理，面向中学生与教师。
-2. 【作图先规划，再由控件分步调用你】需要作图或新建对象时，这一轮只做规划，不要输出 geogebra 命令：
+2. 【作图：先规划，再由 ReAct 循环逐步执行】用户要作图时，这一轮只做规划，不要输出 geogebra 命令：
    · 先用一两句话说明要画什么，然后输出一个 \`\`\`steps 代码块，每行写一步的目标（不写命令、不写序号）。
    · 计划要覆盖完整图形，2~6 步；顺序：先建点 / 基础对象，再连线、圆、多边形，最后加标注与度量。
-   · 之后控件会把「第 i/n 步」的目标单独发给你：那时只输出这一步需要的 \`\`\`geogebra 代码块（1~4 条命令，每行一条），
-     可以配一句不超过 30 字的说明；不要重复画布上已有的对象，也不要提前写后面步骤的命令。
-   · 每一步都接着当前画布往下画，所以后一步可以直接引用前面已经建好的对象名。规划轮里不要附带 geogebra 命令块。
+   · 之后每一小步都会单独请求你一次：你写一行 Thought 说明这一小步做什么，再输出一个 \`\`\`geogebra 代码块（1~4 条命令，每行一条）。
+     控件执行后会把每条命令的成功 / 失败和当前画布对象列表作为 Observation 返回给你，你据此决定下一步；整幅图完成时输出 \`\`\`done。
+   · 有命令失败就换构造或换名字，不要原样重发；画布上已有的对象直接用名字引用，绝不重复定义。
+   · 规划轮里不要附带 geogebra 命令块。
 3. 讲解文字写在代码块外面；不要输出 JSON，不要输出多余的命令格式说明。
 4. 用户只是问概念或要求解题时，直接回答，不必输出代码块。
 5. 若用户要求清空画布，把「清空画布」写成计划的第一步（那一步的命令是 DeleteAll()）。
@@ -23898,15 +23918,25 @@ Mean(列表) Median(列表) Mode(列表) Count(列表) SD(列表) Variance(列�
 - "标出交点"用 Intersect，"标注角度"用 Angle，"标注长度"用 Distance。
 - 命令写完后直接给结论，不要说"请运行"。`;
 
-/* 分步作图执行器：每次请求只负责计划里的一步，避免一轮输出整幅图 */
-const AI_STEP_SYSTEM = `你是「GeoAI」动态几何画板的分步作图执行器。作图计划已经确定，现在只执行其中一步。
+/* 分步作图执行器：ReAct（Thought → Action → Observation）循环，每次请求只做一个动作。
+   参考 ReAct (Yao et al., 2022) 的 thought/action/observation 三元组，以及 Reflexion 的
+   「把执行失败讲给自己听再改法」——画到一半发现两线不相交时，它必须能换构造方式，
+   而不是照着事先写好的计划硬走。 */
+const AI_STEP_SYSTEM = `你是「GeoAI」动态几何画板的作图执行器，用 ReAct 方式一步一步把图补齐。每一步只做一个动作。
 
-【本步规则】
-1. 只输出一个 \`\`\`geogebra 代码块，放 1~4 条命令，每行一条；不要输出其它步骤的命令，也不要输出 steps / search / ask 块。
-2. 画布上已经存在的对象直接引用它们的名字，绝对不要重复定义；需要新对象时起一个不冲突的名字。
-3. 命令必须能在当前画布上直接执行；没有把握的名字不要用。
-4. 可以在代码块前写一句不超过 30 字的说明，其余不要多写，不要输出 JSON。
-5. 画完这一步就停，后面的步骤会由控件另行请求。`;
+【输出格式（严格遵守）】
+先写一行：Thought: 一句话说明这一步要做什么、会用到画布上哪些对象。
+然后从下面三种动作里选一个，只输出一个代码块：
+1. \`\`\`geogebra —— 执行 1~4 条命令（每行一条），把这一步画出来；
+2. \`\`\`search —— 确实不清楚题目条件 / 需要外部资料时，写一行检索词；
+3. \`\`\`done —— 图形已经完整时用它结束，代码块里写一句结论。
+
+【规则】
+1. 执行结果会以 Observation 的形式返回给你：每条命令成功还是失败、现在画布上有哪些对象。照着 Observation 决定下一步。
+2. 命令失败时必须换一种写法或换一个构造（例如两线不相交就换一条线），不要原样重发同一条命令；失败的多半是对象名不对或条件不成立。
+3. 画布上已有的对象直接引用名字，绝对不要重复定义、也不要重画已经成功的部分。
+4. 一个动作只推进一小步（1~4 条命令）；总步数有限，不要在一步里塞整幅图，也不要拖到很多步只画一个点。
+5. 除了 Thought 和代码块，不要输出别的内容；不要输出 JSON、steps、ask 块。`;
 
 
 function aiEffort() { return EFFORTS.find(e => e.id === state.aiEffort) || EFFORTS[EFFORT_DEFAULT]; }
@@ -25260,6 +25290,7 @@ async function aiSend() {
      ③ 正文只在同一帧内重排一次，且不再无条件抢滚动。 */
   const AI_PAINT_MS = 40;
   const AI_FIX_MAX = 2;   /* 作图命令执行失败时，回传 AI 重新生成的次数上限 */
+  const AI_REACT_MAX = 10;   /* ReAct 循环的步数上限：一步一个小动作，够画完一道中考压轴题 */
   const SEARCH_MAX_ROUNDS = 2;   /* AI 自己发起「再联网检索」的次数上限，避免无限自搜 */
   let paintTimer = 0, paintedR = '', paintedC = '', pendingR = '', pendingC = '';
   let streamExec = null;   /* 流式作图：每个完整的 geogebra 代码块一到就执行（定义在 runCmds 之后） */
@@ -25504,7 +25535,7 @@ async function aiSend() {
        AI 只画这一步 → 立刻执行上图 → 再请求下一步，直到计划画完。 */
     const planSteps = asked ? [] : parseStepPlan(curContent);
     const stepMode = planSteps.length > 0;
-    let stepOk = 0, stepBadN = 0, stepFix = 0, stepAborted = false;
+    let stepOk = 0, stepBadN = 0, stepTotal = 0, stepAborted = false;
     const stepLog = [];
 
     if (!stepMode) {
@@ -25517,64 +25548,107 @@ async function aiSend() {
     } else {
       state.aiHistory.push({ role: 'user', content: userContent });
       const planText = stripBlock(stripBlock(curContent, 'search'), 'steps').trim();
-      for (let i = 0; i < planSteps.length; i++) {
-        const desc = planSteps[i];
+      /* ── ReAct 循环：Thought → Action → Observation ──
+         每次请求只做一个动作；执行结果（每条命令成功/失败、当前画布对象）作为 Observation
+         回传，由模型自己决定下一步：继续画 / 换构造 / 补搜 / 结束。
+         相比「照事先写好的计划硬走」，画到一半发现两线不相交时它能立刻换构造，
+         而不是把错误一路带到最后。 */
+      const planMsgs = [
+        { role: 'system', content: AI_STEP_SYSTEM },
+        { role: 'user', content: userContent },
+        { role: 'assistant', content: planText ? '我的作图计划：\n' + planText : '（没有固定计划，按题目要求一步步画完）' },
+      ];
+      const obsText = (rs, raw) => {
+        const labels = state.objects.filter(o => !o.aux).map(o => o.label).filter(Boolean);
+        if (!rs.length) return 'Observation: 没有可执行的命令。' + (raw ? '' : '代码块是空的。') +
+          '请输出一个 ```geogebra 动作（1~4 条命令），或已经画完就输出 ```done。\n当前画布对象（' + labels.length + ' 个）：' + (labels.join(', ') || '空');
+        const lines = rs.map(r => '· ' + r.line + ' → ' + (r.ok ? '成功' + (r.label ? '，生成 ' + r.label : '') : '失败：' + r.err));
+        const failed = rs.filter(r => !r.ok).length;
+        return 'Observation:\n' + lines.join('\n') +
+          '\n当前画布对象（' + labels.length + ' 个）：' + (labels.join(', ') || '空') +
+          (failed ? '\n其中 ' + failed + ' 条失败：请换一种构造或改用正确的对象名，不要原样重发同一条命令。'
+            : '\n继续下一步；如果整幅图已经画完，就输出 ```done 结束。');
+      };
+      let actionNo = 0, reactDone = false;
+      for (let it = 0; it < AI_REACT_MAX && !reactDone; it++) {
+        actionNo++;
         const stepEl = document.createElement('div');
         stepEl.className = 'ai-step';
-        stepEl.innerHTML = '<div class="ai-step-hd"><span class="ai-step-n">第 ' + (i + 1) + '/' + planSteps.length + ' 步</span>' +
-          '<span class="ai-step-go">' + esc(desc) + '</span></div>';
+        stepEl.innerHTML = '<div class="ai-step-hd"><span class="ai-step-n">第 ' + actionNo + ' 步</span><span class="ai-step-go">思考中…</span></div>';
         const stepTx = document.createElement('div');
         stepTx.className = 'ai-step-tx';
         stepEl.appendChild(stepTx);
         body.appendChild(stepEl); keepBottom();
-        aiIsland('write', '作图中 ' + (i + 1) + '/' + planSteps.length, aiIslandPreview(desc), { busy: true });
+        aiIsland('write', '作图中 · 第 ' + actionNo + ' 步', '思考 → 作图 → 观察', { busy: true });
 
-        const stepAsk = '【第 ' + (i + 1) + '/' + planSteps.length + ' 步】' + desc + '\n' +
-          '只画这一步：输出一个 geogebra 代码块（1~4 条命令），不要重复画布上已有的对象，也不要写后面步骤的命令。\n' +
-          buildCanvasContext();
-        const stepMsgs = [
-          { role: 'system', content: AI_STEP_SYSTEM },
-          { role: 'user', content: userContent },
-          { role: 'assistant', content: planText || ('作图计划：共 ' + planSteps.length + ' 步，本步目标：' + desc) },
-          { role: 'user', content: stepAsk },
-        ];
         let sText = '', sTimer = 0;
-        const sFlush = () => { sTimer = 0; stepTx.innerHTML = renderAIContent(stripBlock(sText, 'geogebra')); keepBottom(); };
-        const onStep = (_r, c) => { if (!c) return; sText = c; if (!sTimer) sTimer = setTimeout(sFlush, AI_PAINT_MS); };
+        const paintStep = () => {
+          const th = (String(sText).match(/Thought\s*[:：]\s*([^\n]+)/i) || [])[1] || '';
+          const go = stepEl.querySelector('.ai-step-go');
+          if (go) go.textContent = (th || '正在作图').slice(0, 120);
+          stepTx.innerHTML = renderAIContent(stripBlock(stripBlock(stripBlock(sText, 'geogebra'), 'search'), 'done'));
+          keepBottom();
+        };
+        const onStep = (_r, c) => {
+          if (!c) return;
+          sText = c;
+          if (!sTimer) sTimer = setTimeout(() => { sTimer = 0; paintStep(); }, AI_PAINT_MS);
+        };
         const stopStepPaint = () => { if (sTimer) { clearTimeout(sTimer); sTimer = 0; } };
         let sr = { content: '' };
-        try { sr = await callAI(stepMsgs, eff, onStep); }
+        try { sr = await callAI(planMsgs, eff, onStep); }
         catch (e) { stopStepPaint(); if (e && e.name === 'AbortError') { stepAborted = true; break; } throw e; }
-        stopStepPaint(); sFlush();
+        stopStepPaint(); paintStep();
 
         const raw = sr.content || '';
-        let cmds = extractGeoCommands(raw);
-        let rs = execLines(cmds, stepEl);
-        let bad = rs.filter(r => !r.ok);
-        /* 这一步有命令失败：只针对这一步回传错误让它重画，其他步骤不受影响 */
-        while (bad.length && stepFix < AI_FIX_MAX) {
-          stepFix++;
-          aiIsland('correct', '修正中 ' + stepFix + '/' + AI_FIX_MAX, '第 ' + (i + 1) + ' 步有 ' + bad.length + ' 条命令未成功', { busy: true });
-          const fixAsk = '【第 ' + (i + 1) + '/' + planSteps.length + ' 步 · 修正】上面这段命令里有 ' + bad.length + ' 条执行失败：\n' +
-            bad.map(r => '  · ' + r.line + '   →   ' + r.err).join('\n') + '\n\n' + buildCanvasContext() +
-            '\n\n请只重画这一步：输出一个 geogebra 代码块（1~4 条命令），修正错误，不要重复画布上已有的对象。';
-          let fr = { content: '' };
-          try { fr = await callAI(stepMsgs.concat([{ role: 'assistant', content: raw }, { role: 'user', content: fixAsk }]), eff, onStep); }
-          catch (e) { stopStepPaint(); if (e && e.name === 'AbortError') { stepAborted = true; break; } throw e; }
-          stopStepPaint(); sFlush();
-          const more = extractGeoCommands(fr.content || '');
-          if (!more.length) break;
-          rs = execLines(more, stepEl);
-          bad = rs.filter(r => !r.ok);
+        /* 模型自己判断画完了 */
+        if (/```done\b/i.test(raw)) {
+          reactDone = true;
+          const note = extractBlockList(raw, 'done').join(' ').replace(/\s+/g, ' ').trim();
+          stepEl.querySelector('.ai-step-go').textContent = note ? note.slice(0, 120) : '作图完成';
+          planMsgs.push({ role: 'assistant', content: raw });
+          break;
         }
+        /* 动作二：先去查资料，再继续 */
+        const qs = extractBlockList(raw, 'search').join(' ').trim();
+        if (qs && !extractGeoCommands(raw).length) {
+          stepEl.querySelector('.ai-step-go').textContent = '先查资料：' + qs.slice(0, 80);
+          aiIsland('search', '补充检索', aiIslandPreview(qs), { busy: true });
+          let more = '', hits = 0;
+          try {
+            const results = await aiWebSearch(qs, WEB_MAX_RESULTS);
+            hits = results.length;
+            more = webContextBlock(results, []);
+          } catch (e) { more = ''; }
+          extraHits += hits;
+          planMsgs.push({ role: 'assistant', content: raw });
+          planMsgs.push({ role: 'user', content: hits
+            ? 'Observation: 检索到 ' + hits + ' 条资料：\n' + more + '\n请据此继续作图。'
+            : 'Observation: 没有检索到可用资料，请凭已有信息继续作图。' });
+          stepLog.push('查资料（' + qs + '）');
+          continue;
+        }
+        /* 动作一：执行这一步的命令，把结果作为 Observation 回传 */
+        const cmds = extractGeoCommands(raw);
+        const rs = cmds.length ? execLines(cmds, stepEl) : [];
+        const bad = rs.filter(r => !r.ok);
         stepOk += rs.filter(r => r.ok).length;
         stepBadN += bad.length;
-        stepLog.push('第 ' + (i + 1) + ' 步（' + desc + '）：' + (cmds.join('; ') || '无命令'));
+        if (cmds.length) stepLog.push('第 ' + actionNo + ' 步：' + cmds.join('; '));
+        planMsgs.push({ role: 'assistant', content: raw });
+        planMsgs.push({ role: 'user', content: obsText(rs, raw) });
+        if (!cmds.length && !bad.length) {
+          /* 既没命令也没 done：给一次明确提示，再不行就停 */
+          stepEl.querySelector('.ai-step-go').textContent = '没有给出作图命令';
+          if (it >= 1) break;
+        }
         if (stepAborted) break;
       }
+      if (!reactDone && !stepAborted) stepLog.push('（达到步数上限，图可能还没画完）');
       state.aiHistory.push({ role: 'assistant', content: stepLog.join('\n') || planText || '（分步作图）' });
       if (state.aiHistory.length > 24) state.aiHistory.splice(0, state.aiHistory.length - 24);
       aiCtxSync();
+      stepTotal = actionNo;
     }
 
     /* 作图：流式阶段已经一步一块地画完；这里只处理没成功的命令，回传 AI 修正 */
@@ -25582,8 +25656,8 @@ async function aiSend() {
     let badTotal = 0, doneSub = '回答已就绪';
     if (stepMode) {
       badTotal = stepBadN;
-      doneSub = stepBadN ? stepBadN + ' 条命令未成功'
-        : '已分 ' + planSteps.length + ' 步作图 · 完成 ' + stepOk + ' 条命令';
+      doneSub = stepBadN ? stepOk + ' 条命令成功 · ' + stepBadN + ' 条未成功'
+        : '已分 ' + stepTotal + ' 步作图 · 完成 ' + stepOk + ' 条命令';
       if (stepBadN) toast('有 ' + stepBadN + ' 条命令未执行成功', 'err', 3200);
     } else if (results.length) {
       let bad = results.filter(r => !r.ok);
