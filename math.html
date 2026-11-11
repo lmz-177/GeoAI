@@ -942,13 +942,12 @@ body.dark .eff-warn{color:#c39bff}
 .api-close:hover{background:var(--hover);color:var(--text)}
 .api-close svg{width:13px;height:13px}
 .api-pop-sub{padding:4px 18px 14px;font-size:var(--fs-xs);line-height:17px;color:var(--text-3)}
-/* 输入行：44pt 触控高度 + 聚焦描边 */
-.api-field{margin:0 16px;display:flex;align-items:center;height:46px;border-radius:12px;
+/* 输入行：44pt 触控高度 + 聚焦描边（幕布要盖在上面，需要 relative） */
+.api-field{margin:0 16px;display:flex;align-items:center;height:46px;border-radius:12px;position:relative;
   background:var(--panel-2);border:.5px solid var(--border);
   transition:border-color var(--t),box-shadow var(--t),opacity .2s var(--ease),transform .2s var(--ease)}
-/* 加密动画：验证通过后明文先糊掉、字距拉开，再换成掩码 —— 像被「封存」而不是瞬间消失 */
-.api-field.sealing{opacity:.5;transform:scale(.985)}
-.api-field.sealing input{filter:blur(3.5px);letter-spacing:.2em;transition:filter .16s ease,letter-spacing .16s ease}
+/* 加密动画期间输入行只轻轻一收：字符的「加密」由上面的密文幕布来演 */
+.api-field.sealing{transform:scale(.99)}
 .api-field:focus-within{border-color:var(--accent);box-shadow:0 0 0 3.5px var(--accent-dim)}
 .api-field input{flex:1;min-width:0;height:100%;padding:0 4px 0 13px;background:transparent;border:0;
   font-size:15px;color:var(--text);outline:none}
@@ -958,25 +957,64 @@ body.dark .eff-warn{color:#c39bff}
 .api-eye:hover{color:var(--text)}
 .api-eye.on{color:var(--accent)}
 .api-eye svg{width:17px;height:17px}
-/* 已保存态：封存后的密钥卡片。锁 + 掩码 + 一枚「更换」小键，一眼看出「已存好、可替换」 */
+/* 密文幕布：封存动画期间盖在输入行上。字符逐位翻成十六进制乱数、从左到右
+   锁成密文指纹，整排颜色从主色转绿 —— 「加密完成」。幕布上的终点字符
+   与封存卡里显示的密文指纹是同一串，动画和结果就对上了。 */
+.api-seal{
+  position:absolute;inset:0;z-index:2;border-radius:inherit;display:flex;align-items:center;gap:8px;
+  padding:0 13px;background:var(--panel-2);opacity:0;pointer-events:none;transition:opacity .09s ease;
+}
+.api-seal.on{opacity:1}
+.api-seal-txt{flex:1;min-width:0;font-family:var(--mono);font-size:var(--fs-sm);letter-spacing:.08em;
+  color:var(--accent);white-space:nowrap;overflow:hidden;transition:color .28s ease}
+.api-seal.sealed .api-seal-txt{color:var(--ok)}
+.api-seal-alg{flex:0 0 auto;padding:2px 7px;border-radius:99px;background:var(--accent-dim);
+  font-family:var(--mono);font-size:var(--fs-3xs);font-weight:600;letter-spacing:.03em;color:var(--accent);
+  transition:background .28s ease,color .28s ease}
+.api-seal.sealed .api-seal-alg{background:var(--ok-dim,rgba(52,199,89,.14));color:var(--ok)}
+/* 已保存态：封存卡。不放任何一段真实的 Key —— 左侧加密徽章，标题下是本机
+   AES-GCM 密文的开头几位（密文本来就存在本机，露出它也不可能反推出 Key），
+   右侧「更换」小键；下沿一条账户余额行。 */
 .api-key-card{
-  margin:0 16px;display:flex;align-items:center;gap:9px;height:46px;padding:0 5px 0 13px;
-  border-radius:12px;background:var(--panel-2);border:.5px solid var(--border);
-  animation:apiKeyIn .26s var(--ease-out) both;
+  margin:0 16px;padding:12px 13px;border-radius:14px;
+  background:var(--panel-2);border:.5px solid var(--border);
+  animation:apiKeyIn .3s var(--ease-out) both;
 }
 @keyframes apiKeyIn{from{opacity:0;transform:translateY(-5px) scale(.985)}to{opacity:1;transform:none}}
-.api-key-lock{flex:0 0 16px;width:16px;height:16px;color:var(--ok);display:flex}
-.api-key-lock svg{width:16px;height:16px}
-.api-key-mask{flex:1;min-width:0;font-family:var(--mono);font-size:var(--fs-sm);letter-spacing:.02em;
-  color:var(--text-2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.api-key-change{flex:0 0 auto;height:34px;padding:0 13px;border-radius:9px;
+.api-key-card[hidden]{display:none}
+.akc-row{display:flex;align-items:center;gap:10px}
+.akc-ic{flex:0 0 34px;width:34px;height:34px;border-radius:10px;display:grid;place-items:center;
+  background:var(--accent-dim);color:var(--accent)}
+.akc-ic svg{width:18px;height:18px}
+.akc-info{flex:1;min-width:0}
+.akc-ttl{display:flex;align-items:center;gap:6px;font-size:var(--fs-sm);font-weight:600;
+  letter-spacing:-.2px;color:var(--text);white-space:nowrap}
+.akc-alg{flex:0 0 auto;padding:1.5px 6px;border-radius:99px;background:var(--panel-3);
+  font-family:var(--mono);font-size:var(--fs-3xs);font-weight:500;letter-spacing:.02em;color:var(--text-3)}
+.akc-ct{margin-top:2px;font-family:var(--mono);font-size:var(--fs-2xs);letter-spacing:.03em;
+  color:var(--text-3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.api-key-change{flex:0 0 auto;height:32px;padding:0 12px;border-radius:9px;
   font-size:var(--fs-xs);font-weight:600;color:var(--accent);background:var(--accent-dim);transition:var(--t-ui)}
 .api-key-change:hover{background:var(--accent);color:#fff}
 .api-key-change:active{transform:scale(.95)}
-/* 两态切换：编辑区展开 / 收起的弹簧，不是生硬地 display 切换 */
+.akc-sep{margin:10px -13px;border-top:.5px solid var(--border)}
+.akc-bal{display:flex;align-items:center;gap:7px;min-height:24px}
+.akc-bal-lb{font-size:var(--fs-xs);color:var(--text-3)}
+.akc-bal-amt{margin-left:auto;font-family:var(--mono);font-size:var(--fs-sm);font-weight:600;
+  letter-spacing:-.01em;color:var(--text-3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.akc-bal[data-state="ok"] .akc-bal-amt{color:var(--text)}
+.akc-bal[data-state="warn"] .akc-bal-amt{color:var(--warn)}
+.akc-bal[data-state="err"] .akc-bal-amt{color:var(--danger)}
+.akc-refresh{flex:0 0 28px;width:28px;height:28px;border-radius:50%;display:grid;place-items:center;
+  color:var(--text-3);background:var(--panel-3);transition:var(--t-ui)}
+.akc-refresh:hover{background:var(--hover);color:var(--text)}
+.akc-refresh:active{transform:scale(.92)}
+.akc-refresh svg{width:14px;height:14px}
+.akc-refresh[disabled]{opacity:.5}
+.akc-bal[data-state="loading"] .akc-refresh svg{animation:apiSpin .7s linear infinite}
+/* 两态切换：编辑区展开 / 收起，display 切换 + 各自的进场动画 */
 .api-editor{display:block}
 .api-editor[hidden]{display:none}
-.api-key-card[hidden]{display:none}
 /* 主按钮在编辑态里才出现，避免「已保存」时还挂着一个大蓝块 */
 .api-editor .api-primary{margin-top:12px}
 /* 状态行：小圆点 + 一句话；清除只是行尾的一行小字 */
@@ -2063,17 +2101,32 @@ body.dark .modal,body.dark .cmd-search,body.dark .toolwrap{
               <button class="api-close" id="apiPopClose" title="关闭" aria-label="关闭"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6 6 18"></path></svg></button>
             </div>
             <div class="api-pop-sub">使用你自己的 Key，仅支持 DeepSeek 官方接口</div>
-            <!-- 已保存态：封存后的密钥卡片。只露头尾，右侧一枚「更换」小键 -->
+            <!-- 已保存态：封存卡。不放 Key 的任何真实字符 —— 标题下那串「密文」就是
+                 本机存下来的 AES-GCM 密文的开头几位（密文本来就存在本机，露出它也不可能
+                 反推出 Key），看得见「真的加密了」；下沿一条 DeepSeek 账户余额。 -->
             <div class="api-key-card" id="apiKeyCard" hidden>
-              <span class="api-key-lock" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="4.5" y="10.5" width="15" height="9.5" rx="2.6"></rect><path d="M8.2 10.5V7.8a3.8 3.8 0 0 1 7.6 0v2.7"></path></svg></span>
-              <span class="api-key-mask" id="apiKeyMask">sk-••••••••••</span>
-              <button class="api-key-change" id="apiKeyChange" type="button">更换</button>
+              <div class="akc-row">
+                <span class="akc-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 2.6v5.1c0 4.6-3 8.1-7 10.3-4-2.2-7-5.7-7-10.3V5.6z"></path><path d="M9.2 12.1l2 2 3.6-3.9"></path></svg></span>
+                <div class="akc-info">
+                  <div class="akc-ttl">已加密 · 仅存于本机<span class="akc-alg">AES-256-GCM</span></div>
+                  <div class="akc-ct" id="apiKeyCt">密文 —</div>
+                </div>
+                <button class="api-key-change" id="apiKeyChange" type="button">更换</button>
+              </div>
+              <div class="akc-sep" aria-hidden="true"></div>
+              <div class="akc-bal" id="apiBalance" data-state="idle">
+                <span class="akc-bal-lb">账户余额</span>
+                <span class="akc-bal-amt" id="apiBalanceAmt">—</span>
+                <button class="akc-refresh" id="apiBalanceRefresh" title="刷新余额" aria-label="刷新余额"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 1 1-2.34-5.66"></path><path d="M20 4v4.4h-4.4"></path></svg></button>
+              </div>
             </div>
             <!-- 编辑态：输入框 + 主按钮 + 获取入口 -->
             <div class="api-editor" id="apiEditor">
               <div class="api-field" id="apiField">
                 <input type="password" id="dsKeyInput" placeholder="sk-… 粘贴 API Key" autocomplete="new-password" spellcheck="false" aria-label="DeepSeek API Key">
                 <button class="api-eye" id="dsKeyEye" title="显示 / 隐藏" aria-label="显示 Key"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 12S6 5.8 12 5.8 21.5 12 21.5 12 18 18.2 12 18.2 2.5 12 2.5 12z"></path><circle cx="12" cy="12" r="2.6"></circle></svg></button>
+                <!-- 封存动画的「密文幕布」：盖在输入行上，字符逐位翻成密文再锁定 -->
+                <div class="api-seal" id="apiSeal" aria-hidden="true"><span class="api-seal-txt"></span><span class="api-seal-alg">AES-256-GCM</span></div>
               </div>
               <button class="api-primary" id="dsKeySave" disabled><span class="api-spin" aria-hidden="true"></span><span id="dsKeySaveTxt">保存并验证</span></button>
               <a class="api-link" href="https://platform.deepseek.com/api_keys" target="_blank" rel="noopener noreferrer">获取 API Key <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17 17 7M9 7h8v8"></path></svg></a>
@@ -2767,7 +2820,7 @@ const AI_CTX_MAX = 1000000;
 const AI_STORE = 'ggai_ds_key_v1';
 const AI_WRAP = 'ggai_ds_wrap_v1';
 const AI_DB = 'ggai_secure_store';
-const AI_CONF = { key: '' };
+const AI_CONF = { key: '', fp: '' };   /* fp：密文指纹（AES-GCM 密文开头几位，仅用于封存卡展示） */
 let aiKeyState = 'empty';        // empty | saving | saved | session | error
 let aiKeyReady = null;
 let aiKeySeq = 0;
@@ -2883,11 +2936,12 @@ async function aiDecrypt(o) {
   return new TextDecoder().decode(pt);
 }
 function aiSetState(s) { aiKeyState = s; aiSyncKeyUI(); }
-/* 已保存的 Key 只露头尾，避免整串回显 */
-function aiMaskKey(k) {
-  k = String(k || '');
-  if (k.length < 10) return 'sk-••••';
-  return k.slice(0, 3) + '••••••' + k.slice(-4);
+/* 密文指纹：取本机存的 AES-GCM 密文（base64）去填充后的开头几位。
+   封存卡只展示它 —— 不回显 Key 的任何真实字符；密文本身就存在本机，
+   露出开头几位既证明「真的加密了」，也不可能反推出 Key。 */
+function apiCtFp(o) {
+  const ct = String((o && o.ct) || '').replace(/=+$/, '');
+  return ct ? ct.slice(0, 10) : '';
 }
 /* 状态行：tone = empty / ok / err / testing / session */
 function apiSetState(tone, text) {
@@ -2921,10 +2975,10 @@ function aiSyncKeyUI() {
   }
   /* 两态：有 Key 且没点「更换」→ 显示封存卡；否则显示输入区 */
   const editing = apiEditing || !has;
-  const card = $('#apiKeyCard'), editor = $('#apiEditor'), mask = $('#apiKeyMask');
+  const card = $('#apiKeyCard'), editor = $('#apiEditor'), ct = $('#apiKeyCt');
   if (card) card.hidden = editing;
   if (editor) editor.hidden = !editing;
-  if (mask) mask.textContent = has ? aiMaskKey(AI_CONF.key) : 'sk-••••••••••';
+  if (ct) ct.textContent = has && AI_CONF.fp ? '密文 ' + AI_CONF.fp + '…' : '密文 —';
   if (inp) inp.placeholder = has ? '粘贴新 Key 将替换当前的' : 'sk-… 粘贴 API Key';
   if (clr) {
     clr.hidden = !has;
@@ -2954,9 +3008,11 @@ async function aiLoadKey() {
   try { raw = localStorage.getItem(AI_STORE) || ''; } catch (e) { }
   if (!raw) { aiSetState('empty'); return; }
   try {
-    const key = await aiDecrypt(JSON.parse(raw));
+    const o = JSON.parse(raw);
+    const key = await aiDecrypt(o);
     AI_CONF.key = key || '';
-    /* 读到有效 Key 就直接进入「已封存」态：打开卡片一眼看到掩码和「更换」，
+    AI_CONF.fp = apiCtFp(o);    /* 密文指纹直接取自存的密文，不用解密 */
+    /* 读到有效 Key 就直接进入「已封存」态：打开卡片一眼看到密文卡和「更换」，
        而不是又摆一个空输入框让人以为没保存 */
     apiEditing = !key;
     aiSetState(key ? 'saved' : 'empty');
@@ -2974,6 +3030,7 @@ async function aiSaveKey(key) {
   try {
     const enc = await aiEncrypt(key);
     if (seq !== aiKeySeq) return;    /* 输入已变，丢弃这次旧结果 */
+    AI_CONF.fp = apiCtFp(enc);       /* 记下密文指纹：封存卡和封存动画的终点都用它 */
     if (aiKeyPersisted) {
       localStorage.setItem(AI_STORE, JSON.stringify(enc));
       aiKeyErr = '';
@@ -2995,7 +3052,9 @@ function aiClearKey() {
   aiKeySeq++;
   aiKeyErr = '';
   AI_CONF.key = '';
+  AI_CONF.fp = '';
   apiEditing = true;
+  apiBalanceSet('idle', '—', '');
   try { localStorage.removeItem(AI_STORE); } catch (e) { }
   const inp = $('#dsKeyInput'); if (inp) inp.value = '';
   apiBusy(false);
@@ -3035,29 +3094,86 @@ function apiShowError(msg) {
   apiSetState('err', '连接失败：' + aiFriendlyError(msg));
   const st = $('#dsKeyStatus'); if (st) st.title = String(msg || '');
 }
-/* 「封存」动画：验证通过后，明文先在输入框里糊掉、字距拉开，再换成圆点，
-   最后整块收成密钥卡片。序列约 500ms —— 短到不拖沓，长到能看出「被加密了」。 */
+/* 「封存」动画：明文先从输入框退场，密文幕布上逐位翻字符、从左到右锁成
+   密文指纹（就是封存卡里显示的那串），整排由蓝转绿 —— 看得见「真的在加密」，
+   全程不回显 Key 的任何真实字符。序列约 750ms。 */
 function apiSealKey() {
   return new Promise(done => {
-    const field = $('#apiField'), inp = $('#dsKeyInput');
-    if (!field || !inp) { apiEditing = false; aiSyncKeyUI(); done(); return; }
-    const dots = '••••••••••••••••';
+    const field = $('#apiField'), inp = $('#dsKeyInput'), veil = $('#apiSeal');
+    if (!field || !inp || !veil) { apiEditing = false; aiSyncKeyUI(); done(); return; }
+    /* 明文立刻离开 DOM：接下来演的是密文，不是 Key 本身 */
+    inp.type = 'password';
+    inp.value = '';
+    const eye = $('#dsKeyEye');
+    if (eye) { eye.classList.remove('on'); eye.setAttribute('aria-label', '显示 Key'); }
+    const fp = AI_CONF.fp || '0f3a9c1b2d';
+    const txt = veil.querySelector('.api-seal-txt');
+    veil.classList.remove('sealed');
     field.classList.add('sealing');
-    setTimeout(() => {
-      /* 明文替换成圆点（type 也切回 password，防止 DOM 里残留可读内容） */
-      inp.type = 'password';
-      inp.value = dots;
-      apiEditing = false;
+    veil.classList.add('on');
+    /* 逐位锁定：位置 i 在 (i+1.6) 个步长时定格成密文第 i 位，之前每帧翻随机十六进制 */
+    const GLY = '0123456789abcdef';
+    const n = fp.length, DUR = 440, HOLD = 170;
+    const step = DUR / (n + 2.4);
+    const t0 = performance.now();
+    (function frame(now) {
+      const t = (now || performance.now()) - t0;
+      let out = '';
+      for (let i = 0; i < n; i++) out += t >= (i + 1.6) * step ? fp[i] : GLY[(Math.random() * 16) | 0];
+      if (txt) txt.textContent = out;
+      if (t < DUR) { requestAnimationFrame(frame); return; }
+      if (txt) txt.textContent = fp;
+      veil.classList.add('sealed');       /* 加密完成：整排转绿 */
       setTimeout(() => {
         field.classList.remove('sealing');
-        inp.value = '';
-        aiSyncKeyUI();
-        const eye = $('#dsKeyEye');
-        if (eye) { eye.classList.remove('on'); eye.setAttribute('aria-label', '显示 Key'); }
+        veil.classList.remove('on', 'sealed');
+        apiEditing = false;
+        aiSyncKeyUI();                    /* 幕布落下，封存卡带着密文指纹弹上来 */
         done();
-      }, 240);
-    }, 170);
+      }, HOLD);
+    })();
   });
+}
+/* ── 账户余额：DeepSeek 官方接口，只在封存卡里展示 ── */
+let apiBalBusy = false;
+function apiBalanceSet(state, amt, tip) {
+  const row = $('#apiBalance'), el = $('#apiBalanceAmt');
+  if (row) row.dataset.state = state;
+  if (el) { el.textContent = amt; el.title = tip || ''; }
+}
+async function apiBalanceRefresh() {
+  if (!AI_CONF.key || apiBalBusy) return;
+  apiBalBusy = true;
+  apiBalanceSet('loading', '查询中…', '');
+  const rf = $('#apiBalanceRefresh');
+  if (rf) rf.disabled = true;
+  try {
+    const res = await fetch('https://api.deepseek.com/user/balance',
+      { headers: { Authorization: 'Bearer ' + AI_CONF.key } });
+    if (!res.ok) {
+      const bad = res.status === 401 || res.status === 403;
+      apiBalanceSet('err', bad ? 'Key 已失效' : '获取失败', 'HTTP ' + res.status);
+      return;
+    }
+    const j = await res.json().catch(() => null);
+    const info = ((j && j.balance_infos) || [])[0] || {};
+    const cur = info.currency === 'CNY' ? '¥' : (info.currency ? info.currency + ' ' : '');
+    const amt = Number(info.total_balance);
+    const tip = [];
+    if (info.granted_balance != null) tip.push('赠款 ' + cur + info.granted_balance);
+    if (info.topped_up_balance != null) tip.push('充值 ' + cur + info.topped_up_balance);
+    if (j && j.is_available === false) {
+      apiBalanceSet('warn', isNaN(amt) ? '已停用' : cur + amt.toFixed(2) + ' · 已停用', tip.join(' · '));
+      return;
+    }
+    if (isNaN(amt)) { apiBalanceSet('err', '获取失败', '余额字段缺失'); return; }
+    apiBalanceSet('ok', cur + amt.toFixed(2), tip.join(' · ') || '连接正常');
+  } catch (e) {
+    apiBalanceSet('err', '获取失败', (e && e.message) || '网络错误');
+  } finally {
+    apiBalBusy = false;
+    if (rf) rf.disabled = false;
+  }
 }
 /* 保存并验证：先测通再加密保存，避免把错误 Key 存下来 */
 async function aiSaveAndVerify() {
@@ -3080,14 +3196,14 @@ async function aiSaveAndVerify() {
   }
   if (typed) {
     await aiSaveKey(typed);
-    await apiSealKey();      /* 封存：明文 → 圆点 → 密钥卡片 */
+    await apiSealKey();      /* 封存：明文 → 密文幕布 → 封存卡 */
   } else aiSyncKeyUI();
   apiBusy(false);
   const persist = aiKeyState === 'saved' ? '已加密保存' : '仅本次会话';
   apiSetState('ok', (typed ? persist + ' · ' : '') + '连接正常 · ' + r.ms + ' ms');
   const b = $('#dsKeySave');
   if (b) { b.classList.add('flash'); setTimeout(() => b.classList.remove('flash'), 1000); }
-  if (typed) toast('API Key 已加密保存', 'ok', 2200);
+  if (typed) { toast('API Key 已加密保存', 'ok', 2200); apiBalanceRefresh(); }
 }
 function setApiPop(open) {
   const p = $('#apiPop'), b = $('#aiKeyBtn');
@@ -3101,6 +3217,7 @@ function setApiPop(open) {
     apiBusy(false);
     aiSyncKeyUI();
     if (!AI_CONF.key || apiEditing) setTimeout(() => { const i = $('#dsKeyInput'); if (i) i.focus(); }, 30);
+    else apiBalanceRefresh();      /* 打开就是封存卡：顺手把余额带上 */
   } else {
     /* 关面板时收回明文显示，避免下一次打开还停在“显示 Key”状态 */
     const i = $('#dsKeyInput'), eye = $('#dsKeyEye');
@@ -16675,7 +16792,7 @@ function showHelp() {
       '输入区是一条胶囊长条（左图标 / 中输入 / 右「对话」「发送」）；联网、图片、思考强度三枚圆形图标键浮在胶囊上方，点右下角 × 可整条隐藏（右上「AI」按钮恢复）',
       '用自然语言直接作图与解题，回复里的 <code>geogebra</code> 代码块会被自动执行并画到画布',
       '支持看图：点图片按钮、直接粘贴或把图片拖进输入框，可让它「照着这张图作图」「这道题怎么解」',
-      '<b>思考强度</b>：默认 <b>Low</b>；点按钮展开 Codex 风格的推理滑条 —— <b>7 档</b>等距（Off / Minimal / Low / Medium / High / XHigh / Ultra，每档一色，色相从蓝推进到紫罗兰，轨道上带刻度点），拖动实时跟手、松手吸附；落到 <b>Ultra</b> 时轨道换成蓝紫流动渐变并亮起星尘，同时提示「更快消耗使用额度」；面板右上角的回转箭头一键回到默认。输入多行文字时胶囊会自动长成圆角长方体，删字后变回长条。每次提问都会自动带上当前画布内容，AI 能直接复用已有的点、线、圆',
+      '<b>思考强度</b>：默认 <b>Low</b>；点按钮展开 Codex 风格的推理滑条 —— <b>4 档</b>等距（Off / Low / Medium / High，每档一色，色相从灰经蓝推进到紫罗兰，轨道上带刻度点），拖动实时跟手、松手吸附；落到 <b>High</b> 时轨道换成蓝紫流动渐变并亮起星尘，同时提示「更快消耗使用额度」；面板右上角的回转箭头一键回到默认。输入多行文字时胶囊会自动长成圆角长方体，删字后变回长条。每次提问都会自动带上当前画布内容，AI 能直接复用已有的点、线、圆',
       '点「联网」可先检索实时网页：结果会作为资料给 AI，回答里标出来源链接；消息里直接贴网址也会抓取正文',
       '<b>AI 自己再联网</b>：资料不够时它可以在回答里写 <code>search</code> 块（每行一个检索词），控件会真的再查一轮并把结果补给它继续写，一次回答最多补搜两轮；界面只显示「已补充检索 N 条来源」',
       '<b>AI 先问你</b>：条件不清时它写 <code>ask</code> 块，控件把问题显示成一张澄清卡片，选项可以点，点了直接填进输入框；这时它不会凭猜测作图',
@@ -17291,6 +17408,18 @@ async function runUITest() {
       const r = el.getBoundingClientRect();
       if (r.width < 2 || r.height < 2) continue;
       const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+      /* 被滚动容器裁出视野的控件（工具栏太长时滚到折叠线下方的按钮）不算
+         「不可见 / 不可点」：滚一下就能点到，和整块隐藏是同一回事。
+         判定用中心点 —— 半截露在滚动边缘上的按钮，中心多半已被裁掉。 */
+      let scrolledOut = false;
+      for (let a = el.parentElement; a && a !== document.body; a = a.parentElement) {
+        const oy = getComputedStyle(a).overflowY;
+        if (oy === 'auto' || oy === 'scroll') {
+          const ar = a.getBoundingClientRect();
+          if (cy <= ar.top || cy >= ar.bottom) { scrolledOut = true; break; }
+        }
+      }
+      if (scrolledOut) continue;
       const tag = (el.dataset.act || el.dataset.p || el.dataset.tab || el.id || el.className) + '';
       if (cx < 0 || cy < 0 || cx > innerWidth || cy > innerHeight) { bad.push(tag + ' 超出视口'); continue; }
       const top = document.elementFromPoint(cx, cy);
@@ -22804,16 +22933,16 @@ function pruneAiImages() {
     h.content = h.content.map(p => p.type === 'image_url' ? { type: 'text', text: '（附带的图片已省略）' } : p);
   }
 }
-/* ── 思考强度滑条的视觉（Codex 桌面版 7 档的取色规则）──
-   每档一色：色相从蓝 216.6° 单调推进到紫罗兰 263.9°，填充 / 标题 / 收起态圆点同步换色。
+/* ── 思考强度滑条的视觉（Codex 桌面版的取色规则，收敛到 4 档）──
+   每档一色：色相从中性灰经蓝单调推进到紫罗兰，填充 / 标题 / 收起态圆点同步换色。
    浅色 / 深色各一套实测色板 —— 深色底上亮度随档位上升，否则「更高档」反而更看不清。
    滑条本体是透明的原生 range（键盘与无障碍照旧可用），压在视觉层上面收指针；
    拖动时视觉连续跟手，松手才吸附到最近一档。 */
-const EFF_FILL = ['#8a8a8f', '#4a8ef8', '#3a83f7', '#4a72f2', '#5f5ce8', '#7b48e8', '#914ef6'];
-const EFF_INK  = ['#707073', '#2b62bd', '#2f6fd0', '#3a55b8', '#4a3fc0', '#6a35c8', '#8b46ee'];
-const EFF_FILL_DARK = ['#737378', '#3684ff', '#448dff', '#6e90ff', '#928fff', '#b18dff', '#bd91ff'];
-const EFF_INK_DARK  = ['#a9a9ae', '#73a9ff', '#76aafe', '#8ba7ff', '#a4a2ff', '#bc9cff', '#c39bff'];
-/* Ultra 填充的 15 个实测停靠点：从蓝爬升到 70% 处最亮的紫罗兰，再回落到深紫。
+const EFF_FILL = ['#8a8a8f', '#3a83f7', '#5f5ce8', '#914ef6'];
+const EFF_INK  = ['#707073', '#2f6fd0', '#4a3fc0', '#8b46ee'];
+const EFF_FILL_DARK = ['#737378', '#448dff', '#928fff', '#bd91ff'];
+const EFF_INK_DARK  = ['#a9a9ae', '#76aafe', '#a4a2ff', '#c39bff'];
+/* 最高档（High）填充的 15 个实测停靠点：从蓝爬升到 70% 处最亮的紫罗兰，再回落到深紫。
    单调渐变会明显不像原版，所以这串色标原样保留。 */
 const EFF_ULTRA_BG = 'linear-gradient(90deg,#3b83f6 0%,#3b82f6 10%,#3d7bf3 20%,#4c75f4 30%,'
   + '#6473fa 40%,#8d80fc 50%,#9375fd 55%,#9d78fd 60%,#a779fe 65%,#a476fe 70%,#9e73fe 75%,'
@@ -22922,8 +23051,11 @@ function aiEffortPick(i) {
   if (mini) mini.style.width = (i / Math.max(1, EFFORTS.length - 1) * 100).toFixed(1) + '%';
   const pn = $('#effPopName'); if (pn) { pn.textContent = ef.label; pn.style.color = ink; }
   const pd = $('#effPopDesc'); if (pd) pd.textContent = ef.desc;
-  if (ef.id === 'ultra' && prev !== 'ultra') effWarn(true);
-  else if (ef.id !== 'ultra' && prev === 'ultra') effWarn(false);
+  /* 最高档的仪式感（流动渐变 + 星尘 + 短暂警示）认「最后一档」，不写死档位 id：
+     档位数以后再收敛也不用到处理逻辑里找 */
+  const topId = EFFORTS[EFFORTS.length - 1].id;
+  if (ef.id === topId && prev !== topId) effWarn(true);
+  else if (ef.id !== topId && prev === topId) effWarn(false);
   /* 折叠态状态条上的深度跟着变；生成中不改（阶段文案优先） */
   const isl = $('#aiIsland');
   if (isl && !isl.classList.contains('busy')) aiiEffLabel();
@@ -23084,6 +23216,9 @@ function bindAI() {
       apiSetState('empty', '粘贴新的 Key 后会覆盖当前的');
       setTimeout(() => { const i = $('#dsKeyInput'); if (i) { i.value = ''; i.focus(); } }, 30);
     });
+    /* 余额行尾的刷新键：手动重查 */
+    const balRef = $('#apiBalanceRefresh');
+    if (balRef) balRef.addEventListener('click', () => apiBalanceRefresh());
     const clr = $('#dsKeyClear');
     if (clr) clr.addEventListener('click', () => {
       /* 清除是破坏性操作：第一次点变成“确认清除”，2.5 秒内再点才执行 */
