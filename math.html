@@ -15,7 +15,7 @@
 :root{
   --accent:#007aff; --accent-h:#0a6fd8; --accent-dim:rgba(0,122,255,.12);
   --accent-soft:rgba(0,122,255,.18);
-  --bg:#eaeef5; --chrome:rgba(255,255,255,.50); --panel:rgba(255,255,255,.74); --panel-2:rgba(255,255,255,.56);
+  --bg:#eaeef5; --chrome:rgba(255,255,255,.42); --panel:rgba(255,255,255,.68); --panel-2:rgba(255,255,255,.50);
   --panel-3:rgba(120,120,128,.14); --hover:rgba(120,120,128,.13); --active:rgba(0,122,255,.14);
   --border:rgba(60,60,67,.13); --border-2:rgba(60,60,67,.26);
   --text:#1c1c1e; --text-2:#5b5b60; --text-3:#8a8a8f;
@@ -24,13 +24,19 @@
   --sel:rgba(0,122,255,.22);
   --shadow:0 1px 2px rgba(16,24,40,.05),0 10px 26px rgba(16,24,40,.08);
   --shadow-lg:0 26px 70px rgba(16,24,40,.22);
-  /* —— 液态玻璃材质 —— */
-  --glass:rgba(255,255,255,.46);
-  --glass-2:rgba(255,255,255,.62);
-  --glass-brd:rgba(255,255,255,.62);
-  --glass-blur:blur(30px) saturate(190%);
-  --hi:inset 0 .5px 0 rgba(255,255,255,.85), inset 0 -.5px 0 rgba(255,255,255,.22);
-  --hi-strong:inset 0 1px 0 rgba(255,255,255,.95), inset 0 -1px 1px rgba(255,255,255,.35);
+  /* —— 液态玻璃材质 ——
+     参考 WWDC25「Liquid Glass」的构成：极低的底色不透明度（内容要能透出来）+ 大半径
+     背景模糊（把透出来的内容柔化，而不是挡掉）+ 明亮的细边（镜面高光）+ 内侧一圈
+     柔光。通透感来自「低 alpha + 高 blur + 亮边」三者配合，只降 alpha 会糊、只加
+     blur 会脏。 */
+  --glass:rgba(255,255,255,.32);
+  --glass-2:rgba(255,255,255,.48);
+  --glass-brd:rgba(255,255,255,.72);
+  --glass-blur:blur(34px) saturate(200%);
+  /* 高光 / 厚度：上沿是镜面反射的亮线，下沿压一点暗，玻璃才有「一片」的厚度，
+     而不是贴纸。 */
+  --hi:inset 0 .5px 0 rgba(255,255,255,.92), inset 0 -.5px 0 rgba(0,0,0,.035);
+  --hi-strong:inset 0 1px 0 rgba(255,255,255,1), inset 0 -1px 1px rgba(0,0,0,.05), inset 0 0 0 .5px rgba(255,255,255,.4);
   --r:10px; --r-lg:14px; --r-xl:20px;
   --sb-w:302px;
   /* 字号台阶：小字集中在 10.5 / 11.5 / 12.5 / 13.5 四档，别再造第五个值，
@@ -70,11 +76,11 @@ body.dark{
   --shadow:0 1px 2px rgba(0,0,0,.5),0 12px 34px rgba(0,0,0,.5);
   --shadow-lg:0 30px 80px rgba(0,0,0,.74);
   --sel:rgba(10,132,255,.32);
-  --glass:rgba(34,36,42,.42);
-  --glass-2:rgba(30,32,38,.62);
-  --glass-brd:rgba(255,255,255,.13);
-  --hi:inset 0 .5px 0 rgba(255,255,255,.20), inset 0 -.5px 0 rgba(255,255,255,.05);
-  --hi-strong:inset 0 1px 0 rgba(255,255,255,.26), inset 0 -1px 1px rgba(255,255,255,.08);
+  --glass:rgba(34,36,42,.30);
+  --glass-2:rgba(30,32,38,.46);
+  --glass-brd:rgba(255,255,255,.18);
+  --hi:inset 0 .5px 0 rgba(255,255,255,.26), inset 0 -.5px 0 rgba(0,0,0,.3);
+  --hi-strong:inset 0 1px 0 rgba(255,255,255,.32), inset 0 -1px 1px rgba(0,0,0,.38), inset 0 0 0 .5px rgba(255,255,255,.12);
 }
 *{margin:0;padding:0;box-sizing:border-box}
 html,body{height:100%}
@@ -394,7 +400,11 @@ body.tool-folded .tool-head{padding-bottom:0}
    侧栏是滑出去而不是瞬间消失。 */
 .sidebar{
   width:var(--sb-w);flex:0 0 var(--sb-w);display:flex;flex-direction:column;position:relative;
-  background:var(--panel);border-right:.5px solid var(--border);min-width:180px;overflow:hidden;
+  /* 侧栏本身就是一块液态玻璃：半透明底 + 背景模糊，画布的网格会透过一层柔光，
+     而不是被一块实心白板挡住。内层的 .panel-body 必须让位（见下面的 transparent），
+     否则又把玻璃糊回不透明。 */
+  background:var(--glass-2);border-right:.5px solid var(--glass-brd);min-width:180px;overflow:hidden;
+  -webkit-backdrop-filter:var(--glass-blur);backdrop-filter:var(--glass-blur);
   transition:width var(--t-slow),flex-basis var(--t-slow),
     opacity var(--t-slow),transform var(--t-slow),border-right-color var(--t);
 }
@@ -434,12 +444,13 @@ body.tool-folded .tool-head{padding-bottom:0}
 }
 .pt-seg > button.on{color:var(--text);font-weight:600}
 .pt-seg > button:not(.on):hover{color:var(--text)}
-.panel-body{flex:1;overflow-y:auto;overflow-x:hidden;background:var(--panel)}
+.panel-body{flex:1;overflow-y:auto;overflow-x:hidden;background:transparent}
 
 .algebra-head{
   display:flex;align-items:center;gap:6px;padding:8px 14px;font-size:var(--fs-2xs);font-weight:600;
-  color:var(--text-3);letter-spacing:.4px;background:var(--bg);
+  color:var(--text-3);letter-spacing:.4px;background:var(--glass-2);
   border-bottom:.5px solid var(--border);position:sticky;top:0;z-index:5;
+  -webkit-backdrop-filter:var(--glass-blur);backdrop-filter:var(--glass-blur);
 }
 .algebra-head .cnt{margin-left:auto;font-weight:600;font-size:var(--fs-3xs);background:var(--panel-3);padding:1px 8px;border-radius:99px;letter-spacing:0}
 .obj-row{
@@ -1790,6 +1801,20 @@ body.basic #splitterL{display:none!important}
   .ctx-item{padding-top:10px;padding-bottom:10px}
   /* 分段控件在触屏上整体加高：格子没有内边距可加，加高轨道命中区才够手指 */
   .pt-seg{height:38px}
+}
+/* ---------- 光膜：Liquid Glass 的「受光面」 ----------
+   真实的液体玻璃不是一块均匀的半透明片：正对光源的上半部会亮一层，越往下越透，
+   边缘再收成一道亮线。这里统一给所有玻璃面叠一条上亮下透的线性渐变（只写
+   background-image，不动各自的 background-color），一块块玻璃才有共同的光源方向。
+   放在样式表最后，才能盖过前面 background 简写里被重置的 background-image。 */
+.fmenu-btn,.persp-float,.gv-zoom,.gv-badge,.layer-pop,.fmenu,
+.ai-sheet,.modal,.cmd-search,.toolwrap{
+  background-image:linear-gradient(180deg,rgba(255,255,255,.20),rgba(255,255,255,.02) 46%,rgba(255,255,255,0) 72%);
+}
+body.dark .fmenu-btn,body.dark .persp-float,body.dark .gv-zoom,body.dark .gv-badge,
+body.dark .layer-pop,body.dark .fmenu,body.dark .ai-sheet,
+body.dark .modal,body.dark .cmd-search,body.dark .toolwrap{
+  background-image:linear-gradient(180deg,rgba(255,255,255,.08),rgba(255,255,255,.01) 46%,rgba(255,255,255,0) 72%);
 }
 </style>
 <meta name="theme-color" id="metaThemeColor" content="#f2f2f7">
