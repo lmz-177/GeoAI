@@ -444,6 +444,9 @@ body.tool-folded .tool-head{padding-bottom:0}
 .obj-row:last-child::after,.obj-row:has(+ .slider-inline)::after{display:none}
 /* 按下去的一瞬间给个底色（iOS 的按压反馈），别等松开才响应 */
 .obj-row:active{background:var(--panel-3)}
+/* 对象行可拖到任意图层标题行上换层：抓取用 grab，被拖行半透明 */
+.obj-row[draggable="true"]{cursor:grab}
+.obj-row.dragging{opacity:.4}
 /* 卡片是 overflow:hidden 的，键盘焦点环如果往外长会被圆角裁掉一半；
    卡里的行改成往内画，五个边都还看得见。 */
 .al-card .obj-row:focus-visible{outline-offset:-2px}
@@ -1884,6 +1887,7 @@ body.basic #splitterL{display:none!important}
       </div>
 
       <div class="panel-body hidden" id="paneAlgebra">
+        <div class="cmd-search"><input id="alSearch" placeholder="搜索对象，例如 A、y=x²…" aria-label="搜索对象"></div>
         <div id="algebraList"><div class="empty-hint"><b>从空白开始</b>输入 <code>A=(1,2)</code>，画出第一个点。<br>或从工具栏选择工具。<br>也可以对 AI 说一句话，把想法画出来。</div></div>
       </div>
 
@@ -1953,7 +1957,7 @@ body.basic #splitterL{display:none!important}
         </div>
         <div class="lp-list" id="layerPanelList"></div>
         <button class="btn" id="layerPanelAdd">新建图层</button>
-        <div class="lp-hint">拖动行调整叠放次序，越靠上的图层画得越晚、盖在下面；点名字切换当前图层（之后新建的对象落在这一层）。</div>
+        <div class="lp-hint">拖动行调整叠放次序；点名字切换当前图层（新对象落在这一层）。左侧列表里的对象行也可以拖到任意图层行上换层。</div>
       </div>
 
       <!-- ══════════ AI 助手：悬浮在画布下方，可折叠 ══════════ -->
@@ -12354,7 +12358,10 @@ function refreshAlgebra() {
   bindAlgebra(host);
   /* 图层标题行同样可拖拽换位（与浮层面板共用一套拖拽逻辑） */
   bindLayerDnD(host, '.layer-head');
+  bindObjRowDnD(host);
   labelIconButtons($('#paneAlgebra'));
+  /* 列表重画后保持过滤状态，免得搜一半被刷新冲掉 */
+  filterAlgebra($('#alSearch') ? $('#alSearch').value : '');
 }
 function layerHeadHtml(i, n, extraCls) {
   const L = state.layers[i];
@@ -12517,6 +12524,7 @@ function bindLayerDnD(scope, rowSel) {
   scope.querySelectorAll(rowSel).forEach(row => {
     row.setAttribute('draggable', 'true');
     row.addEventListener('dragstart', e => {
+      if (objDragId !== null) return;
       dragFrom = +row.dataset.layer; row.classList.add('dragging');
       e.dataTransfer.effectAllowed = 'move';
       try { e.dataTransfer.setData('text/plain', 'layer:' + dragFrom); } catch (_) { }
@@ -12531,9 +12539,60 @@ function bindLayerDnD(scope, rowSel) {
     row.addEventListener('drop', e => {
       e.preventDefault(); row.classList.remove('drop-target');
       const to = +row.dataset.layer;
-      if (dragFrom !== null && !isNaN(to)) reorderLayer(dragFrom, to);
-      dragFrom = null;
+      if (isNaN(to)) { dragFrom = null; return; }
+      /* 同一套落点既收「图层换位」也收「对象换层」——先看有没有对象正被拖着 */
+      if (objDragId !== null) moveObjToLayer(objDragId, to);
+      else if (dragFrom !== null) reorderLayer(dragFrom, to);
+      dragFrom = null; objDragId = null;
     });
+  });
+}
+/* ── 对象行拖拽：拖到任意图层标题行（或图层面板的行）上即换层 ──
+   组对象（多边形 / 圆规等派生出一串成员）整组一起搬，保持组完整。 */
+let objDragId = null;
+function bindObjRowDnD(scope) {
+  if (!scope) return;
+  scope.querySelectorAll('.obj-row').forEach(row => {
+    row.setAttribute('draggable', 'true');
+    row.addEventListener('dragstart', e => {
+      const o = getObj(+row.dataset.id); if (!o) return;
+      objDragId = o.id; row.classList.add('dragging');
+      e.dataTransfer.effectAllowed = 'move';
+      try { e.dataTransfer.setData('text/plain', 'obj:' + o.id); } catch (_) { }
+    });
+    row.addEventListener('dragend', () => {
+      row.classList.remove('dragging'); objDragId = null;
+      document.querySelectorAll('.drop-target').forEach(x => x.classList.remove('drop-target'));
+    });
+  });
+}
+function moveObjToLayer(id, li) {
+  const o = getObj(id);
+  if (!o || li < 0 || li >= state.layers.length) return;
+  const targets = o.group ? groupMembers(o) : [o];
+  if (targets.every(x => layerIndexOf(x) === li)) return;
+  pushUndo();
+  for (const x of targets) x.layer = li;
+  recomputeAll();
+  toast('「' + (targets.length > 1 ? o.group : o.label) + '」已移到「' + layerName(li) + '」');
+}
+/* ── 对象搜索：按标签 / 定义实时过滤（比 GeoGebra 列表多一步定位能力）──
+   有搜索词时组标题整体藏起来，结果摊平成一张清单更好扫。 */
+function filterAlgebra(q) {
+  const host = $('#algebraList'); if (!host) return;
+  q = (q || '').trim().toLowerCase();
+  host.querySelectorAll('.obj-row').forEach(r => {
+    if (!q) { r.classList.remove('hidden'); return; }
+    const o = getObj(+r.dataset.id);
+    const hay = o ? (o.label + ' ' + defText(o)).toLowerCase() : '';
+    r.classList.toggle('hidden', hay.indexOf(q) < 0);
+  });
+  host.querySelectorAll('.group-head').forEach(g => g.classList.toggle('hidden', !!q));
+  host.querySelectorAll('.al-card').forEach(c => {
+    const vis = Array.from(c.querySelectorAll('.obj-row')).some(r => !r.classList.contains('hidden'));
+    c.classList.toggle('hidden', !vis && !!q);
+    const lh = c.previousElementSibling;
+    if (lh && lh.classList.contains('layer-head')) lh.classList.toggle('hidden', !vis && !!q);
   });
 }
 function rowHtml(o, extraCls) {
@@ -16814,6 +16873,8 @@ function init() {
   renderToolbar(); renderMathKb(); renderCmdList('');
   bindLayerBar();
   $('#layerPanelAdd').onclick = () => { pushUndo(); addLayer(''); recomputeAll(); toast('已新建「' + layerName(state.curLayer) + '」'); };
+  const alS = $('#alSearch');
+  if (alS) alS.addEventListener('input', () => filterAlgebra(alS.value));
   /* 一级浮层的收起交互：关闭键、点卡片外、Esc —— 有模态弹窗时不抢 Esc */
   $('#layerPanelClose').onclick = closeLayerPanel;
   document.addEventListener('pointerdown', e => {
