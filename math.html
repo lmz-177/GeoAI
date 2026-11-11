@@ -1208,6 +1208,10 @@ body.dark .eff-warn{color:#c39bff}
   position:relative;
   display:none;align-self:center;flex-direction:column;align-items:center;gap:6px;
   cursor:pointer;user-select:none;--orb:#3f8cff;--orb2:#a855f7;
+  /* 鼠标靠近时整只球会让位（脚本写 transform）；给一条短过渡，逐帧的
+     requestAnimationFrame 更新就不会显得生硬，也不会在边界上来回跳。 */
+  transition:transform .16s var(--ease-out);
+  will-change:transform;
 }
 .ai-island:active .aii-bot svg{transform:scale(.94)}
 /* Grok blob：实心身体 + 挖空的两只眼睛。
@@ -22993,7 +22997,8 @@ function bindAI() {
     e.stopPropagation();
     stopAI();
   });
-  /* 待命时眼珠跟着鼠标转：只在收起且空闲（dataset.kind === 'idle'）时生效，
+  /* 待命时眼珠跟着鼠标转，整只球也会「避让」靠近的指针：
+     只在收起且空闲（dataset.kind === 'idle'）时生效，
      生成中 / 终态各有自己的视线动画，不能两套 transform 打架。 */
   (function initEyeFollow() {
     const dock = $('#aiPanel'), isl2 = $('#aiIsland');
@@ -23001,18 +23006,36 @@ function bindAI() {
     const bot = $('#aiiBot');
     if (!dock || !isl2 || !look || !bot) return;
     let raf = 0, px = 0, py = 0;
+    /* 球体当前位移：算距离时用它把移动量加回去，否则「球躲开 → 距离变远 → 少躲一点」
+       会自己跟自己打架，表现为球在原地轻微抖。 */
+    let shx = 0, shy = 0;
+    const NEAR = 130, SHIFT = 7;   /* 指针进入 130px 内开始让位，最多挪 7px */
     const apply = () => {
       raf = 0;
-      if (!dock.classList.contains('mini') || isl2.dataset.kind !== 'idle' || isl2.classList.contains('busy')) return;
+      const idle = dock.classList.contains('mini') && isl2.dataset.kind === 'idle' && !isl2.classList.contains('busy');
+      if (!idle) {
+        /* 生成中 / 展开时把让位归零，别让球停在歪的位置上 */
+        if (shx || shy) { shx = shy = 0; isl2.style.transform = ''; }
+        return;
+      }
       const r = bot.getBoundingClientRect();
       if (!r.width) return;
-      const cx = r.left + r.width / 2, cy = r.top + r.height * .45;
+      const cx = r.left + r.width / 2 + shx, cy = r.top + r.height * .45 + shy;
       const dx = px - cx, dy = py - cy, d = Math.hypot(dx, dy);
       if (d < 1) return;
-      /* 越远偏得越多，但最多偏 26 / 18 个 viewBox 单位（≈ 5px，眼珠既不呆滞也不飞出眼眶） */
+      /* 眼珠：越远偏得越多，但最多偏 26 / 18 个 viewBox 单位（≈ 5px，既不呆滞也不飞出眼眶） */
       const k = Math.min(1, d / 160);
       const ox = (dx / d) * 26 * k, oy = (dy / d) * 18 * k;
       look.style.transform = 'translate(' + ox.toFixed(1) + 'px,' + oy.toFixed(1) + 'px)';
+      /* 球体：靠近时朝远离指针的方向轻挪，距离越近挪得越多（线性衰减到 0） */
+      if (d < NEAR) {
+        const k2 = 1 - d / NEAR;
+        shx = -(dx / d) * SHIFT * k2;
+        shy = -(dy / d) * SHIFT * k2;
+        isl2.style.transform = 'translate(' + shx.toFixed(1) + 'px,' + shy.toFixed(1) + 'px)';
+      } else if (shx || shy) {
+        shx = shy = 0; isl2.style.transform = '';
+      }
     };
     window.addEventListener('pointermove', e => {
       px = e.clientX; py = e.clientY;
