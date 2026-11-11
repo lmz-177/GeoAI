@@ -664,15 +664,17 @@ body.tool-folded .tool-head{padding-bottom:0}
   /* 右上角已经让给「代数 / 图形」浮层，比例徽标就排在它下面一行；不用挪到左上，
      那儿是画图时最常落笔（原点、第一象限）的地方。 */
   position:absolute;right:14px;top:56px;display:flex;align-items:center;gap:6px;
-  background:var(--chrome);border:.5px solid var(--border);border-radius:99px;padding:5px 12px;
-  font-size:11.5px;color:var(--text-2);box-shadow:var(--shadow);pointer-events:none;font-family:var(--mono);
-  -webkit-backdrop-filter:blur(20px) saturate(180%);backdrop-filter:blur(20px) saturate(180%);
+  background:var(--glass);border:.5px solid var(--glass-brd);border-radius:99px;padding:5px 12px;
+  font-size:var(--fs-2xs);color:var(--text-2);box-shadow:var(--shadow),var(--hi);pointer-events:none;font-family:var(--mono);
+  -webkit-backdrop-filter:var(--glass-blur);backdrop-filter:var(--glass-blur);
 }
+/* 画布右下角的缩放条：和右上「代数 / 图形」胶囊用同一套液态玻璃材质
+   （半透明底 + 高光描边 + 大圆角），画布上的浮动控件才像一套东西。 */
 .gv-zoom{
   position:absolute;right:14px;bottom:14px;display:flex;flex-direction:column;gap:1px;
-  background:var(--chrome);border:.5px solid var(--border);border-radius:var(--r-lg);
-  box-shadow:var(--shadow);overflow:hidden;
-  -webkit-backdrop-filter:blur(20px) saturate(180%);backdrop-filter:blur(20px) saturate(180%);
+  background:var(--glass);border:.5px solid var(--glass-brd);border-radius:16px;
+  box-shadow:var(--shadow),var(--hi-strong);overflow:hidden;
+  -webkit-backdrop-filter:var(--glass-blur);backdrop-filter:var(--glass-blur);
 }
 .gv-zoom button{width:38px;height:34px;display:flex;align-items:center;justify-content:center;color:var(--text-2);transition:var(--t-ui)}
 .gv-zoom button:hover{background:var(--hover);color:var(--accent)}
@@ -1027,6 +1029,16 @@ body.dark .eff-warn{color:#c39bff}
 .msg.user .who{color:var(--accent)}
 .msg.ai .who{color:var(--purple)}
 .msg .meta .t{font-weight:400;color:var(--text-3);font-size:10.5px;line-height:1.2;font-family:var(--mono);font-variant-numeric:tabular-nums}
+/* 「重做」这条回复：靠右的轻量胶囊，平时淡、悬停才变主色 —— 消息头不该被一排按钮占满 */
+.msg-retry{
+  margin-left:auto;display:inline-flex;align-items:center;gap:4px;padding:2px 8px;
+  border-radius:7px;font-size:var(--fs-3xs);font-weight:600;line-height:1.5;
+  color:var(--text-3);transition:var(--t-ui);flex:0 0 auto;
+}
+.msg-retry:hover{background:var(--hover);color:var(--accent)}
+.msg-retry:active{transform:scale(.95)}
+.msg-retry svg{width:12px;height:12px;flex:0 0 12px}
+.msg-retry[disabled]{opacity:.4;pointer-events:none}
 .bubble{min-width:0;padding:0;border:0;background:none;border-radius:0;box-shadow:none;
   font-size:var(--fs-sm);line-height:1.7;word-break:break-word;white-space:pre-wrap;color:var(--text)}
 /* 用户输入包一层浅引用块：和 AI 的素排正文区分开，像提交说明里引用的需求原文 */
@@ -22838,6 +22850,15 @@ function aiSyncEffort(keepValue) {
   aiEffortVisual(i / n);
 }
 function bindAI() {
+  /* 消息头的「重做」按钮：聊天区是流式插入消息的，逐条绑会漏，统一委托一次 */
+  const chatEl = $('#aiChat');
+  if (chatEl && !chatEl.dataset.retryBound) {
+    chatEl.dataset.retryBound = '1';
+    chatEl.addEventListener('click', e => {
+      const b = e.target.closest('.msg-retry');
+      if (b) { e.preventDefault(); e.stopPropagation(); aiRegenerate(b); }
+    });
+  }
   aiSyncEffort();
   const big = $('#effortRangeBig');
   if (!big) return;
@@ -23020,18 +23041,34 @@ function bindAI() {
       }
       const r = bot.getBoundingClientRect();
       if (!r.width) return;
-      const cx = r.left + r.width / 2 + shx, cy = r.top + r.height * .45 + shy;
+      /* 基准中心要把「当前渲染出来的位移」减掉：transform 有 160ms 过渡，
+         直接拿 shx（目标值）补偿会和实际渲染位置对不上，鼠标压在球上时就会
+         算出一个忽大忽小的距离，球在原地震。读 computed matrix 才是精确的。 */
+      let tx = 0, ty = 0;
+      const mt = getComputedStyle(isl2).transform;
+      if (mt && mt !== 'none') {
+        const mm = mt.match(/matrix\(([-\d.,\s]+)\)/);
+        if (mm) { const v = mm[1].split(','); tx = parseFloat(v[4]) || 0; ty = parseFloat(v[5]) || 0; }
+      }
+      const cx = r.left + r.width / 2 - tx, cy = r.top + r.height * .45 - ty;
       const dx = px - cx, dy = py - cy, d = Math.hypot(dx, dy);
-      if (d < 1) return;
+      /* 指针正好压在球心：方向没有意义，直接归零，否则会按上一帧的残值乱偏 */
+      if (d < 1) {
+        if (shx || shy) { shx = shy = 0; isl2.style.transform = ''; }
+        return;
+      }
       /* 眼珠：越远偏得越多，但最多偏 26 / 18 个 viewBox 单位（≈ 5px，既不呆滞也不飞出眼眶） */
       const k = Math.min(1, d / 160);
       const ox = (dx / d) * 26 * k, oy = (dy / d) * 18 * k;
       look.style.transform = 'translate(' + ox.toFixed(1) + 'px,' + oy.toFixed(1) + 'px)';
-      /* 球体：靠近时朝指针方向轻挪（磁吸感），距离越近挪得越多（线性衰减到 0） */
+      /* 球体：靠近时朝指针方向轻挪（磁吸感），距离越近挪得越多。
+         位移封顶在「到指针距离的 45%」——不然鼠标停在球上时，球会一步跨过指针，
+         下一帧方向反转、再跨回来，表现就是原地高频抖动。 */
       if (d < NEAR) {
         const k2 = 1 - d / NEAR;
-        shx = (dx / d) * SHIFT * k2;
-        shy = (dy / d) * SHIFT * k2;
+        const amp = Math.min(SHIFT * k2, d * .45);
+        shx = (dx / d) * amp;
+        shy = (dy / d) * amp;
         isl2.style.transform = 'translate(' + shx.toFixed(1) + 'px,' + shy.toFixed(1) + 'px)';
       } else if (shx || shy) {
         shx = shy = 0; isl2.style.transform = '';
@@ -23221,6 +23258,33 @@ function aiWelcome(noExpand) {
   if ($('#aiChat').children.length) return;
   /* 首次进入保持折叠，不抢画布空间 */
   aiPush('assistant', '我是画板里的 AI 助手。看图、解题、作图，都可以交给我。\n\n说出你的想法，我会一边推理，一边把它画到画布上。\n\n也可以轻点左下角「图片」，或粘贴、拖入一张截图——手写题、函数图像，都能还原。\n\n例如：画出 y=x²-2x-3，并标出顶点与零点。', { noExpand: !!noExpand });
+}
+/* 「重做」：撤回最后一轮的提问 + 回复，再用同样的输入重发。
+   只认最后一条 AI 消息上的按钮 —— 点历史里的旧消息不该把后面的对话一起删掉。
+   历史与 DOM 必须同步撤回，否则模型会看到「已经问过、也答过」的重复上下文。 */
+function aiRegenerate(btn) {
+  if (state.aiBusy) { toast('正在生成，先停止再重做', 'err'); return; }
+  const lu = state.aiLastUser;
+  if (!lu || (!lu.text && !(lu.imgs || []).length)) { toast('还没有可以重做的提问', 'err'); return; }
+  const chat = $('#aiChat');
+  const msgs = Array.from(chat.children);
+  const lastAi = [...msgs].reverse().find(m => m.classList.contains('ai'));
+  if (!lastAi || !lastAi.contains(btn)) { toast('只能重做最后一条回复', 'err'); return; }
+  const aiIdx = msgs.indexOf(lastAi);
+  const lastUser = aiIdx > 0 && msgs[aiIdx - 1].classList.contains('user') ? msgs[aiIdx - 1] : null;
+  /* 历史：先弹掉尾部的 assistant（分步作图可能连续 push 多条），再弹一条 user */
+  while (state.aiHistory.length && state.aiHistory[state.aiHistory.length - 1].role === 'assistant') state.aiHistory.pop();
+  if (lastUser && state.aiHistory.length && state.aiHistory[state.aiHistory.length - 1].role === 'user') state.aiHistory.pop();
+  msgs.slice(aiIdx).forEach(m => m.remove());
+  if (lastUser) lastUser.remove();
+  const n = String(chat.children.length);
+  ['#aiMsgCount', '#aiHistCnt', '#aiHistCntOpen'].forEach(sel => { const el = $(sel); if (el) el.textContent = n; });
+  aiNavBuild();
+  state.aiImages = (lu.imgs || []).slice(); renderAiAttach();
+  const inp = $('#aiInput');
+  inp.value = lu.text || '';
+  inp.dispatchEvent(new Event('input', { bubbles: true }));
+  aiSend();
 }
 function aiPush(role, text, opts) {
   /* 有新消息时展开对话区；但用户把历史记录折叠着，就别替他展开 */
@@ -23691,6 +23755,8 @@ async function aiSend() {
   const dock0 = $('#aiPanel');
   if (!(dock0 && dock0.classList.contains('hist-fold'))) toggleAISheet(true);
   aiPush('user', text || '（图片）', imgs.length ? { images: imgs } : undefined);
+  /* 记下原始提问，供消息头上的「重做」按钮原样重发（DOM 里是转义过的文本，还原不可靠） */
+  state.aiLastUser = { text, imgs };
   state.aiImages = []; renderAiAttach();
   const eff = aiEffort();
   state.aiBusy = true;
@@ -23705,7 +23771,8 @@ async function aiSend() {
   const wrap = document.createElement('div');
   wrap.className = 'msg ai';
   wrap.innerHTML = '<div class="rail"><span class="dot"></span></div>' +
-    '<div class="body"><div class="meta"><span class="who">AI 助手</span><span class="t">思考强度 ' + eff.label + '</span></div>' +
+    '<div class="body"><div class="meta"><span class="who">AI 助手</span><span class="t">思考强度 ' + eff.label + '</span>' +
+    '<button class="msg-retry" type="button" title="用同样的问题重新生成这条回复" aria-label="重做回复">' + ICON.rotate + '<span>重做</span></button></div>' +
     '<div class="bubble"><span class="typing"><i></i><i></i><i></i></span></div></div>';
   const body = wrap.querySelector('.body');
   chat.appendChild(wrap);
