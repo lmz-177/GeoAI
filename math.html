@@ -39,7 +39,7 @@
   --fs-2xs:11.5px;   /* 次级说明、单位、行内元信息 */
   --fs-xs:12.5px;    /* 按钮、胶囊、正文以外的控件标签 */
   --fs-sm:13.5px;    /* 菜单项、对话框按钮、列表主标签 */
-  --fs-md:15px;      /* 面板 / 对话框标题（比正文高一档，不跟正文字号混用） */
+  --fs-md:15px;      /* 面板 / 对话框标题（比正文高一档） */
   --fs-ios-input:16px; /* 仅 iOS 输入框（焦点防缩放），桌面端不使用 */
   --fs-code:24px;      /* 在线分享的 8 位标识码（唯一的展示级大字） */
   --font:-apple-system,BlinkMacSystemFont,'SF Pro Text','SF Pro Display','PingFang SC','HarmonyOS Sans SC','Microsoft YaHei',system-ui,sans-serif;
@@ -308,71 +308,65 @@ body.dark .app::before{
 }
 .tool-head{display:flex;align-items:center;justify-content:space-between;gap:6px;padding:0 2px 7px}
 .th-title{font-size:var(--fs-xs);font-weight:600;color:var(--text-3);letter-spacing:.4px;flex:0 0 auto}
-/* 工具搜索：76 个工具分 9 组，组名记得住但某个工具落在哪组常常想不起来。
-   输入两个字直接过滤，命中的组自动展开 —— GeoGebra 的工具面板没有这个。 */
+.th-fold{width:22px;height:22px}
+.th-fold svg{width:13px;height:13px}
+/* 工具搜索：工具一多，组名记得住但「赤道圆在哪组」常常想不起来。
+   输入两个字直接过滤，命中的组自动展开 —— 参考的 GeoGebra 工具面板没有这一层。 */
 .tool-search{flex:1;min-width:0;height:27px;padding:0 9px;border-radius:9px;
   background:var(--panel-3);border:.5px solid transparent;font-size:var(--fs-2xs);color:var(--text);
   transition:var(--t-ui);-webkit-appearance:none;appearance:none}
 .tool-search::placeholder{color:var(--text-3)}
 .tool-search:focus{background:var(--panel-2);border-color:var(--accent)}
-/* 一个都没搜到：框变红，不用再找「为什么列表是空的」 */
 .tool-search.no-hit{border-color:var(--danger);background:rgba(255,59,48,.08)}
-.th-fold{width:22px;height:22px}
-.th-fold svg{width:13px;height:13px}
 /* ── 绘图工具栏 ──
-   结构照 GeoGebra 计算器官网的「工具」面板：语义分组名 + 组内平铺工具行，
-   一眼能看全每一类有什么。视觉上换成 iOS 分组列表：一张卡片一组、42px 行高、
-   组名可折叠、组内选中项带主色竖条 —— 76 个工具不必靠 13 个大方块摊满面板。 */
-.toolgrid{display:flex;flex-direction:column;gap:9px;
-  flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;padding:1px 2px 12px}
-.tgroup{position:relative;min-width:0;background:var(--panel-2);border:.5px solid var(--border);
-  border-radius:14px;overflow:hidden}
-.ttrigger{
-  width:100%;min-height:42px;display:flex;flex-direction:row;align-items:center;
-  justify-content:flex-start;gap:10px;padding:9px 11px;
-  border-radius:0;color:var(--text);transition:var(--t-ui);position:relative;text-align:left;
+   结构照 GeoGebra 计算器的「工具」面板：语义分组名 + 组内图标平铺（图标在上、名字在下），
+   一屏能扫到一整类工具。视觉上做得更收敛：组名可折、右上角标数量、选中项主色胶囊底，
+   组与组之间留白而不是画分隔线（分隔线一多，面板就像表格）。 */
+.toolgrid{display:flex;flex-direction:column;gap:16px;
+  flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;
+  padding:3px 2px 16px;scrollbar-gutter:stable}
+.tgroup{position:relative;min-width:0;display:flex;flex-direction:column;gap:5px}
+/* 组标题行：点一下折叠整组（13 组全展开很长，常画圆的用户可以把别的组收掉） */
+.tg-head{
+  display:flex;align-items:center;gap:7px;width:100%;padding:2px 3px;border-radius:8px;
+  font-size:var(--fs-sm);font-weight:700;letter-spacing:-.1px;color:var(--text);
+  text-align:left;transition:var(--t-ui);
 }
-.ttrigger:hover{background:var(--hover)}
-.ttrigger:active{background:var(--active)}
-/* 选中组不再整块反白：只把图标与组名染成主色，卡片结构保持清晰（iOS 列表里一行选中就是这样） */
-.ttrigger.on{background:transparent;color:var(--accent);box-shadow:none}
-.ttrigger svg{width:20px;height:20px;flex:0 0 20px;color:var(--text-2);transition:var(--t-ui)}
-.ttrigger.on svg{color:var(--accent)}
-.tg-name{flex:1;min-width:0;font-size:var(--fs-sm);font-weight:600;line-height:1.2;
-  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text);text-align:left}
-.ttrigger.on .tg-name{color:var(--accent)}
-/* 组内工具数：让「这一组还有 8 个」在收起状态下也看得见 */
-.tg-count{flex:0 0 auto;min-width:20px;padding:1px 6px;border-radius:99px;background:var(--panel-3);
-  color:var(--text-3);font-size:var(--fs-3xs);font-weight:700;text-align:center;font-variant-numeric:tabular-nums}
-.ttrigger.on .tg-count{background:var(--accent-dim);color:var(--accent)}
-.tg-chev{flex:0 0 14px;width:14px;height:14px;color:var(--text-3);transform:rotate(-90deg);transition:transform .22s var(--ease)}
-.tgroup.open .tg-chev{transform:rotate(0)}
+.tg-head:hover{background:var(--hover)}
+.tg-head:active{background:var(--active)}
+/* 组名占满剩余宽度，数量徽标与箭头一起靠右对齐 */
+.tg-head>span:first-child{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* 当前工具落在这一组：组名变主色，收起状态下也能看出「工具在下面这组」 */
+.tgroup.on .tg-head{color:var(--accent)}
+.tg-head .tg-chev{margin-left:auto;flex:0 0 13px;width:13px;height:13px;color:var(--text-3);
+  transform:rotate(0);transition:transform .22s var(--ease)}
+.tgroup.folded .tg-head .tg-chev{transform:rotate(-90deg)}
+.tg-head .tg-count{flex:0 0 auto;font-size:var(--fs-3xs);font-weight:600;color:var(--text-3);
+  font-variant-numeric:tabular-nums}
+/* 组内工具：3 列图标网格 */
+.flyout{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:3px}
+.tgroup.folded .flyout{display:none}
+.flyout button{
+  display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:5px;
+  min-width:0;padding:9px 3px 7px;border-radius:12px;
+  color:var(--text);transition:var(--t-ui);
+}
+.flyout button:hover{background:var(--hover)}
+.flyout button:active{transform:scale(.95);background:var(--active)}
+.flyout button svg{width:23px;height:23px;flex:0 0 23px;color:var(--text-2);transition:var(--t-ui)}
+/* 名字允许两行（「显示/隐藏标签」「过三点的圆锥曲线」这类不缩成半个词） */
+.fl-name{font-size:var(--fs-3xs);line-height:1.18;font-weight:500;text-align:center;color:var(--text-2);
+  max-width:100%;white-space:normal;word-break:break-word;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+/* 选中：整格淡主色胶囊 + 图标与名字变主色，比整块反白轻，网格不会破相 */
+.flyout button.on{background:var(--accent-dim);color:var(--accent)}
+.flyout button.on svg{color:var(--accent)}
+.flyout button.on .fl-name{color:var(--accent);font-weight:700}
 /* 面板独占一个页签：工具网格撑满面板，下面不再留一大片空白 */
 #paneTools{display:flex;flex-direction:column}
 #paneTools .toolwrap{flex:1;display:flex;flex-direction:column;min-height:0;position:static}
-/* 组内工具就地展开（不是浮层）：展开后仍留在卡片里，缩进一层，像 iOS 设置里展开的子项 */
-.flyout{
-  display:none;padding:0 0 6px;border-top:.5px solid var(--border);
-  background:transparent;
-}
-.tgroup.open .flyout{display:block;animation:subIn .18s var(--ease-out) both}
-@keyframes subIn{from{opacity:0;transform:translateY(-5px)}to{opacity:1;transform:none}}
-.flyout button{
-  width:100%;min-height:38px;display:flex;align-items:center;gap:10px;
-  padding:7px 11px 7px 36px;border-radius:0;
-  color:var(--text);font-size:var(--fs-xs);font-weight:500;transition:var(--t-ui);position:relative;text-align:left;
-}
-.flyout button:hover{background:var(--hover)}
-.flyout button:active{background:var(--active)}
-.flyout button.on{background:var(--active);color:var(--accent);font-weight:650}
-.flyout button.on svg{color:var(--accent)}
-/* 选中项左侧主色竖条：比整行反白更轻，也不打断列表的节奏 */
-.flyout button.on::before{content:'';position:absolute;left:0;top:7px;bottom:7px;width:3px;
-  border-radius:0 3px 3px 0;background:var(--accent)}
-.flyout button svg{width:17px;height:17px;flex:0 0 17px;color:var(--text-3)}
-.fl-name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .tsep{width:1px;height:26px;background:var(--border);margin:0 7px;flex:0 0 1px}
-/* 工具栏悬停提示：显示功能名字（.ttrigger 与浮出按钮共用） */
+/* 工具栏悬停提示：显示功能名字（组内工具按钮共用） */
 .tipbox{
   position:fixed;left:-9999px;top:-9999px;z-index:400;pointer-events:none;
   background:var(--chrome);color:var(--text);border:.5px solid var(--border);border-radius:9px;
@@ -1620,9 +1614,6 @@ body.dark .toast{background:rgba(58,58,60,.9);color:#f2f2f7}
   /* 窄屏画布本来就矮，AI 输入条又会铺满底部：缩放条挪到右上角并改成横排，
      只占一行高度，怎么都不会被压住；「代数 / 图形」浮层已经在右上，缩放条排它下面。 */
   .gv-zoom{top:56px;bottom:auto;right:12px;flex-direction:row}
-  /* 对话面板展开时几乎铺满整块画布，右上角的缩放条正好被它盖住：
-     与其让一个点不到的键悬在上面，不如在对话期间收起来（这时也不做精细缩放）。 */
-  body:has(#aiPanel:not(.mini)) .gv-zoom{display:none}
   .gv-zoom .sep{width:1px;height:auto;align-self:stretch}
   /* 比例徽标在窄屏排到右上第二行（视图切换下面），左侧整条留给侧栏浮层与工具网格，
      避免它压在左侧面板的对象列表上 */
@@ -11576,22 +11567,26 @@ T({
 });
 
 const TOOLGROUPS = [
-  /* 分组按 GeoGebra 计算器官网「工具」面板的语义走（基本工具 / 作图 / 度量 / 变换…），
-     但把 76 个工具归成 9 类：原来 13 类太碎，「圆与弧」和「圆锥曲线」之外还有「多边形」，
-     每类只有两三个工具也要占一张卡。合并后一类一卡，组名 + 工具数在收起时就看得见。 */
+  /* 分组照 GeoGebra 工具箱的次序排：移动 → 点 → 直线 → 特殊直线 → 多边形 →
+     圆与弧 → 圆锥曲线 → 度量 → 变换 → 函数 → 文本/媒体 → 其它 → 代数。
+     每组第一个是「组脸」，点它展开浮出条选组内其它工具。 */
   ['move', 'pan', 'zoom', 'zoomOut', 'select'],
   ['point', 'pointOn', 'attach', 'intersect', 'midpoint', 'centroid', 'incenter'],
   ['line', 'segment', 'segmentFix', 'ray', 'vector', 'vectorFromPoint', 'polyline'],
   ['perp', 'parallel', 'perpBisector', 'angleBisector', 'tangent', 'polar', 'diameter', 'bestFitLine'],
-  ['polygon', 'regularPolygon', 'circleCP', 'circleCR', 'circle3', 'semicircle', 'arc', 'circumArc', 'sector', 'circumSector', 'incircle'],
+  ['polygon', 'regularPolygon'],
+  ['circleCP', 'circleCR', 'circle3', 'semicircle', 'arc', 'circumArc', 'sector', 'circumSector', 'incircle'],
   ['ellipse', 'hyperbola', 'parabola', 'conic5', 'curve'],
-  ['angle', 'angleFix', 'distance', 'area', 'slope', 'relation', 'reflectLine', 'reflectPoint', 'rotate', 'translate', 'dilate'],
-  ['functionPlot', 'inspect', 'zeroes', 'extremum', 'turningPoint', 'derivative', 'integral', 'solve', 'factor', 'expand', 'simplify'],
-  ['text', 'image', 'button', 'inputBox', 'dropdown', 'slider', 'checkbox', 'locus', 'pen', 'animate', 'deleteTool'],
+  ['angle', 'angleFix', 'distance', 'area', 'slope', 'relation'],
+  ['reflectLine', 'reflectPoint', 'rotate', 'translate', 'dilate'],
+  ['functionPlot', 'inspect', 'zeroes', 'extremum', 'turningPoint', 'derivative', 'integral'],
+  ['text', 'image', 'button', 'inputBox', 'dropdown', 'slider', 'checkbox'],
+  ['locus', 'pen', 'animate', 'deleteTool'],
+  ['solve', 'factor', 'expand', 'simplify'],
 ];
-/* 工具栏各组的名字：组标题、帮助页都用它。必须定义在 TOOLGROUPS 旁边，
+/* 工具栏各组的名字：浮出条的小标题与帮助页都用它。必须定义在 TOOLGROUPS 旁边，
    renderToolbar 在初始化时就会用到，放到文件后面会踩 const 的暂时性死区。 */
-const TOOLGROUP_NAMES = ['移动与视图', '点与交点', '直线与线段', '特殊直线', '多边形与圆', '圆锥曲线', '度量与变换', '函数与代数', '文本与其它'];
+const TOOLGROUP_NAMES = ['移动与视图', '点', '直线', '特殊直线', '多边形', '圆与弧', '圆锥曲线', '度量', '变换', '函数', '文本与媒体', '其它', '代数'];
 function execStr(s) { const r = executeLine(s); return r.created || []; }
 function toolSteps(tool, picks) { const s = typeof tool.steps === 'function' ? tool.steps(picks) : (tool.steps || []); return tool.repeat ? s : s.slice(picks.length); }
 function finishTool() {
@@ -11614,15 +11609,17 @@ function toolCursor(kind) { return ({ move: 'default', pan: 'grab', zoom: 'zoom-
 function setTool(id) {
   state.tool = id; state.toolState = null;
   const gid = groupOfTool(id);
-  $$('.ttrigger').forEach(b => b.classList.toggle('on', b.dataset.tool === id || (TOOLS[id] && b.dataset.group === gid)));
-  /* 选中的工具可能落在收起的组里（AI 直接切工具、快捷键、撤销回放都会这样）：
-     自动展开那一组并滚到可见，不然用户看不到选中态在哪，会以为没生效。 */
-  const tg = gid ? document.querySelector('.tgroup[data-group="' + gid + '"]') : null;
-  if (tg && !tg.classList.contains('open')) {
-    tg.classList.add('open');
-    const t = tg.querySelector('.ttrigger');
-    if (t) t.setAttribute('aria-expanded', 'true');
-    try { tg.scrollIntoView({ block: 'nearest' }); } catch (_) { }
+  /* 组标题不再代表某个工具，只标记「本组里有当前工具」 */
+  $$('#toolbar .tgroup').forEach(g => g.classList.toggle('on', !!gid && g.dataset.group === gid));
+  /* 当前工具所在组若被折叠 / 搜索隐藏，自动展开并滚到可见：
+     AI 直接切工具、快捷键、撤销回放都会走到这里，不然用户看不到选中态在哪。 */
+  const tg = gid ? document.querySelector('#toolbar .tgroup[data-group="' + gid + '"]') : null;
+  if (tg) {
+    const wasFolded = tg.classList.contains('folded');
+    tg.classList.remove('folded', 'hidden');
+    const hd = tg.querySelector('.tg-head');
+    if (hd && hd.dataset.group) hd.setAttribute('aria-expanded', 'true');
+    if (wasFolded) { saveToolGroupFoldedState(); try { tg.scrollIntoView({ block: 'nearest' }); } catch (_) { } }
   }
   $$('.flyout button').forEach(b => b.classList.toggle('on', b.dataset.tool === id));
   canvas.style.cursor = toolCursor(TOOLS[id] && TOOLS[id].kind);
@@ -12189,64 +12186,45 @@ function selectObject(id, add) {
 /* ═══════════════════════ 12. 界面：工具栏 / 代数区 / 输入栏 ═══════════════════════ */
 function renderToolbar() {
   const bar = $('#toolbar'); bar.innerHTML = '';
-  /* 展开状态先读一次，避免 renderToolbar 被多次调用时把用户折叠过的组又全打开 */
-  const openSet = toolGroupOpenState();
+  const folded = toolGroupFoldedState();
   TOOLGROUPS.forEach((group, gi) => {
-    const main = group[0];
     const gid = 'g' + gi;
+    const gname = TOOLGROUP_NAMES[gi] || TOOLS[group[0]].name;
     const wrap = document.createElement('div');
-    wrap.className = 'tgroup'; wrap.dataset.group = gid;
-    if (openSet.has(gid)) wrap.classList.add('open');
-    wrap.innerHTML = '<button class="ttrigger" data-group="' + gid + '" data-tool="' + main + '" data-name="' + esc(TOOLS[main].name) + '" aria-label="' + esc(TOOLGROUP_NAMES[gi] || TOOLS[main].name) + '" aria-expanded="' + (wrap.classList.contains('open') ? 'true' : 'false') + '">' +
-      (ICON[TOOLS[main].icon] || '') + '<span class="tg-name">' + esc(TOOLGROUP_NAMES[gi] || TOOLS[main].name) + '</span>' +
-      '<span class="tg-count">' + group.length + '</span>' +
-      (group.length > 1 ? '<span class="tg-chev">' + ICON.chevDown + '</span>' : '') + '</button>' +
+    wrap.className = 'tgroup' + (folded.has(gid) ? ' folded' : ''); wrap.dataset.group = gid;
+    wrap.innerHTML =
+      '<button class="tg-head" data-group="' + gid + '" aria-expanded="' + (folded.has(gid) ? 'false' : 'true') + '" aria-label="' + esc(gname) + '">' +
+        '<span>' + esc(gname) + '</span>' +
+        '<span class="tg-count">' + group.length + '</span>' +
+        '<span class="tg-chev">' + ICON.chevDown + '</span>' +
+      '</button>' +
       '<div class="flyout">' +
       group.map(id => '<button data-tool="' + id + '" data-name="' + esc(TOOLS[id].name) + '" aria-label="' + esc(TOOLS[id].name) + '">' +
-        (ICON[TOOLS[id].icon] || '') + '<span class="fl-name">' + esc(TOOLS[id].name) + '</span></button>').join('') + '</div>';
+        (ICON[TOOLS[id].icon] || '') + '<span class="fl-name">' + esc(TOOLS[id].name) + '</span></button>').join('') +
+      '</div>';
     bar.appendChild(wrap);
   });
-  /* 概率计算器：分布曲线计算，非作图工具，单独一张卡片放在末尾 */
+  /* 概率计算器：分布曲线计算，不是作图工具，单独一组放在末尾 */
   const pwrap = document.createElement('div');
   pwrap.className = 'tgroup';
-  const pbtn = document.createElement('button');
-  pbtn.className = 'ttrigger';
-  pbtn.id = 'btnProbCalc';
-  pbtn.dataset.name = '概率计算器';
-  pbtn.setAttribute('aria-label', '概率计算器');
-  pbtn.innerHTML = ICON.dist + '<span class="tg-name">概率计算器</span><span class="tg-count">Σ</span>';
-  pbtn.addEventListener('click', e => { e.stopPropagation(); probOpen(); });
-  pwrap.appendChild(pbtn); bar.appendChild(pwrap);
+  pwrap.innerHTML = '<button class="tg-head" aria-label="概率计算器"><span>概率计算</span><span class="tg-count">1</span></button>' +
+    '<div class="flyout"><button id="btnProbCalc" data-name="概率计算器" aria-label="概率计算器">' +
+    ICON.dist + '<span class="fl-name">概率计算器</span></button></div>';
+  pwrap.querySelector('#btnProbCalc').addEventListener('click', e => { e.stopPropagation(); probOpen(); });
+  bar.appendChild(pwrap);
 
-  const trigger = e => {
-    const btn = e.target.closest('.ttrigger'); if (!btn) return;
-    if (!btn.dataset.group) return;   // 非工具组按钮（如概率计算器）
-    const gi = btn.dataset.group;
-    const group = TOOLGROUPS[+gi.slice(1)] || [];
-    if (group.length === 1) { setTool(group[0]); return; }
-    const host = btn.parentElement;
-    /* 单开：展开一组时其它组自动收起，列表不会被撑成一条长河 */
-    $$('.tgroup').forEach(g => {
-      const on = g === host && !host.classList.contains('open');
-      g.classList.toggle('open', on);
-      const t = g.querySelector('.ttrigger');
-      if (t && t.dataset.group) t.setAttribute('aria-expanded', on ? 'true' : 'false');
-    });
-    saveToolGroupOpenState();
-    hideToolTip();
-    e.stopPropagation();
-  };
   bar.addEventListener('click', e => {
     const fb = e.target.closest('.flyout button');
-    if (fb) { setTool(fb.dataset.tool); saveToolGroupOpenState(); return; }
-    trigger(e);
-  });
-  /* 键盘：组标题行的 Enter / 空格 / → 展开，← 收起，列表可纯键盘走通 */
-  bar.addEventListener('keydown', e => {
-    const btn = e.target.closest('.ttrigger');
-    if (!btn || !btn.dataset.group) return;
-    if (e.key === 'ArrowRight' && !btn.parentElement.classList.contains('open')) { e.preventDefault(); trigger(e); }
-    else if (e.key === 'ArrowLeft' && btn.parentElement.classList.contains('open')) { e.preventDefault(); trigger(e); }
+    if (fb && fb.dataset.tool) { setTool(fb.dataset.tool); hideToolTip(); return; }
+    const hd = e.target.closest('.tg-head');
+    if (hd && hd.dataset.group) {
+      /* 组标题：折叠 / 展开整组，状态记在本机 */
+      const host = hd.parentElement;
+      const nowFolded = host.classList.toggle('folded');
+      hd.setAttribute('aria-expanded', nowFolded ? 'false' : 'true');
+      saveToolGroupFoldedState();
+      hideToolTip();
+    }
   });
   /* 悬停即显示功能名字 */
   bar.addEventListener('pointerover', e => {
@@ -12269,14 +12247,7 @@ function renderToolbar() {
     clearTimeout(tipTouchTimer);
     tipTouchTimer = setTimeout(hideToolTip, 1400);
   });
-  /* 离开工具栏才收起气泡并重置「已预热」状态。注意这里挂了 capture：
-     mouseleave 会沿着祖先链在每个子元素上各触发一次，若不加 relatedTarget 判断，
-     从一个按钮移到另一个按钮时会把刚显示的新气泡立刻关掉。 */
-  bar.addEventListener('mouseleave', e => {
-    if (e.relatedTarget && bar.contains(e.relatedTarget)) return;
-    tipWarm = false; hideToolTip();
-  }, true);
-  /* 工具搜索绑一次即可（toolbar 每次重建，但输入框在 toolbar 外面） */
+  /* 工具搜索只绑一次（toolbar 每次重建，输入框在它外面） */
   const ts = $('#toolSearch');
   if (ts && !ts.dataset.bound) {
     ts.dataset.bound = '1';
@@ -12285,26 +12256,51 @@ function renderToolbar() {
       if (e.key === 'Escape') { ts.value = ''; filterTools(''); ts.blur(); }
     });
   }
+  /* 离开工具栏才收起气泡并重置「已预热」状态。注意这里挂了 capture：
+     mouseleave 会沿着祖先链在每个子元素上各触发一次，若不加 relatedTarget 判断，
+     从一个按钮移到另一个按钮时会把刚显示的新气泡立刻关掉。 */
+  bar.addEventListener('mouseleave', e => {
+    if (e.relatedTarget && bar.contains(e.relatedTarget)) return;
+    tipWarm = false; hideToolTip();
+  }, true);
 }
-/* 按名字过滤工具：命中的组自动展开；清空后回到用户自己记住的展开状态。
-   「点」这种单字查询会撞上一堆名字，所以组名命中也算命中，但只展开展开的组、不筛子项。 */
+/* 工具组的折叠状态存在本机：常画圆的用户下次进来别的组还收着，不必每次都滚半天。
+   默认全部展开 —— 和参考的 GeoGebra 工具面板一样，一眼看全所有工具。 */
+const TOOLGROUP_STORE = 'geoai_toolgroups_folded';
+function toolGroupFoldedState() {
+  try {
+    const raw = localStorage.getItem(TOOLGROUP_STORE);
+    if (raw) return new Set(JSON.parse(raw));
+  } catch (_) { }
+  return new Set();
+}
+function saveToolGroupFoldedState() {
+  try {
+    const ids = $$('#toolbar .tgroup.folded').map(g => g.dataset.group).filter(Boolean);
+    localStorage.setItem(TOOLGROUP_STORE, JSON.stringify(ids));
+  } catch (_) { }
+}
+/* 按名字过滤工具：命中的组自动展开，其余整组隐藏；清空后回到用户记住的折叠状态。 */
 function filterTools(q) {
   q = (q || '').trim().toLowerCase();
   const bar = $('#toolbar'); if (!bar) return;
   const groups = $$('.tgroup', bar);
+  const ts = $('#toolSearch');
   if (!q) {
-    const open = toolGroupOpenState();
+    const folded = toolGroupFoldedState();
     groups.forEach(g => {
-      g.classList.remove('hidden');
-      g.classList.toggle('open', open.has(g.dataset.group));
+      g.classList.remove('hidden', 'folded');
+      if (folded.has(g.dataset.group)) g.classList.add('folded');
+      const hd = g.querySelector('.tg-head');
+      if (hd && hd.dataset.group) hd.setAttribute('aria-expanded', folded.has(g.dataset.group) ? 'false' : 'true');
       $$('.flyout button', g).forEach(b => b.classList.remove('hidden'));
     });
-    const t = $('#toolSearch'); if (t) t.classList.remove('no-hit');
+    if (ts) ts.classList.remove('no-hit');
     return;
   }
   let total = 0;
   groups.forEach(g => {
-    const gname = (g.querySelector('.tg-name') || {}).textContent || '';
+    const gname = (g.querySelector('.tg-head span') || {}).textContent || '';
     const groupHit = gname.toLowerCase().indexOf(q) >= 0;
     let hit = 0;
     $$('.flyout button', g).forEach(b => {
@@ -12313,29 +12309,12 @@ function filterTools(q) {
       b.classList.toggle('hidden', !on);
       if (on) hit++;
     });
-    /* 只有组标题的单工具组（概率计算器）没有子行，按组名算一次 */
     if (!$$('.flyout button', g).length) hit = groupHit ? 1 : 0;
     g.classList.toggle('hidden', !hit);
-    g.classList.toggle('open', hit > 0);
+    g.classList.remove('folded');          // 搜到的组一定展开，否则等于没搜到
     total += hit;
   });
-  const t = $('#toolSearch'); if (t) t.classList.toggle('no-hit', total === 0);
-}
-/* 工具组的展开状态存在本机：常画圆的用户下次进来那一组还是开着的。
-   没存过时只展开第一组（视图与选择），其余收起，面板不会一进来就铺满。 */
-const TOOLGROUP_STORE = 'geoai_toolgroups';
-function toolGroupOpenState() {
-  try {
-    const raw = localStorage.getItem(TOOLGROUP_STORE);
-    if (raw) return new Set(JSON.parse(raw));
-  } catch (_) { }
-  return new Set(['g0']);
-}
-function saveToolGroupOpenState() {
-  try {
-    const ids = $$('.tgroup.open').map(g => g.dataset.group).filter(Boolean);
-    localStorage.setItem(TOOLGROUP_STORE, JSON.stringify(ids));
-  } catch (_) { }
+  if (ts) ts.classList.toggle('no-hit', total === 0);
 }
 /* 工具栏悬停提示：一个共用的气泡，自动避开屏幕边缘。
    节奏按「第一次慢、之后快」来：首次悬停稍等再弹（手只是划过去就不必打扰），
@@ -12395,7 +12374,6 @@ function labelIconButtons(root) {
 }
 function setToolbarFold(on) {
   on = !!on;
-  if (on) $$('.tgroup').forEach(g => g.classList.remove('open'));
   document.body.classList.toggle('tool-folded', on);
   foldSave('ggai_toolfold', on);
   syncFoldUI(); syncMenuChecks();
@@ -16812,7 +16790,6 @@ function bindShortcuts() {
         return;
       }
       if (state.toolState) { resetTool(); toast('已取消'); }
-      $$('.tgroup').forEach(g => g.classList.remove('open'));
       /* 对标 GeoGebra：Esc 取消当前作图工具，回到「移动」；平移/缩放等导航工具保持 */
       if (state.tool !== 'move' && TOOLS[state.tool] && !TOOLS[state.tool].kind) setTool('move');
       return;
@@ -17172,7 +17149,7 @@ async function runUITest() {
     if (innerWidth <= 820) { setPersp('graphics'); await sleep(380); }
     toggleAI(true); await sleep(0);
     toggleAISheet(true); await sleep(380);   /* 对话区展开带动画，等它落定再量 */
-    const sel = '#fmenuBtn, #persp button, #toolFold, #toolbar .ttrigger, #panelTabs button, #gvIn, #gvOut, #gvHome, #gvPlay, #btnEnter, #kbToggle, #aiSend, #aiCtx, #effortBox, #aiFold';
+    const sel = '#fmenuBtn, #persp button, #toolFold, #toolbar .flyout button, #panelTabs button, #gvIn, #gvOut, #gvHome, #gvPlay, #btnEnter, #kbToggle, #aiSend, #aiCtx, #effortBox, #aiFold';
     const bad = [];
     for (const el of document.querySelectorAll(sel)) {
       if (el.disabled) continue;
@@ -17192,32 +17169,49 @@ async function runUITest() {
     if (bad.length) throw new Error(bad.slice(0, 6).join(' | '));
   });
 
-  /* 1c. 工具组就地展开：点组标题展开组内工具行、同时只开一组、再点收起
-     （改版前是浮出层，需要校验不越出视口；现在展开内容就在卡片里，跟着面板滚动） */
-  await A('布局:工具组展开展开可点', async () => {
+  /* 1c. 工具栏每组都平铺可见、可点；点组标题可折叠整组（参考 GeoGebra 工具面板的
+     分组 + 图标平铺结构，多了一层折叠与搜索） */
+  await A('布局:工具组平铺与折叠', async () => {
     const groups = $$('#toolbar .tgroup');
     if (!groups.length) throw new Error('工具栏为空');
     if (!$('#toolbar').closest('#paneTools')) throw new Error('绘图工具没有独立成「绘图」页签');
     if (!$('.tool-head')) throw new Error('绘图工具缺少标题行');
+    /* 每组都有组标题 + 至少一行工具，且默认全部展开 */
+    for (const g of groups) {
+      if (!g.querySelector('.tg-head')) throw new Error('工具组缺少组标题'); 
+      if (g.classList.contains('folded')) throw new Error('工具组默认应当是展开的：' + (g.querySelector('.tg-head span') || {}).textContent);
+    }
     const g = groups[1] || groups[0];
-    g.querySelector('.ttrigger').click(); await sleep(0);
-    if (!g.classList.contains('open')) throw new Error('点击组标题没有展开');
     const firstBtn = g.querySelector('.flyout button[data-tool]');
-    if (!firstBtn) throw new Error('组内没有工具行');
+    if (!firstBtn) throw new Error('组内没有工具按钮');
     firstBtn.scrollIntoView({ block: 'nearest' }); await sleep(0);
     const br = firstBtn.getBoundingClientRect();
-    if (br.width < 2 || br.height < 2) throw new Error('组内工具行未显示');
+    if (br.width < 2 || br.height < 2) throw new Error('组内工具按钮未显示');
     const top = document.elementFromPoint(br.left + br.width / 2, br.top + br.height / 2);
-    if (!(top === firstBtn || firstBtn.contains(top))) throw new Error('组内工具行被遮挡：' + (top ? top.tagName + '.' + top.className : 'none'));
-    const other = groups.find(x => x !== g);
-    if (other && other.classList.contains('open')) throw new Error('展开一组时其它组没有收起');
-    /* 点组内工具行应切到该工具，并把选中态同步到那一行 */
+    if (!(top === firstBtn || firstBtn.contains(top))) throw new Error('组内工具按钮被遮挡：' + (top ? top.tagName + '.' + top.className : 'none'));
+    /* 点组内工具：切工具并点亮该格 */
     const tid = firstBtn.dataset.tool;
     firstBtn.click(); await sleep(0);
-    if (state.tool !== tid) throw new Error('点工具行没有切换工具');
-    if (!firstBtn.classList.contains('on')) throw new Error('选中工具行没有高亮');
-    g.querySelector('.ttrigger').click(); await sleep(0);
-    if (g.classList.contains('open')) throw new Error('再次点击组标题没有收起');
+    if (state.tool !== tid) throw new Error('点工具按钮没有切换工具');
+    if (!firstBtn.classList.contains('on')) throw new Error('当前工具没有高亮');
+    /* 点组标题：整组收起（图标网格隐藏），再点恢复 */
+    const hd = g.querySelector('.tg-head');
+    hd.click(); await sleep(0);
+    if (!g.classList.contains('folded')) throw new Error('点组标题没有折叠该组');
+    if (getComputedStyle(g.querySelector('.flyout')).display !== 'none') throw new Error('折叠后组内工具仍可见');
+    if (hd.getAttribute('aria-expanded') !== 'false') throw new Error('折叠后 aria-expanded 不对');
+    hd.click(); await sleep(0);
+    if (g.classList.contains('folded')) throw new Error('再点组标题没有展开');
+    /* 搜索：输入「圆」只剩圆相关的组，且不误伤别的组 */
+    const ts = $('#toolSearch');
+    if (ts) {
+      ts.value = '圆'; ts.dispatchEvent(new Event('input', { bubbles: true })); await sleep(0);
+      const vis = groups.filter(x => !x.classList.contains('hidden'));
+      if (!vis.length) throw new Error('搜索没有命中任何组');
+      if (vis.length >= groups.length) throw new Error('搜索没有过滤掉不相关的组');
+      ts.value = ''; ts.dispatchEvent(new Event('input', { bubbles: true })); await sleep(0);
+      if (groups.some(x => x.classList.contains('hidden'))) throw new Error('清空搜索后组没有全部恢复');
+    }
   });
 
   /* 1d. 工具栏折叠：折叠即整块隐藏，只留标题行与展开键 */
@@ -17370,10 +17364,10 @@ async function runUITest() {
   });
   await A('工具栏:悬停显示功能名字', async () => {
     const bar = $('#toolbar');
-    const btn = Array.from(bar.querySelectorAll('.ttrigger[data-name]')).find(b => b.dataset.name === '零点') || bar.querySelector('.ttrigger[data-name]');
-    if (!btn) throw new Error('工具栏按钮缺少 data-name');
+    const btn = Array.from(bar.querySelectorAll('.flyout button[data-name]')).find(b => b.dataset.name === '零点') || bar.querySelector('.flyout button[data-name]');
+    if (!btn) throw new Error('工具按钮缺少 data-name');
     const name = btn.dataset.name;
-    if (!name) throw new Error('工具栏按钮没有功能名字');
+    if (!name) throw new Error('工具按钮没有功能名字');
     btn.dispatchEvent(new PointerEvent('pointerover', { bubbles: true }));
     await sleep(260);
     const tip = $('#tipBox');
@@ -17384,22 +17378,19 @@ async function runUITest() {
     await sleep(0);
     if (tip.classList.contains('on')) throw new Error('移开后气泡没消失');
     /* 同一工具栏里看过一次之后，换按钮应当立即显示（不再等首次的 420ms） */
-    const btn2 = Array.from(bar.querySelectorAll('.ttrigger[data-name]')).find(b => b !== btn);
+    const btn2 = Array.from(bar.querySelectorAll('.flyout button[data-name]')).find(b => b !== btn);
     if (btn2) {
       btn2.dispatchEvent(new PointerEvent('pointerover', { bubbles: true }));
       if (!tip.classList.contains('on')) throw new Error('第二次悬停没有立即显示名字');
       btn2.dispatchEvent(new PointerEvent('pointerout', { bubbles: true }));
     }
-    /* 浮出组里的按钮同样带名字（供悬停显示） */
+    /* 所有工具行都带名字，悬停才有东西可显示 */
     const fly = bar.querySelector('.flyout button[data-name]');
-    if (!fly || !fly.dataset.name) throw new Error('浮出按钮缺少名字');
-    /* 新增的高中常用工具都进了工具栏（零点在「函数」组里，是组内工具行而不是主触发键） */
+    if (!fly || !fly.dataset.name) throw new Error('工具按钮缺少名字');
+    /* 新增的高中常用工具都进了工具栏（零点在「函数」组里） */
     if (!bar.querySelector('[data-tool="zeroes"]')) throw new Error('零点工具未上工具栏');
     const groups = $$('#toolbar .tgroup');
-    /* 9 个语义分组 + 概率计算器那张卡；组数少于 9 说明有组被漏渲染 */
-    if (groups.length < 9) throw new Error('工具组数量不对：' + groups.length);
-    const names = $$('#toolbar .tg-name').map(x => x.textContent);
-    if (!names.includes('多边形与圆') || !names.includes('函数与代数')) throw new Error('工具组名不对：' + names.slice(0, 4).join('/'));
+    if (groups.length < 13) throw new Error('工具组数量不对：' + groups.length);
   });
   await A('滑动条拖动', async () => {
     refreshAlgebra(); await sleep(0);
@@ -17928,9 +17919,7 @@ async function runUITest() {
     aiiEffMenu(false); await sleep(0);
     if ($('#aiiEff').classList.contains('on')) throw new Error('滑条没有收起');
     aiEffortPick(EFFORT_DEFAULT); aiSyncEffort();
-    /* 待命时眼珠跟鼠标：指针落在角色左上 / 右下，视线方向要相反。
-       先切回 idle —— 上面走过 done 终态，眼珠只在完全空闲时才接管 transform。 */
-    aiIsland('idle', '待命', '', { busy: false }); await sleep(0);
+    /* 待命时眼珠跟鼠标：指针落在角色左上 / 右下，视线方向要相反 */
     const lookEl = $('#aiIsland .aii-look');
     const br = $('#aiiBot').getBoundingClientRect();
     const fire = (x, y) => window.dispatchEvent(new PointerEvent('pointermove', { clientX: x, clientY: y }));
@@ -19802,9 +19791,6 @@ async function runUITest() {
   /* 9b-6. 左侧代数面板：行内按钮不误触、分组可折叠、缩放条不被窄侧栏挤压 */
   await A('代数面板:分组折叠', async () => {
     executeLine('DeleteAll()');
-    /* 先切回「代数」页签：绘图工具独占一个页签后，默认页签不一定是代数，
-       面板隐藏时量到的宽度是 0，下面的宽度断言会误判。 */
-    switchPanel('algebra'); await sleep(0);
     state.layers = [{ name: '图层 1', visible: true, locked: false }]; state.curLayer = 0;
     state.collapsedGroups = {};
     executeLine('A=(1,1)'); executeLine('B=(2,2)'); recomputeAll(); refreshAlgebra(); await sleep(0);
