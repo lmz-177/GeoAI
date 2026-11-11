@@ -540,6 +540,28 @@ body.tool-folded .tool-head{padding-bottom:0}
 .lp-row .lp-btns button:disabled:hover{background:transparent;color:var(--text-3)}
 .lp-row .lp-btns svg{width:12px;height:12px}
 .lp-hint{font-size:var(--fs-2xs);color:var(--text-3);line-height:1.7;margin-top:8px}
+/* ── 图层面板：一级悬浮卡片（非模态），与 API 卡同一套玻璃语言 ──
+   图层管理不再开二级弹窗：卡片浮在缩放竖条上方，点外面或 Esc 收起，
+   行可以直接拖拽换位 —— 排序是这里最高频的操作，不该隔着遮罩做。 */
+.layer-pop{
+  position:absolute;right:14px;bottom:78px;z-index:60;display:none;flex-direction:column;gap:9px;
+  width:min(302px,calc(100vw - 28px));padding:14px;border-radius:20px;
+  background:var(--glass-2);border:.5px solid var(--glass-brd);
+  box-shadow:var(--shadow-lg),var(--hi-strong);
+  -webkit-backdrop-filter:var(--glass-blur);backdrop-filter:var(--glass-blur);
+  transform-origin:100% 100%;
+}
+.layer-pop.on{display:flex;animation:lpIn .22s var(--ease-out) both}
+@keyframes lpIn{from{opacity:0;transform:translateY(8px) scale(.97)}to{opacity:1;transform:none}}
+.lp-head{display:flex;align-items:center;gap:8px;padding:0 2px}
+.lp-ttl{flex:1;font-size:15px;font-weight:700;letter-spacing:-.2px}
+#layerPanelClose{width:26px;height:26px;flex:0 0 26px}
+.layer-pop .btn{width:100%}
+/* 拖拽反馈：被拖的行半透明，落点行描边发亮 */
+.lp-row[draggable="true"],.layer-head[draggable="true"]{cursor:grab}
+.lp-row.dragging,.layer-head.dragging{opacity:.38}
+.lp-row.drop-target{border-color:var(--accent);box-shadow:0 0 0 2.5px var(--accent-dim)}
+.layer-head.drop-target{background:var(--accent-dim);border-radius:8px}
 .obj-row.in-layer{padding-left:24px}
 /* 组标题：卡片里的子标题行（比 section header 亮一点，和对象行区分开） */
 .group-head{
@@ -1923,6 +1945,16 @@ body.basic #splitterL{display:none!important}
         <div class="sep"></div>
         <button id="gvHome" title="标准视图" aria-label="标准视图"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11 12 4l8 7"></path><path d="M6.5 9.6V20h11V9.6"></path></svg></button>
       </div>
+      <!-- 图层面板：浮在缩放竖条上方的一级卡片，行可拖拽排序，点外面 / Esc 关闭 -->
+      <div class="layer-pop" id="layerPanel" role="dialog" aria-label="图层管理">
+        <div class="lp-head">
+          <div class="lp-ttl">图层</div>
+          <button class="icon-btn" id="layerPanelClose" aria-label="关闭图层管理"></button>
+        </div>
+        <div class="lp-list" id="layerPanelList"></div>
+        <button class="btn" id="layerPanelAdd">新建图层</button>
+        <div class="lp-hint">拖动行调整叠放次序，越靠上的图层画得越晚、盖在下面；点名字切换当前图层（之后新建的对象落在这一层）。</div>
+      </div>
 
       <!-- ══════════ AI 助手：悬浮在画布下方，可折叠 ══════════ -->
       <div class="ai-dock mini" id="aiPanel">
@@ -2099,24 +2131,7 @@ body.basic #splitterL{display:none!important}
   </div>
 </div>
 
-<!-- ══════════ 图层管理 ══════════ -->
-<div class="backdrop" id="layerBackdrop">
-  <div class="modal" style="max-width:430px">
-    <div class="modal-head">
-      <h2>图层管理</h2>
-      <button class="icon-btn" data-close="layerBackdrop" aria-label="关闭"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6 6 18"></path></svg></button>
-    </div>
-    <div class="modal-body">
-      <div class="lp-list" id="layerPanelList"></div>
-      <div class="lp-hint">点名字切换当前图层（之后新建的对象落在这一层）；⌃ ⌄ 调整叠放次序，越靠上的图层画得越晚、盖在下面的图层上面。</div>
-    </div>
-    <div class="modal-foot">
-      <button class="btn" id="layerPanelAdd">新建图层</button>
-      <span class="spacer"></span>
-      <button class="btn primary" data-close="layerBackdrop">完成</button>
-    </div>
-  </div>
-</div>
+<!-- ══════════ 图层管理：一级浮层（不弹二级窗） ══════════ -->
 
 <!-- ══════════ 应用内确认框（替代原生 confirm） ══════════ -->
 <div class="backdrop" id="confirmBackdrop">
@@ -12309,7 +12324,7 @@ function refreshAlgebra() {
   const host = $('#algebraList'); if (!host) return;
   renderLayerBar();
   /* 图层管理面板开着的时候跟着一起刷新，免得面板里的名字 / 计数停在旧状态 */
-  if ($('#layerBackdrop') && $('#layerBackdrop').classList.contains('on')) renderLayerPanel();
+  if ($('#layerPanel') && $('#layerPanel').classList.contains('on')) renderLayerPanel();
   const list = state.objects.filter(o => !o.aux);
   if (!list.length) {
     host.innerHTML = '<div class="empty-hint"><b>从空白开始</b>输入 <code>A=(1,2)</code>，画出第一个点。<br>或从工具栏选择工具。<br>也可以对 AI 说一句话，把想法画出来。</div>';
@@ -12337,6 +12352,8 @@ function refreshAlgebra() {
   }
   host.innerHTML = html;
   bindAlgebra(host);
+  /* 图层标题行同样可拖拽换位（与浮层面板共用一套拖拽逻辑） */
+  bindLayerDnD(host, '.layer-head');
   labelIconButtons($('#paneAlgebra'));
 }
 function layerHeadHtml(i, n, extraCls) {
@@ -12471,8 +12488,54 @@ function renderLayerPanel() {
     });
   });
   labelIconButtons(host);
+  bindLayerDnD(host, '.lp-row');
 }
-function openLayerPanel() { renderLayerPanel(); openBackdrop('layerBackdrop'); }
+/* ── 图层面板开关：一级浮层，不再走遮罩弹窗 ── */
+function openLayerPanel() {
+  const p = $('#layerPanel'); if (!p) return;
+  const on = !p.classList.contains('on');
+  if (on) renderLayerPanel();
+  p.classList.toggle('on', on);
+  const pb = $('#layerPanelBtn'); if (pb) pb.setAttribute('aria-expanded', String(on));
+}
+function closeLayerPanel() {
+  const p = $('#layerPanel'); if (p) p.classList.remove('on');
+  const pb = $('#layerPanelBtn'); if (pb) pb.setAttribute('aria-expanded', 'false');
+}
+/* ── 拖拽排序 ──
+   moveLayerTo 已经把对象与当前图层的下标一起搬好，这里只补刷新与提示。
+   浮层面板与对象列表的图层标题行共用这套绑定（行上都有 data-layer）。 */
+function reorderLayer(from, to) {
+  if (moveLayerTo(from, to)) {
+    recomputeAll(); renderLayerBar();
+    toast('「' + layerName(to) + '」已移到第 ' + (to + 1) + ' 层');
+  }
+}
+function bindLayerDnD(scope, rowSel) {
+  if (!scope) return;
+  let dragFrom = null;
+  scope.querySelectorAll(rowSel).forEach(row => {
+    row.setAttribute('draggable', 'true');
+    row.addEventListener('dragstart', e => {
+      dragFrom = +row.dataset.layer; row.classList.add('dragging');
+      e.dataTransfer.effectAllowed = 'move';
+      try { e.dataTransfer.setData('text/plain', 'layer:' + dragFrom); } catch (_) { }
+    });
+    row.addEventListener('dragend', () => {
+      row.classList.remove('dragging');
+      scope.querySelectorAll('.drop-target').forEach(x => x.classList.remove('drop-target'));
+      dragFrom = null;
+    });
+    row.addEventListener('dragover', e => { e.preventDefault(); row.classList.add('drop-target'); });
+    row.addEventListener('dragleave', () => row.classList.remove('drop-target'));
+    row.addEventListener('drop', e => {
+      e.preventDefault(); row.classList.remove('drop-target');
+      const to = +row.dataset.layer;
+      if (dragFrom !== null && !isNaN(to)) reorderLayer(dragFrom, to);
+      dragFrom = null;
+    });
+  });
+}
 function rowHtml(o, extraCls) {
   const sel = state.selection.includes(o.id);
   /* 定义列不必再重复左边已经单独占一列的标签：「A = 」「说明 = 」「中点 M = 」这些前缀
@@ -16751,6 +16814,18 @@ function init() {
   renderToolbar(); renderMathKb(); renderCmdList('');
   bindLayerBar();
   $('#layerPanelAdd').onclick = () => { pushUndo(); addLayer(''); recomputeAll(); toast('已新建「' + layerName(state.curLayer) + '」'); };
+  /* 一级浮层的收起交互：关闭键、点卡片外、Esc —— 有模态弹窗时不抢 Esc */
+  $('#layerPanelClose').onclick = closeLayerPanel;
+  document.addEventListener('pointerdown', e => {
+    const p = $('#layerPanel'); if (!p.classList.contains('on')) return;
+    if (p.contains(e.target) || e.target.closest('#layerPanelBtn')) return;
+    closeLayerPanel();
+  }, true);
+  document.addEventListener('keydown', e => {
+    if (e.key !== 'Escape') return;
+    const p = $('#layerPanel');
+    if (p && p.classList.contains('on') && !document.querySelector('.backdrop.on')) closeLayerPanel();
+  });
   bindMenus(); bindCanvas(); bindSplitters(); bindShortcuts();
   probBind();
   sheetBind();
@@ -18494,7 +18569,7 @@ async function runUITest() {
     $('#layerPanelAdd').click(); await sleep(0);
     if (state.layers.length !== 2) throw new Error('新建图层按钮无效');
     if (state.curLayer !== 1) throw new Error('新建后未切到新图层');
-    $('#layerBackdrop .btn.primary').click(); await sleep(0);
+    closeLayerPanel(); await sleep(0);
     if (!$('#layerPanelBtn').title.includes(state.layers[1].name)) throw new Error('图层栏没显示当前图层：' + $('#layerPanelBtn').title);
     executeLine('C=(0,4)'); recomputeAll(); refreshAlgebra(); await sleep(0);
     if (layerIndexOf(getObjByLabel('C')) !== 1) throw new Error('新对象没落在当前图层');
@@ -18530,7 +18605,7 @@ async function runUITest() {
     state.layers = [{ name: '图层 1', visible: true, locked: false }]; state.curLayer = 0;
     executeLine('A=(1,1)'); recomputeAll(); refreshAlgebra(); await sleep(0);
     $('#layerPanelBtn').click(); await sleep(0);
-    const bd = $('#layerBackdrop');
+    const bd = $('#layerPanel');
     if (!bd.classList.contains('on')) throw new Error('图层管理面板没打开');
     const rows = () => Array.from($('#layerPanelList').querySelectorAll('.lp-row'));
     if (rows().length !== 1) throw new Error('面板行数不对：' + rows().length);
@@ -18560,10 +18635,15 @@ async function runUITest() {
     if (rowOf(0).querySelector('[data-lact="down"]').disabled !== true) throw new Error('最下层应禁用下移');
     rowOf(1).querySelector('[data-lact="down"]').click(); await sleep(0);
     if (state.layers[0].name !== '图层 2') throw new Error('面板下移按钮无效：' + state.layers.map(l => l.name).join('/'));
-    rowOf(0).querySelector('[data-lact="del"]').click(); await sleep(0);
+    /* 拖拽排序的底层入口（浏览器测试里不便发真实 drag 事件，直接驱动同一函数）：
+       把图层 2（此刻在下）拖回上层，对象下标与当前图层要一起跟着走 */
+    reorderLayer(0, 1); await sleep(0);
+    if (state.layers[1].name !== '图层 2' || state.layers[0].name !== '图层 1') throw new Error('拖拽排序（reorderLayer）无效：' + state.layers.map(l => l.name).join('/'));
+    if (layerIndexOf(getObjByLabel('A')) !== 0) throw new Error('拖拽排序没把对象下标一起搬');
+    rowOf(1).querySelector('[data-lact="del"]').click(); await sleep(0);
     if (state.layers.length !== 1) throw new Error('面板删除按钮无效');
     if (rows()[0].querySelector('[data-lact="del"]').disabled !== true) throw new Error('只剩一层时应禁用删除');
-    closeBackdrop('layerBackdrop'); await sleep(0);
+    closeLayerPanel(); await sleep(0);
     if (bd.classList.contains('on')) throw new Error('图层管理面板关不掉');
   });
 
@@ -19435,20 +19515,20 @@ async function runUITest() {
     if (!pb.querySelector('svg')) throw new Error('图层管理键没有图标');
     /* 点图层键开面板，面板里能新建图层 */
     pb.click(); await sleep(0);
-    if (!$('#layerBackdrop').classList.contains('on')) throw new Error('图层管理键没打开图层面板');
+    if (!$('#layerPanel').classList.contains('on')) throw new Error('图层管理键没打开图层面板');
     $('#layerPanelAdd').click(); await sleep(0);
     if (state.layers.length !== 2 || state.curLayer !== 1) throw new Error('面板「新建图层」没新建并切过去');
     if (!pb.title.includes(state.layers[1].name)) throw new Error('图层管理键 tooltip 没写当前图层');
-    closeBackdrop('layerBackdrop'); await sleep(0);
-    if ($('#layerBackdrop').classList.contains('on')) throw new Error('图层面板没关掉');
+    closeLayerPanel(); await sleep(0);
+    if ($('#layerPanel').classList.contains('on')) throw new Error('图层面板没关掉');
   });
 
   /* 9b-3. 无障碍：模态语义 / Esc 关的是当前那个 / 焦点入框；外加主题色与焦点样式兜底 */
   await A('无障碍:模态语义与 Esc', async () => {
     switchPanel('algebra');
-    $('#layerPanelBtn').click(); await sleep(0);
-    const bd = $('#layerBackdrop'), m = bd.querySelector('.modal');
-    if (!bd.classList.contains('on')) throw new Error('图层管理面板没打开');
+    probOpen(); await sleep(0);
+    const bd = $('#probBackdrop'), m = bd.querySelector('.modal');
+    if (!bd.classList.contains('on')) throw new Error('概率计算器没打开');
     if (m.getAttribute('role') !== 'dialog' || m.getAttribute('aria-modal') !== 'true') throw new Error('模态缺少 dialog / aria-modal 语义');
     if (!m.getAttribute('aria-labelledby')) throw new Error('模态缺少 aria-labelledby');
     const eh = document.getElementById(m.getAttribute('aria-labelledby'));
@@ -19469,9 +19549,9 @@ async function runUITest() {
     if ((headClose.textContent || '').trim()) throw new Error('右上角关闭键不该有文字');
     /* Esc 关的是「当前打开着的」模态（旧版写死 settingsBackdrop，这里根本关不掉） */
     window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })); await sleep(0);
-    if (bd.classList.contains('on')) throw new Error('Esc 没关掉图层管理面板');
+    if (bd.classList.contains('on')) throw new Error('Esc 没关掉概率计算器');
     probOpen(); await sleep(0);
-    if (!$('#probBackdrop').classList.contains('on')) throw new Error('概率计算器没打开');
+    if (!$('#probBackdrop').classList.contains('on')) throw new Error('概率计算器没重新打开');
     window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })); await sleep(0);
     if ($('#probBackdrop').classList.contains('on')) throw new Error('Esc 没关掉概率计算器');
     /* 键盘焦点与减弱动效的兜底规则必须存在，否则全局 outline:none 会让键盘用户完全失去焦点提示 */
