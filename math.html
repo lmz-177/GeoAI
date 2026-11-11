@@ -39,6 +39,7 @@
   --fs-2xs:11.5px;   /* 次级说明、单位、行内元信息 */
   --fs-xs:12.5px;    /* 按钮、胶囊、正文以外的控件标签 */
   --fs-sm:13.5px;    /* 菜单项、对话框按钮、列表主标签 */
+  --fs-md:15px;      /* 面板 / 对话框标题（比正文高一档，不跟正文字号混用） */
   --fs-ios-input:16px; /* 仅 iOS 输入框（焦点防缩放），桌面端不使用 */
   --fs-code:24px;      /* 在线分享的 8 位标识码（唯一的展示级大字） */
   --font:-apple-system,BlinkMacSystemFont,'SF Pro Text','SF Pro Display','PingFang SC','HarmonyOS Sans SC','Microsoft YaHei',system-ui,sans-serif;
@@ -305,56 +306,71 @@ body.dark .app::before{
   -webkit-backdrop-filter:var(--glass-blur);backdrop-filter:var(--glass-blur);
   user-select:none;
 }
-.tool-head{display:flex;align-items:center;justify-content:space-between;padding:0 2px 5px}
-.th-title{font-size:var(--fs-xs);font-weight:600;color:var(--text-3);letter-spacing:.4px}
+.tool-head{display:flex;align-items:center;justify-content:space-between;gap:6px;padding:0 2px 7px}
+.th-title{font-size:var(--fs-xs);font-weight:600;color:var(--text-3);letter-spacing:.4px;flex:0 0 auto}
+/* 工具搜索：76 个工具分 9 组，组名记得住但某个工具落在哪组常常想不起来。
+   输入两个字直接过滤，命中的组自动展开 —— GeoGebra 的工具面板没有这个。 */
+.tool-search{flex:1;min-width:0;height:27px;padding:0 9px;border-radius:9px;
+  background:var(--panel-3);border:.5px solid transparent;font-size:var(--fs-2xs);color:var(--text);
+  transition:var(--t-ui);-webkit-appearance:none;appearance:none}
+.tool-search::placeholder{color:var(--text-3)}
+.tool-search:focus{background:var(--panel-2);border-color:var(--accent)}
+/* 一个都没搜到：框变红，不用再找「为什么列表是空的」 */
+.tool-search.no-hit{border-color:var(--danger);background:rgba(255,59,48,.08)}
 .th-fold{width:22px;height:22px}
 .th-fold svg{width:13px;height:13px}
-.toolgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;
-  flex:1;min-height:0;grid-auto-rows:minmax(56px,104px);align-content:space-between}
-.tgroup{position:relative;min-width:0}
+/* ── 绘图工具栏 ──
+   结构照 GeoGebra 计算器官网的「工具」面板：语义分组名 + 组内平铺工具行，
+   一眼能看全每一类有什么。视觉上换成 iOS 分组列表：一张卡片一组、42px 行高、
+   组名可折叠、组内选中项带主色竖条 —— 76 个工具不必靠 13 个大方块摊满面板。 */
+.toolgrid{display:flex;flex-direction:column;gap:9px;
+  flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;padding:1px 2px 12px}
+.tgroup{position:relative;min-width:0;background:var(--panel-2);border:.5px solid var(--border);
+  border-radius:14px;overflow:hidden}
 .ttrigger{
-  width:100%;height:100%;min-height:56px;display:flex;flex-direction:column;align-items:center;
-  justify-content:center;gap:4px;padding:6px 5px;
-  border-radius:12px;color:var(--text);transition:var(--t-ui);position:relative;
+  width:100%;min-height:42px;display:flex;flex-direction:row;align-items:center;
+  justify-content:flex-start;gap:10px;padding:9px 11px;
+  border-radius:0;color:var(--text);transition:var(--t-ui);position:relative;text-align:left;
 }
 .ttrigger:hover{background:var(--hover)}
-.ttrigger:active{transform:scale(.96);background:var(--active)}
-.ttrigger.on{background:var(--accent);color:#fff;box-shadow:0 2px 8px var(--accent-soft)}
-.ttrigger svg{width:24px;height:24px;flex:0 0 24px}
-/* 工具名常驻：13 组图标单看形状认不全，GGB 的工具箱也是一格一个名字 */
-.tg-name{font-size:var(--fs-2xs);font-weight:600;line-height:1.2;max-width:100%;
-  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text-2)}
-.ttrigger.on .tg-name{color:#fff}
-.ttrigger .corner{position:absolute;right:5px;top:5px;width:0;height:0;border-left:5px solid transparent;border-bottom:5px solid currentColor;opacity:.45;border-radius:1px}
+.ttrigger:active{background:var(--active)}
+/* 选中组不再整块反白：只把图标与组名染成主色，卡片结构保持清晰（iOS 列表里一行选中就是这样） */
+.ttrigger.on{background:transparent;color:var(--accent);box-shadow:none}
+.ttrigger svg{width:20px;height:20px;flex:0 0 20px;color:var(--text-2);transition:var(--t-ui)}
+.ttrigger.on svg{color:var(--accent)}
+.tg-name{flex:1;min-width:0;font-size:var(--fs-sm);font-weight:600;line-height:1.2;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text);text-align:left}
+.ttrigger.on .tg-name{color:var(--accent)}
+/* 组内工具数：让「这一组还有 8 个」在收起状态下也看得见 */
+.tg-count{flex:0 0 auto;min-width:20px;padding:1px 6px;border-radius:99px;background:var(--panel-3);
+  color:var(--text-3);font-size:var(--fs-3xs);font-weight:700;text-align:center;font-variant-numeric:tabular-nums}
+.ttrigger.on .tg-count{background:var(--accent-dim);color:var(--accent)}
+.tg-chev{flex:0 0 14px;width:14px;height:14px;color:var(--text-3);transform:rotate(-90deg);transition:transform .22s var(--ease)}
+.tgroup.open .tg-chev{transform:rotate(0)}
 /* 面板独占一个页签：工具网格撑满面板，下面不再留一大片空白 */
 #paneTools{display:flex;flex-direction:column}
 #paneTools .toolwrap{flex:1;display:flex;flex-direction:column;min-height:0;position:static}
+/* 组内工具就地展开（不是浮层）：展开后仍留在卡片里，缩进一层，像 iOS 设置里展开的子项 */
 .flyout{
-  position:absolute;top:calc(100% + 6px);left:0;
-  background:var(--glass-2);border:.5px solid var(--glass-brd);
-  border-radius:16px;box-shadow:var(--shadow-lg),var(--hi-strong);padding:7px;display:none;z-index:120;
-  -webkit-backdrop-filter:var(--glass-blur);backdrop-filter:var(--glass-blur);
-  grid-template-columns:repeat(3,40px);gap:4px;
-  /* 浮出条从触发键的左上角展开（最后一列从右上角），不是从自己的中心冒出来 */
-  transform-origin:0 0;
+  display:none;padding:0 0 6px;border-top:.5px solid var(--border);
+  background:transparent;
 }
-/* 网格最后一列展开时改成右对齐，飞出菜单不会顶出面板右缘 */
-.tgroup:nth-child(2n) .flyout{left:auto;right:0;transform-origin:100% 0}
-/* 面板底部两排的浮出条改为向上展开，否则会被面板底边裁掉 */
-.tgroup:nth-last-child(-n+4) .flyout{top:auto;bottom:calc(100% + 6px);transform-origin:0 100%}
-.tgroup:nth-child(2n):nth-last-child(-n+4) .flyout{transform-origin:100% 100%}
-.tgroup.open .flyout{display:grid;animation:pop .16s var(--ease-out) both}
+.tgroup.open .flyout{display:block;animation:subIn .18s var(--ease-out) both}
+@keyframes subIn{from{opacity:0;transform:translateY(-5px)}to{opacity:1;transform:none}}
 .flyout button{
-  width:40px;height:40px;display:flex;align-items:center;justify-content:center;border-radius:12px;
-  color:var(--text);transition:var(--t-ui);
+  width:100%;min-height:38px;display:flex;align-items:center;gap:10px;
+  padding:7px 11px 7px 36px;border-radius:0;
+  color:var(--text);font-size:var(--fs-xs);font-weight:500;transition:var(--t-ui);position:relative;text-align:left;
 }
 .flyout button:hover{background:var(--hover)}
-.flyout button:active{transform:scale(.92)}
-.flyout button.on{background:var(--accent);color:#fff;box-shadow:0 4px 12px var(--accent-soft),inset 0 1px 0 rgba(255,255,255,.3)}
-.flyout button svg{width:20px;height:20px}
-/* 浮出条顶上的组名：GGB 的工具箱每格都写着组名，这里是展开时才出现的小标题，
-   不占常态高度，但要让人知道这一组是「特殊直线」还是「圆与弧」。 */
-.fly-title{grid-column:1/-1;font-size:var(--fs-3xs);font-weight:700;color:var(--text-3);text-align:center;padding:0 0 4px;letter-spacing:.4px;white-space:nowrap}
+.flyout button:active{background:var(--active)}
+.flyout button.on{background:var(--active);color:var(--accent);font-weight:650}
+.flyout button.on svg{color:var(--accent)}
+/* 选中项左侧主色竖条：比整行反白更轻，也不打断列表的节奏 */
+.flyout button.on::before{content:'';position:absolute;left:0;top:7px;bottom:7px;width:3px;
+  border-radius:0 3px 3px 0;background:var(--accent)}
+.flyout button svg{width:17px;height:17px;flex:0 0 17px;color:var(--text-3)}
+.fl-name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .tsep{width:1px;height:26px;background:var(--border);margin:0 7px;flex:0 0 1px}
 /* 工具栏悬停提示：显示功能名字（.ttrigger 与浮出按钮共用） */
 .tipbox{
@@ -557,7 +573,7 @@ body.tool-folded .tool-head{padding-bottom:0}
 .layer-pop.on{display:flex;animation:lpIn .22s var(--ease-out) both}
 @keyframes lpIn{from{opacity:0;transform:translateY(8px) scale(.97)}to{opacity:1;transform:none}}
 .lp-head{display:flex;align-items:center;gap:8px;padding:0 2px}
-.lp-ttl{flex:1;font-size:15px;font-weight:700;letter-spacing:-.2px}
+.lp-ttl{flex:1;font-size:var(--fs-md);font-weight:700;letter-spacing:-.2px}
 #layerPanelClose{width:26px;height:26px;flex:0 0 26px}
 .layer-pop .btn{width:100%}
 /* 拖拽反馈：被拖的行半透明，落点行描边发亮 */
@@ -1604,6 +1620,9 @@ body.dark .toast{background:rgba(58,58,60,.9);color:#f2f2f7}
   /* 窄屏画布本来就矮，AI 输入条又会铺满底部：缩放条挪到右上角并改成横排，
      只占一行高度，怎么都不会被压住；「代数 / 图形」浮层已经在右上，缩放条排它下面。 */
   .gv-zoom{top:56px;bottom:auto;right:12px;flex-direction:row}
+  /* 对话面板展开时几乎铺满整块画布，右上角的缩放条正好被它盖住：
+     与其让一个点不到的键悬在上面，不如在对话期间收起来（这时也不做精细缩放）。 */
+  body:has(#aiPanel:not(.mini)) .gv-zoom{display:none}
   .gv-zoom .sep{width:1px;height:auto;align-self:stretch}
   /* 比例徽标在窄屏排到右上第二行（视图切换下面），左侧整条留给侧栏浮层与工具网格，
      避免它压在左侧面板的对象列表上 */
@@ -1880,9 +1899,10 @@ body.basic #splitterL{display:none!important}
         <div class="toolwrap" id="toolWrap">
           <div class="tool-head">
             <span class="th-title">绘图工具</span>
+            <input class="tool-search" id="toolSearch" placeholder="搜索工具" aria-label="搜索工具" autocomplete="off">
             <button class="icon-btn th-fold" id="toolFold" title="收起绘图工具" aria-label="收起绘图工具"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 14.5 12 8.5l6 6"></path></svg></button>
           </div>
-          <div class="toolgrid" id="toolbar"><div class="tgroup" data-group="g0"><button class="ttrigger on" data-group="g0" data-tool="move" data-name="移动" aria-label="移动"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 3l7 17 2.5-6.5L20 11z"></path></svg><span class="tg-name">移动与视图</span><span class="corner"></span></button><div class="flyout"><div class="fly-title">移动与视图</div><button data-tool="move" data-name="移动" aria-label="移动" class="on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 3l7 17 2.5-6.5L20 11z"></path></svg></button><button data-tool="pan" data-name="移动视图" aria-label="移动视图"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11V5.5a1.5 1.5 0 0 1 3 0V11m0-1.5a1.5 1.5 0 0 1 3 0V11m0-1a1.5 1.5 0 0 1 3 0v4.5A6.5 6.5 0 0 1 11.5 21h-.8a5.5 5.5 0 0 1-4.6-2.5L4 15.2a1.6 1.6 0 0 1 2.6-1.8L9 15.6"></path></svg></button><button data-tool="zoom" data-name="放大" aria-label="放大"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-3.5-3.5M11 8.5v5M8.5 11h5"></path></svg></button><button data-tool="zoomOut" data-name="缩小" aria-label="缩小"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-3.5-3.5M8.5 11h5"></path></svg></button><button data-tool="select" data-name="框选" aria-label="框选"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16v16H4z" stroke-dasharray="3 2"></path><path d="M9 14l2.5-4L14 14z" fill="currentColor" opacity=".35"></path></svg></button></div></div><div class="tgroup" data-group="g1"><button class="ttrigger" data-group="g1" data-tool="point" data-name="点" aria-label="点"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3.4" fill="currentColor" stroke="none"></circle><path d="M4 12h3M17 12h3M12 4v3M12 17v3" opacity=".5"></path></svg><span class="tg-name">点</span><span class="corner"></span></button><div class="flyout"><div class="fly-title">点</div><button data-tool="point" data-name="点" aria-label="点"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3.4" fill="currentColor" stroke="none"></circle><path d="M4 12h3M17 12h3M12 4v3M12 17v3" opacity=".5"></path></svg></button><button data-tool="pointOn" data-name="对象上的点" aria-label="对象上的点"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 18c5-11 13-11 18 0" stroke-width="1.6"></path><circle cx="12" cy="12.6" r="3.1" fill="currentColor" stroke="none"></circle></svg></button><button data-tool="attach" data-name="附着 / 分离点" aria-label="附着 / 分离点"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17c4-10 14-10 18 0" opacity=".65"></path><path d="M12 5.5V14" stroke-dasharray="2.5 2.2"></path><circle cx="12" cy="15.5" r="3" fill="currentColor" stroke="none"></circle></svg></button><button data-tool="intersect" data-name="交点" aria-label="交点"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 18C8 6 16 6 20 18"></path><path d="M4 6c4 12 12 12 16 0" opacity=".75"></path><circle cx="12" cy="12" r="2.6" fill="currentColor" stroke="none"></circle></svg></button><button data-tool="midpoint" data-name="中点" aria-label="中点"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="5.5" cy="17" r="2.2" fill="currentColor" stroke="none"></circle><circle cx="18.5" cy="17" r="2.2" fill="currentColor" stroke="none"></circle><circle cx="12" cy="7" r="2.6" fill="currentColor" stroke="none"></circle><path d="M5.5 17 12 7l6.5 10" opacity=".5"></path></svg></button><button data-tool="centroid" data-name="重心" aria-label="重心"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="5.5" cy="17" r="2.2" fill="currentColor" stroke="none"></circle><circle cx="18.5" cy="17" r="2.2" fill="currentColor" stroke="none"></circle><circle cx="12" cy="7" r="2.6" fill="currentColor" stroke="none"></circle><path d="M5.5 17 12 7l6.5 10" opacity=".5"></path></svg></button><button data-tool="incenter" data-name="内心" aria-label="内心"></button></div></div><div class="tgroup" data-group="g2"><button class="ttrigger" data-group="g2" data-tool="line" data-name="直线" aria-label="直线"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 19L21 5"></path><circle cx="3" cy="19" r="1.6" fill="currentColor" stroke="none"></circle><circle cx="21" cy="5" r="1.6" fill="currentColor" stroke="none"></circle></svg><span class="tg-name">直线</span><span class="corner"></span></button><div class="flyout"><div class="fly-title">直线</div><button data-tool="line" data-name="直线" aria-label="直线"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 19L21 5"></path><circle cx="3" cy="19" r="1.6" fill="currentColor" stroke="none"></circle><circle cx="21" cy="5" r="1.6" fill="currentColor" stroke="none"></circle></svg></button><button data-tool="segment" data-name="线段" aria-label="线段"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 18.5 19.5 5.5"></path><circle cx="4.5" cy="18.5" r="1.9" fill="currentColor" stroke="none"></circle><circle cx="19.5" cy="5.5" r="1.9" fill="currentColor" stroke="none"></circle></svg></button><button data-tool="segmentFix" data-name="定长线段" aria-label="定长线段"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 18 19 6"></path><circle cx="5" cy="18" r="1.9" fill="currentColor" stroke="none"></circle><circle cx="19" cy="6" r="1.9" fill="currentColor" stroke="none"></circle><path d="M11 14.2h4.5M13.2 12v4.5" opacity=".6" stroke-width="1.3"></path></svg></button><button data-tool="ray" data-name="射线" aria-label="射线"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19 20 5"></path><path d="M20 5l-4.4.8M20 5l-.8 4.4"></path><circle cx="4" cy="19" r="1.9" fill="currentColor" stroke="none"></circle></svg></button><button data-tool="vector" data-name="向量" aria-label="向量"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19 19 6"></path><path d="M19 6l-4.6.6M19 6l-.6 4.6"></path></svg></button><button data-tool="vectorFromPoint" data-name="从点出发的向量" aria-label="从点出发的向量"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 19 19 6"></path><path d="M19 6l-4.4.5M19 6l-.5 4.4"></path><circle cx="5" cy="19" r="2" fill="currentColor" stroke="none"></circle><path d="M5 19h4M5 19v-4" opacity=".35" stroke-width="1.2"></path></svg></button><button data-tool="polyline" data-name="折线" aria-label="折线"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 18l5-9 5 6 8-11"></path></svg></button></div></div><div class="tgroup" data-group="g3"><button class="ttrigger" data-group="g3" data-tool="perp" data-name="垂线" aria-label="垂线"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20 20 20M12 20V5"></path><path d="M12 16h4v4" stroke-width="1.3"></path></svg><span class="tg-name">特殊直线</span><span class="corner"></span></button><div class="flyout"><div class="fly-title">特殊直线</div><button data-tool="perp" data-name="垂线" aria-label="垂线"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20 20 20M12 20V5"></path><path d="M12 16h4v4" stroke-width="1.3"></path></svg></button><button data-tool="parallel" data-name="平行线" aria-label="平行线"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 20 11 4M13 20 19 4"></path></svg></button><button data-tool="perpBisector" data-name="中垂线" aria-label="中垂线"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17 21 7"></path><path d="M12 4v9" stroke-dasharray="3 2"></path><path d="M12 8.5l3 4h-6z" fill="currentColor" stroke="none" opacity=".5"></path></svg></button><button data-tool="angleBisector" data-name="角平分线" aria-label="角平分线"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20 20 20M4 20 17 6"></path><path d="M12.5 20 15 12.4"></path><path d="M8 20a9 9 0 0 1 1.6-4.6" opacity=".5" stroke-width="1.3"></path></svg></button><button data-tool="tangent" data-name="切线" aria-label="切线"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="13" r="6.5"></circle><path d="M3.5 9 21.5 5"></path><circle cx="13.4" cy="7.2" r="1.7" fill="currentColor" stroke="none"></circle></svg></button><button data-tool="polar" data-name="极线" aria-label="极线"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="10.5" cy="13" r="6.5" opacity=".7"></circle><path d="M19.5 3.5 6 17"></path><path d="M19.5 3.5l-3.6.5M19.5 3.5l-.5 3.6"></path><circle cx="19.5" cy="3.5" r="1.7" fill="currentColor" stroke="none"></circle></svg></button><button data-tool="diameter" data-name="直径" aria-label="直径"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8"></circle><path d="M4 12h16"></path><circle cx="12" cy="12" r="1.7" fill="currentColor" stroke="none"></circle></svg></button><button data-tool="bestFitLine" data-name="最佳拟合直线" aria-label="最佳拟合直线"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 18 20.5 6"></path><circle cx="7" cy="15.5" r="1.5" fill="currentColor" stroke="none"></circle><circle cx="13" cy="9.6" r="1.5" fill="currentColor" stroke="none"></circle><circle cx="16.5" cy="14" r="1.5" fill="currentColor" stroke="none"></circle><circle cx="19" cy="7.4" r="1.5" fill="currentColor" stroke="none"></circle></svg></button></div></div><div class="tgroup" data-group="g4"><button class="ttrigger" data-group="g4" data-tool="polygon" data-name="多边形" aria-label="多边形"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5 20.5 10l-3.3 9.7H6.8L3.5 10z"></path></svg><span class="tg-name">多边形</span><span class="corner"></span></button><div class="flyout"><div class="fly-title">多边形</div><button data-tool="polygon" data-name="多边形" aria-label="多边形"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5 20.5 10l-3.3 9.7H6.8L3.5 10z"></path></svg></button><button data-tool="regularPolygon" data-name="正多边形" aria-label="正多边形"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5 20.5 10l-3.3 9.7H6.8L3.5 10z" opacity=".45"></path><circle cx="12" cy="3.5" r="1.6" fill="currentColor" stroke="none"></circle><circle cx="20.5" cy="10" r="1.6" fill="currentColor" stroke="none"></circle><circle cx="12" cy="12" r="2" fill="currentColor" stroke="none"></circle></svg></button></div></div><div class="tgroup" data-group="g5"><button class="ttrigger" data-group="g5" data-tool="circleCP" data-name="圆（圆心 + 圆上点）" aria-label="圆（圆心 + 圆上点）"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8"></circle><circle cx="12" cy="12" r="1.8" fill="currentColor" stroke="none"></circle><circle cx="18.6" cy="7.6" r="1.8" fill="currentColor" stroke="none"></circle></svg><span class="tg-name">圆与弧</span><span class="corner"></span></button><div class="flyout"><div class="fly-title">圆与弧</div><button data-tool="circleCP" data-name="圆（圆心 + 圆上点）" aria-label="圆（圆心 + 圆上点）"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8"></circle><circle cx="12" cy="12" r="1.8" fill="currentColor" stroke="none"></circle><circle cx="18.6" cy="7.6" r="1.8" fill="currentColor" stroke="none"></circle></svg></button><button data-tool="circleCR" data-name="圆（圆心 + 半径）" aria-label="圆（圆心 + 半径）"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="13" r="7.5"></circle><circle cx="11" cy="13" r="1.8" fill="currentColor" stroke="none"></circle><path d="M11 13l6-4.6" stroke-dasharray="2.5 2"></path></svg></button><button data-tool="circle3" data-name="过三点的圆" aria-label="过三点的圆"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"></circle><circle cx="12" cy="3.5" r="1.6" fill="currentColor" stroke="none"></circle><circle cx="19.4" cy="16" r="1.6" fill="currentColor" stroke="none"></circle><circle cx="4.6" cy="16" r="1.6" fill="currentColor" stroke="none"></circle></svg></button><button data-tool="semicircle" data-name="半圆" aria-label="半圆"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 15a8.5 8.5 0 0 1 17 0z"></path><path d="M3.5 15h17"></path></svg></button><button data-tool="arc" data-name="圆弧" aria-label="圆弧"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 18a11 11 0 0 1 16 0"></path><circle cx="12" cy="18" r="1.7" fill="currentColor" stroke="none"></circle></svg></button><button data-tool="circumArc" data-name="过三点的圆弧" aria-label="过三点的圆弧"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 17a8.5 8.5 0 0 1 17 0"></path><circle cx="3.5" cy="17" r="1.7" fill="currentColor" stroke="none"></circle><circle cx="12" cy="8.4" r="1.7" fill="currentColor" stroke="none"></circle><circle cx="20.5" cy="17" r="1.7" fill="currentColor" stroke="none"></circle></svg></button><button data-tool="sector" data-name="扇形" aria-label="扇形"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 16a8.5 8.5 0 0 1 17 0z" fill="currentColor" opacity=".18"></path><path d="M3.5 16a8.5 8.5 0 0 1 17 0z"></path></svg></button><button data-tool="circumSector" data-name="过三点的扇形" aria-label="过三点的扇形"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 17a8.5 8.5 0 0 1 17 0z" fill="currentColor" opacity=".2"></path><path d="M3.5 17a8.5 8.5 0 0 1 17 0"></path><circle cx="12" cy="8.4" r="1.6" fill="currentColor" stroke="none"></circle></svg></button><button data-tool="incircle" data-name="内切圆" aria-label="内切圆"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5 20 19H4z"></path><circle cx="11.6" cy="14.4" r="3.4" opacity=".85"></circle></svg></button></div></div><div class="tgroup" data-group="g6"><button class="ttrigger" data-group="g6" data-tool="ellipse" data-name="椭圆" aria-label="椭圆"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="12" rx="9" ry="5.5"></ellipse><circle cx="6.2" cy="12" r="1.5" fill="currentColor" stroke="none"></circle><circle cx="17.8" cy="12" r="1.5" fill="currentColor" stroke="none"></circle></svg><span class="tg-name">圆锥曲线</span><span class="corner"></span></button><div class="flyout"><div class="fly-title">圆锥曲线</div><button data-tool="ellipse" data-name="椭圆" aria-label="椭圆"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="12" rx="9" ry="5.5"></ellipse><circle cx="6.2" cy="12" r="1.5" fill="currentColor" stroke="none"></circle><circle cx="17.8" cy="12" r="1.5" fill="currentColor" stroke="none"></circle></svg></button><button data-tool="hyperbola" data-name="双曲线" aria-label="双曲线"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 19c6-1 7-11 9-14M21 5c-6 1-7 11-9 14"></path><path d="M3 19c6-1 7-11 9-14"></path></svg></button><button data-tool="parabola" data-name="抛物线" aria-label="抛物线"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20C12 10 6 8 3.5 8M12 20c0-10 6-12 8.5-12" transform="rotate(0 12 12)"></path><path d="M5 20c0-9 4-13 7-13s7 4 7 13"></path></svg></button><button data-tool="conic5" data-name="过五点的圆锥曲线" aria-label="过五点的圆锥曲线"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="12" rx="9" ry="6"></ellipse><circle cx="4.5" cy="14" r="1.4" fill="currentColor" stroke="none"></circle><circle cx="8" cy="6.6" r="1.4" fill="currentColor" stroke="none"></circle><circle cx="16" cy="6.6" r="1.4" fill="currentColor" stroke="none"></circle><circle cx="19.5" cy="14" r="1.4" fill="currentColor" stroke="none"></circle><circle cx="12" cy="18" r="1.4" fill="currentColor" stroke="none"></circle></svg></button><button data-tool="curve" data-name="参数曲线" aria-label="参数曲线"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 17.5C7 17.5 6 6.5 12 6.5s5 11 8.5 11"></path><circle cx="12" cy="6.5" r="2" fill="currentColor" stroke="none"></circle></svg></button></div></div><div class="tgroup" data-group="g7"><button class="ttrigger" data-group="g7" data-tool="angle" data-name="角度" aria-label="角度"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19h16M4 19 18 5"></path><path d="M12 19a8 8 0 0 1 1.4-4.2" stroke-width="1.4"></path></svg><span class="tg-name">度量</span><span class="corner"></span></button><div class="flyout"><div class="fly-title">度量</div><button data-tool="angle" data-name="角度" aria-label="角度"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19h16M4 19 18 5"></path><path d="M12 19a8 8 0 0 1 1.4-4.2" stroke-width="1.4"></path></svg></button><button data-tool="angleFix" data-name="定角" aria-label="定角"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19h16M4 19 17 6"></path><path d="M10 19a7 7 0 0 1 1.3-3.8" stroke-width="1.4"></path><path d="M14 8.5l3.5.6" opacity=".7"></path></svg></button><button data-tool="distance" data-name="距离 / 长度" aria-label="距离 / 长度"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 16 16 4l4 4L8 20z"></path><path d="M7 13l2 2M10 10l2 2M13 7l2 2" stroke-width="1.3"></path></svg></button><button data-tool="area" data-name="面积" aria-label="面积"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4 20 10l-3 9H7l-3-9z" fill="currentColor" opacity=".18"></path><path d="M12 4 20 10l-3 9H7l-3-9z"></path></svg></button><button data-tool="slope" data-name="斜率" aria-label="斜率"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 20h18M3 20 20 5"></path><path d="M13 16.5h5v-4" opacity=".6" stroke-width="1.3"></path></svg></button><button data-tool="relation" data-name="关系" aria-label="关系"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="7.5" cy="12" r="4.2" opacity=".8"></circle><rect x="12.6" y="7.8" width="8.4" height="8.4" rx="1.6" opacity=".8"></rect><path d="M10.6 10.4h2.6M10.6 13.6h2.6" stroke-width="1.3"></path></svg></button></div></div><div class="tgroup" data-group="g8"><button class="ttrigger" data-group="g8" data-tool="reflectLine" data-name="关于直线对称" aria-label="关于直线对称"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v18" stroke-dasharray="3 2.5"></path><path d="M8 8 4 12l4 4M16 8l4 4-4 4"></path></svg><span class="tg-name">变换</span><span class="corner"></span></button><div class="flyout"><div class="fly-title">变换</div><button data-tool="reflectLine" data-name="关于直线对称" aria-label="关于直线对称"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v18" stroke-dasharray="3 2.5"></path><path d="M8 8 4 12l4 4M16 8l4 4-4 4"></path></svg></button><button data-tool="reflectPoint" data-name="中心对称" aria-label="中心对称"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="2" fill="currentColor" stroke="none"></circle><path d="M6 6l3 3M18 6l-3 3M6 18l3-3M18 18l-3-3"></path></svg></button><button data-tool="rotate" data-name="旋转" aria-label="旋转"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 1 1-2.6-5.9"></path><path d="M20 3.5V8h-4.5"></path></svg></button><button data-tool="translate" data-name="平移" aria-label="平移"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17h11M3 17l3-3M3 17l3 3"></path><path d="M9 7h11M20 7l-3-3M20 7l-3 3" opacity=".65"></path></svg></button><button data-tool="dilate" data-name="位似" aria-label="位似"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20 20 4"></path><path d="M20 4l-1 5M20 4l-5 1"></path><rect x="3" y="17" width="4" height="4" fill="currentColor" stroke="none" opacity=".5"></rect></svg></button></div></div><div class="tgroup" data-group="g9"><button class="ttrigger" data-group="g9" data-tool="functionPlot" data-name="画函数" aria-label="画函数"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18.5 4.5c-3.6 0-3.9 3-3.9 6.3v3.4c0 3.3-.3 6.3-3.9 6.3"></path><path d="M12 3.6h6M10.2 20.4H16" opacity=".6" stroke-width="1.3"></path><path d="M3.5 15.2c1.6-1.6 2.6 1.4 4.4.2" stroke-width="1.3"></path></svg><span class="tg-name">函数</span><span class="corner"></span></button><div class="flyout"><div class="fly-title">函数</div><button data-tool="functionPlot" data-name="画函数" aria-label="画函数"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18.5 4.5c-3.6 0-3.9 3-3.9 6.3v3.4c0 3.3-.3 6.3-3.9 6.3"></path><path d="M12 3.6h6M10.2 20.4H16" opacity=".6" stroke-width="1.3"></path><path d="M3.5 15.2c1.6-1.6 2.6 1.4 4.4.2" stroke-width="1.3"></path></svg></button><button data-tool="inspect" data-name="函数分析" aria-label="函数分析"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2.6"></rect><path d="M6 15.5c2.4 0 2.8-7 5-7s2.6 7 5 7"></path><circle cx="11" cy="8.5" r="1.5" fill="currentColor" stroke="none"></circle></svg></button><button data-tool="zeroes" data-name="零点" aria-label="零点"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12.5h4l2.6 6.5L14 5.5l3 7h4"></path><circle cx="14" cy="5.5" r="1.9" fill="currentColor" stroke="none"></circle></svg></button><button data-tool="extremum" data-name="极值点" aria-label="极值点"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 18.5c4 0 5.5-11.5 9-11.5s5 11.5 9 11.5"></path><circle cx="12" cy="7" r="2" fill="currentColor" stroke="none"></circle><path d="M12 7v6" stroke-dasharray="2.5 2.5" opacity=".55"></path></svg></button><button data-tool="turningPoint" data-name="拐点" aria-label="拐点"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 18c4 0 4.6-8 9-8s5 8 9 8" opacity=".8"></path><circle cx="12" cy="10" r="2.1" fill="currentColor" stroke="none"></circle></svg></button><button data-tool="derivative" data-name="导函数" aria-label="导函数"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 20h18M3 20 20 5"></path><path d="M13 16.5h5v-4" opacity=".6" stroke-width="1.3"></path></svg></button><button data-tool="integral" data-name="定积分" aria-label="定积分"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16.5 4.5c-3.4 0-3.6 2.9-3.6 6v3.2c0 3.1-.2 6-3.6 6"></path><path d="M10 3.6h5.5M8.5 20.4H14" opacity=".6" stroke-width="1.3"></path></svg></button></div></div><div class="tgroup" data-group="g10"><button class="ttrigger" data-group="g10" data-tool="text" data-name="文本" aria-label="文本"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 6V4.5h14V6M12 4.5V20M9 20h6"></path></svg><span class="tg-name">文本与媒体</span><span class="corner"></span></button><div class="flyout"><div class="fly-title">文本与媒体</div><button data-tool="text" data-name="文本" aria-label="文本"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 6V4.5h14V6M12 4.5V20M9 20h6"></path></svg></button><button data-tool="image" data-name="图片" aria-label="图片"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="4.5" width="17" height="15" rx="2.6"></rect><circle cx="9" cy="10" r="1.6"></circle><path d="M4.5 17.8l4.3-4.3 3 3 3.4-3.4 4.3 4.3"></path></svg></button><button data-tool="button" data-name="按钮" aria-label="按钮"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2.8" y="7.5" width="18.4" height="9" rx="3"></rect><path d="M8 12h8" opacity=".7"></path></svg></button><button data-tool="inputBox" data-name="输入框" aria-label="输入框"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2.8" y="7.5" width="18.4" height="9" rx="2.4"></rect><path d="M7 10v4M7 12h5" stroke-width="1.3"></path></svg></button><button data-tool="dropdown" data-name="下拉列表" aria-label="下拉列表"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2.8" y="6.5" width="18.4" height="7.5" rx="2"></rect><path d="M15.4 9.6l2 2 2-2" stroke-width="1.4"></path><path d="M5.5 9.8h6" opacity=".65"></path></svg></button><button data-tool="slider" data-name="滑动条" aria-label="滑动条"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h18"></path><circle cx="15" cy="12" r="3" fill="currentColor" stroke="none"></circle><path d="M3 12v0"></path></svg></button><button data-tool="checkbox" data-name="复选框" aria-label="复选框"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="3.5" width="17" height="17" rx="3.5"></rect><path d="M8 12.2l2.8 2.8L16.4 9"></path></svg></button></div></div><div class="tgroup" data-group="g11"><button class="ttrigger" data-group="g11" data-tool="locus" data-name="轨迹" aria-label="轨迹"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 18c4 0 6-11 9-11s5 11 9 11" stroke-dasharray="3 2.5"></path><circle cx="12" cy="7" r="2" fill="currentColor" stroke="none"></circle></svg><span class="tg-name">其它</span><span class="corner"></span></button><div class="flyout"><div class="fly-title">其它</div><button data-tool="locus" data-name="轨迹" aria-label="轨迹"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 18c4 0 6-11 9-11s5 11 9 11" stroke-dasharray="3 2.5"></path><circle cx="12" cy="7" r="2" fill="currentColor" stroke="none"></circle></svg></button><button data-tool="pen" data-name="手绘" aria-label="手绘"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20c2.4-1.4 3.6-4.6 6-8.6S15.4 5 19.6 4.4c.6 3.6-2 7.4-6.4 10.6S6.6 19.8 4 20z"></path><path d="M4 20l5.4-5.4" opacity=".6" stroke-width="1.3"></path></svg></button><button data-tool="animate" data-name="动画" aria-label="动画"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4.5 19 12 7 19.5z" fill="currentColor" opacity=".2"></path><path d="M7 4.5 19 12 7 19.5z"></path></svg></button><button data-tool="deleteTool" data-name="删除对象" aria-label="删除对象"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9 7V4.5h6V7M6.5 7l1 13h9l1-13"></path></svg></button></div></div><div class="tgroup" data-group="g12"><button class="ttrigger" data-group="g12" data-tool="solve" data-name="解方程" aria-label="解方程"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 6.5 11.5 12 5 17.5M19 6.5 12.5 12 19 17.5"></path></svg><span class="tg-name">代数</span><span class="corner"></span></button><div class="flyout"><div class="fly-title">代数</div><button data-tool="solve" data-name="解方程" aria-label="解方程"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 6.5 11.5 12 5 17.5M19 6.5 12.5 12 19 17.5"></path></svg></button><button data-tool="factor" data-name="因式分解" aria-label="因式分解"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20v-8.5M12 11.5 6 4.5M12 11.5l6-7"></path><circle cx="12" cy="11.5" r="1.7" fill="currentColor" stroke="none"></circle><circle cx="6" cy="4.5" r="1.7" fill="currentColor" stroke="none"></circle><circle cx="18" cy="4.5" r="1.7" fill="currentColor" stroke="none"></circle></svg></button><button data-tool="expand" data-name="展开" aria-label="展开"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9.5 14.5 4 20M14.5 9.5 20 4"></path><path d="M14 4h6v6M4 14v6h6" opacity=".75"></path></svg></button><button data-tool="simplify" data-name="化简" aria-label="化简"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 7h12M7.5 12h9M9.5 17h5"></path></svg></button></div></div><button class="ttrigger" id="btnProbCalc" data-name="概率计算器" aria-label="概率计算器"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 19.5C6 19.5 7.4 5.5 12 5.5s6 14 9.5 14"></path><path d="M2.5 19.5h19"></path></svg><span class="tg-name">概率计算器</span></button></div>
+          <div class="toolgrid" id="toolbar"></div>
         </div>
       </div>
 
@@ -11556,26 +11576,22 @@ T({
 });
 
 const TOOLGROUPS = [
-  /* 分组照 GeoGebra 工具箱的次序排：移动 → 点 → 直线 → 特殊直线 → 多边形 →
-     圆与弧 → 圆锥曲线 → 度量 → 变换 → 函数 → 文本/媒体 → 其它 → 代数。
-     每组第一个是「组脸」，点它展开浮出条选组内其它工具。 */
+  /* 分组按 GeoGebra 计算器官网「工具」面板的语义走（基本工具 / 作图 / 度量 / 变换…），
+     但把 76 个工具归成 9 类：原来 13 类太碎，「圆与弧」和「圆锥曲线」之外还有「多边形」，
+     每类只有两三个工具也要占一张卡。合并后一类一卡，组名 + 工具数在收起时就看得见。 */
   ['move', 'pan', 'zoom', 'zoomOut', 'select'],
   ['point', 'pointOn', 'attach', 'intersect', 'midpoint', 'centroid', 'incenter'],
   ['line', 'segment', 'segmentFix', 'ray', 'vector', 'vectorFromPoint', 'polyline'],
   ['perp', 'parallel', 'perpBisector', 'angleBisector', 'tangent', 'polar', 'diameter', 'bestFitLine'],
-  ['polygon', 'regularPolygon'],
-  ['circleCP', 'circleCR', 'circle3', 'semicircle', 'arc', 'circumArc', 'sector', 'circumSector', 'incircle'],
+  ['polygon', 'regularPolygon', 'circleCP', 'circleCR', 'circle3', 'semicircle', 'arc', 'circumArc', 'sector', 'circumSector', 'incircle'],
   ['ellipse', 'hyperbola', 'parabola', 'conic5', 'curve'],
-  ['angle', 'angleFix', 'distance', 'area', 'slope', 'relation'],
-  ['reflectLine', 'reflectPoint', 'rotate', 'translate', 'dilate'],
-  ['functionPlot', 'inspect', 'zeroes', 'extremum', 'turningPoint', 'derivative', 'integral'],
-  ['text', 'image', 'button', 'inputBox', 'dropdown', 'slider', 'checkbox'],
-  ['locus', 'pen', 'animate', 'deleteTool'],
-  ['solve', 'factor', 'expand', 'simplify'],
+  ['angle', 'angleFix', 'distance', 'area', 'slope', 'relation', 'reflectLine', 'reflectPoint', 'rotate', 'translate', 'dilate'],
+  ['functionPlot', 'inspect', 'zeroes', 'extremum', 'turningPoint', 'derivative', 'integral', 'solve', 'factor', 'expand', 'simplify'],
+  ['text', 'image', 'button', 'inputBox', 'dropdown', 'slider', 'checkbox', 'locus', 'pen', 'animate', 'deleteTool'],
 ];
-/* 工具栏各组的名字：浮出条的小标题与帮助页都用它。必须定义在 TOOLGROUPS 旁边，
+/* 工具栏各组的名字：组标题、帮助页都用它。必须定义在 TOOLGROUPS 旁边，
    renderToolbar 在初始化时就会用到，放到文件后面会踩 const 的暂时性死区。 */
-const TOOLGROUP_NAMES = ['移动与视图', '点', '直线', '特殊直线', '多边形', '圆与弧', '圆锥曲线', '度量', '变换', '函数', '文本与媒体', '其它', '代数'];
+const TOOLGROUP_NAMES = ['移动与视图', '点与交点', '直线与线段', '特殊直线', '多边形与圆', '圆锥曲线', '度量与变换', '函数与代数', '文本与其它'];
 function execStr(s) { const r = executeLine(s); return r.created || []; }
 function toolSteps(tool, picks) { const s = typeof tool.steps === 'function' ? tool.steps(picks) : (tool.steps || []); return tool.repeat ? s : s.slice(picks.length); }
 function finishTool() {
@@ -11597,7 +11613,17 @@ function resetTool() { state.toolState = null; draw(); updateToolHint(); }
 function toolCursor(kind) { return ({ move: 'default', pan: 'grab', zoom: 'zoom-in', zoomOut: 'zoom-out', pen: 'crosshair', select: 'crosshair' }[kind]) || 'crosshair'; }
 function setTool(id) {
   state.tool = id; state.toolState = null;
-  $$('.ttrigger').forEach(b => b.classList.toggle('on', b.dataset.tool === id || (TOOLS[id] && b.dataset.group === groupOfTool(id))));
+  const gid = groupOfTool(id);
+  $$('.ttrigger').forEach(b => b.classList.toggle('on', b.dataset.tool === id || (TOOLS[id] && b.dataset.group === gid)));
+  /* 选中的工具可能落在收起的组里（AI 直接切工具、快捷键、撤销回放都会这样）：
+     自动展开那一组并滚到可见，不然用户看不到选中态在哪，会以为没生效。 */
+  const tg = gid ? document.querySelector('.tgroup[data-group="' + gid + '"]') : null;
+  if (tg && !tg.classList.contains('open')) {
+    tg.classList.add('open');
+    const t = tg.querySelector('.ttrigger');
+    if (t) t.setAttribute('aria-expanded', 'true');
+    try { tg.scrollIntoView({ block: 'nearest' }); } catch (_) { }
+  }
   $$('.flyout button').forEach(b => b.classList.toggle('on', b.dataset.tool === id));
   canvas.style.cursor = toolCursor(TOOLS[id] && TOOLS[id].kind);
   updateToolHint(); draw();
@@ -12163,27 +12189,35 @@ function selectObject(id, add) {
 /* ═══════════════════════ 12. 界面：工具栏 / 代数区 / 输入栏 ═══════════════════════ */
 function renderToolbar() {
   const bar = $('#toolbar'); bar.innerHTML = '';
+  /* 展开状态先读一次，避免 renderToolbar 被多次调用时把用户折叠过的组又全打开 */
+  const openSet = toolGroupOpenState();
   TOOLGROUPS.forEach((group, gi) => {
     const main = group[0];
     const gid = 'g' + gi;
     const wrap = document.createElement('div');
     wrap.className = 'tgroup'; wrap.dataset.group = gid;
-    wrap.innerHTML = '<button class="ttrigger" data-group="' + gid + '" data-tool="' + main + '" data-name="' + esc(TOOLS[main].name) + '" aria-label="' + esc(TOOLS[main].name) + '">' +
+    if (openSet.has(gid)) wrap.classList.add('open');
+    wrap.innerHTML = '<button class="ttrigger" data-group="' + gid + '" data-tool="' + main + '" data-name="' + esc(TOOLS[main].name) + '" aria-label="' + esc(TOOLGROUP_NAMES[gi] || TOOLS[main].name) + '" aria-expanded="' + (wrap.classList.contains('open') ? 'true' : 'false') + '">' +
       (ICON[TOOLS[main].icon] || '') + '<span class="tg-name">' + esc(TOOLGROUP_NAMES[gi] || TOOLS[main].name) + '</span>' +
-      (group.length > 1 ? '<span class="corner"></span>' : '') + '</button>' +
-      '<div class="flyout">' + (group.length > 1 ? '<div class="fly-title">' + esc(TOOLGROUP_NAMES[gi] || '') + '</div>' : '') +
-      group.map(id => '<button data-tool="' + id + '" data-name="' + esc(TOOLS[id].name) + '" aria-label="' + esc(TOOLS[id].name) + '">' + (ICON[TOOLS[id].icon] || '') + '</button>').join('') + '</div>';
+      '<span class="tg-count">' + group.length + '</span>' +
+      (group.length > 1 ? '<span class="tg-chev">' + ICON.chevDown + '</span>' : '') + '</button>' +
+      '<div class="flyout">' +
+      group.map(id => '<button data-tool="' + id + '" data-name="' + esc(TOOLS[id].name) + '" aria-label="' + esc(TOOLS[id].name) + '">' +
+        (ICON[TOOLS[id].icon] || '') + '<span class="fl-name">' + esc(TOOLS[id].name) + '</span></button>').join('') + '</div>';
     bar.appendChild(wrap);
   });
-  /* 概率计算器：分布曲线计算，非作图工具，放在工具网格末尾 */
+  /* 概率计算器：分布曲线计算，非作图工具，单独一张卡片放在末尾 */
+  const pwrap = document.createElement('div');
+  pwrap.className = 'tgroup';
   const pbtn = document.createElement('button');
   pbtn.className = 'ttrigger';
   pbtn.id = 'btnProbCalc';
   pbtn.dataset.name = '概率计算器';
   pbtn.setAttribute('aria-label', '概率计算器');
-  pbtn.innerHTML = ICON.dist + '<span class="tg-name">概率计算器</span>';
+  pbtn.innerHTML = ICON.dist + '<span class="tg-name">概率计算器</span><span class="tg-count">Σ</span>';
   pbtn.addEventListener('click', e => { e.stopPropagation(); probOpen(); });
-  bar.appendChild(pbtn);
+  pwrap.appendChild(pbtn); bar.appendChild(pwrap);
+
   const trigger = e => {
     const btn = e.target.closest('.ttrigger'); if (!btn) return;
     if (!btn.dataset.group) return;   // 非工具组按钮（如概率计算器）
@@ -12191,18 +12225,30 @@ function renderToolbar() {
     const group = TOOLGROUPS[+gi.slice(1)] || [];
     if (group.length === 1) { setTool(group[0]); return; }
     const host = btn.parentElement;
-    const wasOpen = host.classList.contains('open');
-    $$('.tgroup').forEach(g => g.classList.remove('open'));
-    if (!wasOpen) host.classList.add('open');
+    /* 单开：展开一组时其它组自动收起，列表不会被撑成一条长河 */
+    $$('.tgroup').forEach(g => {
+      const on = g === host && !host.classList.contains('open');
+      g.classList.toggle('open', on);
+      const t = g.querySelector('.ttrigger');
+      if (t && t.dataset.group) t.setAttribute('aria-expanded', on ? 'true' : 'false');
+    });
+    saveToolGroupOpenState();
     hideToolTip();
     e.stopPropagation();
   };
   bar.addEventListener('click', e => {
     const fb = e.target.closest('.flyout button');
-    if (fb) { setTool(fb.dataset.tool); $$('.tgroup').forEach(g => g.classList.remove('open')); return; }
+    if (fb) { setTool(fb.dataset.tool); saveToolGroupOpenState(); return; }
     trigger(e);
   });
-  /* 悬停即显示功能名字（浮出组延迟展开，先让用户看清名字） */
+  /* 键盘：组标题行的 Enter / 空格 / → 展开，← 收起，列表可纯键盘走通 */
+  bar.addEventListener('keydown', e => {
+    const btn = e.target.closest('.ttrigger');
+    if (!btn || !btn.dataset.group) return;
+    if (e.key === 'ArrowRight' && !btn.parentElement.classList.contains('open')) { e.preventDefault(); trigger(e); }
+    else if (e.key === 'ArrowLeft' && btn.parentElement.classList.contains('open')) { e.preventDefault(); trigger(e); }
+  });
+  /* 悬停即显示功能名字 */
   bar.addEventListener('pointerover', e => {
     const b = e.target.closest('[data-name]');
     if (b && bar.contains(b)) showToolTipSoon(b);
@@ -12223,22 +12269,73 @@ function renderToolbar() {
     clearTimeout(tipTouchTimer);
     tipTouchTimer = setTimeout(hideToolTip, 1400);
   });
-  let hoverTimer = null;
-  bar.addEventListener('mouseenter', e => {
-    const tg = e.target.closest('.tgroup'); if (!tg) return;
-    const gi = tg.dataset.group, group = TOOLGROUPS[+gi.slice(1)] || [];
-    if (group.length < 2) return;
-    clearTimeout(hoverTimer);
-    hoverTimer = setTimeout(() => { $$('.tgroup').forEach(g => g.classList.remove('open')); tg.classList.add('open'); hideToolTip(); }, 320);
-  }, true);
   /* 离开工具栏才收起气泡并重置「已预热」状态。注意这里挂了 capture：
      mouseleave 会沿着祖先链在每个子元素上各触发一次，若不加 relatedTarget 判断，
      从一个按钮移到另一个按钮时会把刚显示的新气泡立刻关掉。 */
   bar.addEventListener('mouseleave', e => {
     if (e.relatedTarget && bar.contains(e.relatedTarget)) return;
-    clearTimeout(hoverTimer); tipWarm = false; hideToolTip();
+    tipWarm = false; hideToolTip();
   }, true);
-  document.addEventListener('click', () => $$('.tgroup').forEach(g => g.classList.remove('open')));
+  /* 工具搜索绑一次即可（toolbar 每次重建，但输入框在 toolbar 外面） */
+  const ts = $('#toolSearch');
+  if (ts && !ts.dataset.bound) {
+    ts.dataset.bound = '1';
+    ts.addEventListener('input', () => filterTools(ts.value));
+    ts.addEventListener('keydown', e => {
+      if (e.key === 'Escape') { ts.value = ''; filterTools(''); ts.blur(); }
+    });
+  }
+}
+/* 按名字过滤工具：命中的组自动展开；清空后回到用户自己记住的展开状态。
+   「点」这种单字查询会撞上一堆名字，所以组名命中也算命中，但只展开展开的组、不筛子项。 */
+function filterTools(q) {
+  q = (q || '').trim().toLowerCase();
+  const bar = $('#toolbar'); if (!bar) return;
+  const groups = $$('.tgroup', bar);
+  if (!q) {
+    const open = toolGroupOpenState();
+    groups.forEach(g => {
+      g.classList.remove('hidden');
+      g.classList.toggle('open', open.has(g.dataset.group));
+      $$('.flyout button', g).forEach(b => b.classList.remove('hidden'));
+    });
+    const t = $('#toolSearch'); if (t) t.classList.remove('no-hit');
+    return;
+  }
+  let total = 0;
+  groups.forEach(g => {
+    const gname = (g.querySelector('.tg-name') || {}).textContent || '';
+    const groupHit = gname.toLowerCase().indexOf(q) >= 0;
+    let hit = 0;
+    $$('.flyout button', g).forEach(b => {
+      const nm = (b.dataset.name || '').toLowerCase();
+      const on = groupHit || nm.indexOf(q) >= 0;
+      b.classList.toggle('hidden', !on);
+      if (on) hit++;
+    });
+    /* 只有组标题的单工具组（概率计算器）没有子行，按组名算一次 */
+    if (!$$('.flyout button', g).length) hit = groupHit ? 1 : 0;
+    g.classList.toggle('hidden', !hit);
+    g.classList.toggle('open', hit > 0);
+    total += hit;
+  });
+  const t = $('#toolSearch'); if (t) t.classList.toggle('no-hit', total === 0);
+}
+/* 工具组的展开状态存在本机：常画圆的用户下次进来那一组还是开着的。
+   没存过时只展开第一组（视图与选择），其余收起，面板不会一进来就铺满。 */
+const TOOLGROUP_STORE = 'geoai_toolgroups';
+function toolGroupOpenState() {
+  try {
+    const raw = localStorage.getItem(TOOLGROUP_STORE);
+    if (raw) return new Set(JSON.parse(raw));
+  } catch (_) { }
+  return new Set(['g0']);
+}
+function saveToolGroupOpenState() {
+  try {
+    const ids = $$('.tgroup.open').map(g => g.dataset.group).filter(Boolean);
+    localStorage.setItem(TOOLGROUP_STORE, JSON.stringify(ids));
+  } catch (_) { }
 }
 /* 工具栏悬停提示：一个共用的气泡，自动避开屏幕边缘。
    节奏按「第一次慢、之后快」来：首次悬停稍等再弹（手只是划过去就不必打扰），
@@ -17095,32 +17192,32 @@ async function runUITest() {
     if (bad.length) throw new Error(bad.slice(0, 6).join(' | '));
   });
 
-  /* 1c. 工具栏浮出菜单必须完整可见、可点（曾因 toolbar overflow:auto 被裁剪） */
-  await A('布局:工具浮出可点', async () => {
+  /* 1c. 工具组就地展开：点组标题展开组内工具行、同时只开一组、再点收起
+     （改版前是浮出层，需要校验不越出视口；现在展开内容就在卡片里，跟着面板滚动） */
+  await A('布局:工具组展开展开可点', async () => {
     const groups = $$('#toolbar .tgroup');
     if (!groups.length) throw new Error('工具栏为空');
     if (!$('#toolbar').closest('#paneTools')) throw new Error('绘图工具没有独立成「绘图」页签');
     if (!$('.tool-head')) throw new Error('绘图工具缺少标题行');
     const g = groups[1] || groups[0];
-    g.classList.add('open'); await sleep(0);
+    g.querySelector('.ttrigger').click(); await sleep(0);
+    if (!g.classList.contains('open')) throw new Error('点击组标题没有展开');
     const firstBtn = g.querySelector('.flyout button[data-tool]');
-    if (!firstBtn) throw new Error('浮出菜单没有工具按钮');
+    if (!firstBtn) throw new Error('组内没有工具行');
+    firstBtn.scrollIntoView({ block: 'nearest' }); await sleep(0);
     const br = firstBtn.getBoundingClientRect();
-    if (br.width < 2) throw new Error('浮出菜单未显示');
-    if (br.bottom > innerHeight) throw new Error('浮出菜单超出视口底部');
+    if (br.width < 2 || br.height < 2) throw new Error('组内工具行未显示');
     const top = document.elementFromPoint(br.left + br.width / 2, br.top + br.height / 2);
-    if (!(top === firstBtn || firstBtn.contains(top))) throw new Error('浮出菜单被裁剪/遮挡：' + (top ? top.tagName + '.' + top.className : 'none'));
-    g.classList.remove('open');
-    /* 底部一排的浮出条必须向上展开，不能掉到面板外面 */
-    const last = groups[groups.length - 1];
-    last.classList.add('open'); await sleep(0);
-    const lastBtn = last.querySelector('.flyout button[data-tool]');
-    const lr = lastBtn.getBoundingClientRect();
-    if (lr.width < 2 || lr.height < 2) throw new Error('底部工具组的浮出菜单没显示');
-    if (lr.bottom > $('#paneTools').getBoundingClientRect().bottom + 1) throw new Error('底部浮出菜单掉到面板外');
-    const ltop = document.elementFromPoint(lr.left + lr.width / 2, lr.top + lr.height / 2);
-    if (!(ltop === lastBtn || lastBtn.contains(ltop))) throw new Error('底部浮出菜单被裁剪/遮挡');
-    last.classList.remove('open');
+    if (!(top === firstBtn || firstBtn.contains(top))) throw new Error('组内工具行被遮挡：' + (top ? top.tagName + '.' + top.className : 'none'));
+    const other = groups.find(x => x !== g);
+    if (other && other.classList.contains('open')) throw new Error('展开一组时其它组没有收起');
+    /* 点组内工具行应切到该工具，并把选中态同步到那一行 */
+    const tid = firstBtn.dataset.tool;
+    firstBtn.click(); await sleep(0);
+    if (state.tool !== tid) throw new Error('点工具行没有切换工具');
+    if (!firstBtn.classList.contains('on')) throw new Error('选中工具行没有高亮');
+    g.querySelector('.ttrigger').click(); await sleep(0);
+    if (g.classList.contains('open')) throw new Error('再次点击组标题没有收起');
   });
 
   /* 1d. 工具栏折叠：折叠即整块隐藏，只留标题行与展开键 */
@@ -17296,10 +17393,13 @@ async function runUITest() {
     /* 浮出组里的按钮同样带名字（供悬停显示） */
     const fly = bar.querySelector('.flyout button[data-name]');
     if (!fly || !fly.dataset.name) throw new Error('浮出按钮缺少名字');
-    /* 新增的高中常用工具都进了工具栏（零点在「函数」组里，是浮出按钮而不是主触发键） */
+    /* 新增的高中常用工具都进了工具栏（零点在「函数」组里，是组内工具行而不是主触发键） */
     if (!bar.querySelector('[data-tool="zeroes"]')) throw new Error('零点工具未上工具栏');
     const groups = $$('#toolbar .tgroup');
-    if (groups.length < 13) throw new Error('工具组数量不对：' + groups.length);
+    /* 9 个语义分组 + 概率计算器那张卡；组数少于 9 说明有组被漏渲染 */
+    if (groups.length < 9) throw new Error('工具组数量不对：' + groups.length);
+    const names = $$('#toolbar .tg-name').map(x => x.textContent);
+    if (!names.includes('多边形与圆') || !names.includes('函数与代数')) throw new Error('工具组名不对：' + names.slice(0, 4).join('/'));
   });
   await A('滑动条拖动', async () => {
     refreshAlgebra(); await sleep(0);
@@ -17828,7 +17928,9 @@ async function runUITest() {
     aiiEffMenu(false); await sleep(0);
     if ($('#aiiEff').classList.contains('on')) throw new Error('滑条没有收起');
     aiEffortPick(EFFORT_DEFAULT); aiSyncEffort();
-    /* 待命时眼珠跟鼠标：指针落在角色左上 / 右下，视线方向要相反 */
+    /* 待命时眼珠跟鼠标：指针落在角色左上 / 右下，视线方向要相反。
+       先切回 idle —— 上面走过 done 终态，眼珠只在完全空闲时才接管 transform。 */
+    aiIsland('idle', '待命', '', { busy: false }); await sleep(0);
     const lookEl = $('#aiIsland .aii-look');
     const br = $('#aiiBot').getBoundingClientRect();
     const fire = (x, y) => window.dispatchEvent(new PointerEvent('pointermove', { clientX: x, clientY: y }));
@@ -19700,6 +19802,9 @@ async function runUITest() {
   /* 9b-6. 左侧代数面板：行内按钮不误触、分组可折叠、缩放条不被窄侧栏挤压 */
   await A('代数面板:分组折叠', async () => {
     executeLine('DeleteAll()');
+    /* 先切回「代数」页签：绘图工具独占一个页签后，默认页签不一定是代数，
+       面板隐藏时量到的宽度是 0，下面的宽度断言会误判。 */
+    switchPanel('algebra'); await sleep(0);
     state.layers = [{ name: '图层 1', visible: true, locked: false }]; state.curLayer = 0;
     state.collapsedGroups = {};
     executeLine('A=(1,1)'); executeLine('B=(2,2)'); recomputeAll(); refreshAlgebra(); await sleep(0);
