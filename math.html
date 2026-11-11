@@ -1063,25 +1063,29 @@ body.dark .eff-warn{color:#c39bff}
    每条记录 = 左侧轨道（竖线 + 角色色节点）+ 右侧内容（角色 · 时间 → 正文）。
    结构靠轨道表达，不再用分隔线 + 彩条堆在每行上；用户输入包一层引用块，
    AI 回复保持素排，扫一眼就能分清谁说了什么。 */
-/* ── 对话空态：手写的 hello ──
+/* ── 对话空态：手写的 hello（按参考 CodePen 的真实笔迹重做）──
    一条消息都没有时，会话区只留一段自己「写」出来的 hello 和一句提示；
    发出第一条指令就收起，把对话清空后又回来。
-   笔画用 pathLength="1" 归一化，dashoffset 1→0 即写完，不必用 JS 去量每条路径的长度。 */
+   pathLength="1" 把三条笔画各自归一化，dashoffset 1→0 就是一笔写完；
+   最后那个点是零长度的 line，靠 round 线帽把 stroke-width 从 0 长成圆点。 */
 .ai-hello{
   flex:0 0 auto;display:flex;flex-direction:column;align-items:center;justify-content:center;
-  gap:12px;padding:26px 16px 22px;pointer-events:none;user-select:none;
+  gap:10px;padding:24px 16px 20px;pointer-events:none;user-select:none;
 }
-.ai-hello svg{width:168px;height:auto;overflow:visible;color:var(--text)}
-.ai-hello path{
-  fill:none;stroke:currentColor;stroke-width:6;stroke-linecap:round;stroke-linejoin:round;
-  stroke-dasharray:1;stroke-dashoffset:1;
-}
+.ai-hello svg{width:184px;height:auto;overflow:visible;color:var(--text)}
+.ai-hello .hk{fill:none;stroke:currentColor;stroke-width:18;stroke-linecap:round;stroke-linejoin:round}
+.ai-hello .p1,.ai-hello .p2,.ai-hello .p3{stroke-dasharray:1;stroke-dashoffset:1}
+.ai-hello .p4{stroke-width:0}
 /* 只在面板真的展开时动笔：收起重开就会重写一遍，跟手写的节奏一致。
-   收起时动画整条失效、笔画回到隐藏态，不会留一幅「写完的静态图」。 */
-.ai-dock.sheet-open .ai-hello path{animation:helloInk .6s var(--ease-out) forwards;animation-delay:var(--d,0s)}
-@keyframes helloInk{to{stroke-dashoffset:0}}
+   节奏照参考稿按比例压缩（原稿 5s + 1.2s + 1s + 0.1s → 这里约 2.5s）。 */
+.ai-dock.sheet-open .ai-hello .p1{animation:hkDraw 1.5s linear forwards}
+.ai-dock.sheet-open .ai-hello .p2{animation:hkDraw .42s linear 1.56s forwards}
+.ai-dock.sheet-open .ai-hello .p3{animation:hkDraw .34s linear 2s forwards}
+.ai-dock.sheet-open .ai-hello .p4{animation:hkDot .12s linear 2.38s forwards}
+@keyframes hkDraw{to{stroke-dashoffset:0}}
+@keyframes hkDot{to{stroke-width:18px}}
 .ai-hello-txt{font-size:var(--fs-sm);font-weight:500;color:var(--text-3);letter-spacing:.1px;opacity:0}
-.ai-dock.sheet-open .ai-hello-txt{animation:helloHint .55s var(--ease-out) .95s both}
+.ai-dock.sheet-open .ai-hello-txt{animation:helloHint .55s var(--ease-out) 1.5s both}
 @keyframes helloHint{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
 .ai-chat{flex:1 1 auto;min-height:0;overflow-y:auto;padding:10px 14px 14px 16px;display:flex;flex-direction:column;gap:0;scroll-behavior:smooth}
 .msg{display:grid;grid-template-columns:16px minmax(0,1fr);column-gap:12px;align-items:stretch;
@@ -2091,14 +2095,12 @@ body.dark .modal,body.dark .cmd-search,body.dark .toolwrap{
           <div class="ai-chat-wrap">
             <!-- 空态：手写 hello。发出第一条指令即收起，清空全部对话后又回来 -->
             <div class="ai-hello" id="aiHello" aria-hidden="true">
-              <svg viewBox="0 0 250 96">
-                <path pathLength="1" d="M30 74V22" style="--d:0s"></path>
-                <path pathLength="1" d="M30 52c3-10 16-15 25-8 7 5 8 18 8 30" style="--d:.16s"></path>
-                <path pathLength="1" d="M113 51c-2-10-14-14-21-7-8 7-6 22 4 27 8 3 16-2 18-9" style="--d:.42s"></path>
-                <path pathLength="1" d="M87 57h26" style="--d:.76s"></path>
-                <path pathLength="1" d="M128 74V22c0-4 2-6 6-5" style="--d:.9s"></path>
-                <path pathLength="1" d="M152 74V22c0-4 2-6 6-5" style="--d:1.04s"></path>
-                <path pathLength="1" d="M192 40c-11-1-20 8-19 19 1 12 13 18 24 15 10-3 14-15 8-24-3-4-8-8-13-10z" style="--d:1.2s"></path>
+              <svg viewBox="0 0 582 197">
+                <title>Hello</title>
+                <path class="hk p1" pathLength="1" d="M208,338c38-16.67,73.74-45.72,97.33-66,21.33-18.33,32.67-35.67,37.33-52.67C347.12,203.12,344,192,332,192c-11,0-21,10.33-24.94,27.68-4.52,19.89-22.06,107.82-29.39,149,15.67-72.33,36.33-81.33,53.67-81.33,22.33,0,24.67,18.67,19.42,39-5.43,21.07-7.42,44.32,17.91,44.32,18,0,35.53-8.17,52.67-20,14-9.67,23-24,23-40,0-13.42-8-23.33-20.67-23.33s-24.33,12-24.33,33.33c0,27,16.33,48,44,48,25.67,0,47.67-19.67,62-44.67,13.61-23.74,30.67-64.67,33.33-92.67s-5.33-36-18.67-36-24.67,17.33-28.67,43.33S486,302,491.33,330s28,37.67,46,37.67,38.17-15.67,52-37c16.54-25.51,35.87-67.45,38.67-102,2-24.67-8.67-33.33-20-33.33-14.67,0-23.33,13.33-28,38-4.5,23.81-8,64-2,94,4.64,23.21,25.33,40.33,44.67,40.33s32.67-19,36.67-42.33" transform="translate(-199 -183)"></path>
+                <path class="hk p2" pathLength="1" d="M697.33,287.33C672,287.33,661.33,305,659,327c-2.81,26.54,10.33,41.67,29.67,41.67,22,0,34.54-20.78,36.67-40.67,2-18.67-7.39-39.13-28-40.67" transform="translate(-199 -183)"></path>
+                <path class="hk p3" pathLength="1" d="M714.8,295.12c12.11,12.26,43.53,9.55,56.53-5.79" transform="translate(-199 -183)"></path>
+                <line class="hk p4" x1="561" y1="181.67" x2="561" y2="181.67"></line>
               </svg>
               <div class="ai-hello-txt">说一句，我把它画出来</div>
             </div>
@@ -18386,7 +18388,7 @@ async function runUITest() {
   await A('AI:空态 hello 跟随消息增删', async () => {
     const host = $('#aiHello'), chat = $('#aiChat');
     if (!host) throw new Error('空态 hello 缺失');
-    if (host.querySelectorAll('path').length !== 7) throw new Error('hello 笔画数不对');
+    if (host.querySelectorAll('.hk').length !== 4) throw new Error('hello 笔画数不对');
     const keep = chat.innerHTML;
     chat.innerHTML = ''; await sleep(0);
     if (host.classList.contains('hidden')) throw new Error('没有消息时 hello 应显示');
