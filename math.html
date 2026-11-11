@@ -23027,11 +23027,11 @@ function bindAI() {
       const k = Math.min(1, d / 160);
       const ox = (dx / d) * 26 * k, oy = (dy / d) * 18 * k;
       look.style.transform = 'translate(' + ox.toFixed(1) + 'px,' + oy.toFixed(1) + 'px)';
-      /* 球体：靠近时朝远离指针的方向轻挪，距离越近挪得越多（线性衰减到 0） */
+      /* 球体：靠近时朝指针方向轻挪（磁吸感），距离越近挪得越多（线性衰减到 0） */
       if (d < NEAR) {
         const k2 = 1 - d / NEAR;
-        shx = -(dx / d) * SHIFT * k2;
-        shy = -(dy / d) * SHIFT * k2;
+        shx = (dx / d) * SHIFT * k2;
+        shy = (dy / d) * SHIFT * k2;
         isl2.style.transform = 'translate(' + shx.toFixed(1) + 'px,' + shy.toFixed(1) + 'px)';
       } else if (shx || shy) {
         shx = shy = 0; isl2.style.transform = '';
