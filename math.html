@@ -724,20 +724,25 @@ body.tool-folded .tool-head{padding-bottom:0}
   max-height:min(84vh,820px);opacity:1;transform:none;pointer-events:auto;margin-bottom:0;
   border-color:var(--glass-brd);box-shadow:var(--shadow-lg),var(--hi-strong);
 }
-.ai-sheet-head{flex:0 0 auto;display:flex;align-items:center;gap:9px;padding:8px 12px;border-bottom:.5px solid var(--border)}
-.ai-sheet-head .lbl{font-size:11.5px;color:var(--text-3);font-weight:600}
-/* ── 历史记录头：标准的「披露」控件 ──
-   箭头在标题左边（文件树 / 工程历史的惯例），收起时箭头转向右、条数徽标留着，
-   一眼知道「点这里展开」。折叠历史只收消息列表，输入框不受影响。 */
-.ai-sh-fold{display:flex;align-items:center;gap:7px;padding:3px 8px 3px 5px;margin-left:-5px;border-radius:9px;transition:var(--t-ui)}
-.ai-sh-fold:hover{background:var(--hover)}
-.ai-sh-fold[aria-expanded="true"] .ai-sh-chev{transform:rotate(0)}
+/* ── 历史记录：浮在消息区右上角的数量小药丸 ──
+   不再是整条横栏（横栏 + 「历史记录」标题占掉 40px 高度）：
+   条数 + 收起箭头收成一枚玻璃胶囊浮在角落，消息区整段让给正文。
+   折叠历史只收消息列表，输入框不受影响（胶囊随 .ai-sheet 一起收掉）。 */
+.ai-hist-pill{
+  position:absolute;top:8px;right:12px;z-index:6;
+  display:flex;align-items:center;gap:5px;height:26px;padding:0 9px 0 8px;
+  border-radius:99px;color:var(--text-2);font-size:var(--fs-2xs);font-weight:700;
+  background:var(--glass);border:.5px solid var(--glass-brd);
+  box-shadow:var(--shadow),var(--hi);
+  -webkit-backdrop-filter:var(--glass-blur);backdrop-filter:var(--glass-blur);
+  transition:var(--t-ui);
+}
+.ai-hist-pill:hover{color:var(--accent);background:var(--accent-dim)}
+.ai-hist-pill:active{transform:scale(.96)}
 .ai-sh-chev{display:flex;width:13px;height:13px;color:var(--text-3);transition:transform var(--t)}
 .ai-sh-chev svg{width:13px;height:13px}
-.ai-sh-fold[aria-expanded="false"] .ai-sh-chev{transform:rotate(-90deg)}
-.ai-sh-name{font-size:var(--fs-sm);font-weight:700;letter-spacing:-.1px;color:var(--text)}
-.ai-sh-cnt{font-size:var(--fs-3xs);font-weight:700;color:var(--text-3);background:var(--panel-3);
-  padding:0 6px;border-radius:99px;line-height:1.7;min-width:16px;text-align:center}
+.ai-sh-cnt{font-size:var(--fs-3xs);font-weight:700;color:var(--accent);background:var(--accent-dim);
+  padding:0 6px;border-radius:99px;line-height:1.7;min-width:16px;text-align:center;font-variant-numeric:tabular-nums}
 .ai-dock.hist-fold .ai-chat{display:none}
 .ai-dock.hist-fold .ai-chat-wrap{display:none}
 /* 折叠态：整条历史头收掉，只留工具排里的一枚小键，不再占一整行 */
@@ -783,7 +788,7 @@ body.tool-folded .tool-head{padding-bottom:0}
   position:absolute;top:-3px;right:-3px;min-width:14px;height:14px;padding:0 3px;border-radius:99px;
   display:flex;align-items:center;justify-content:center;
   font-size:var(--fs-3xs);font-weight:700;line-height:1;color:#fff;background:var(--accent);
-  box-shadow:0 0 0 1.5px var(--panel);
+  box-shadow:0 0 0 1.5px var(--bg);
 }
 /* ── 对话消息导航：右侧一列圆点，每个用户提问一枚，点按跳到那一轮 ──
    面板矮、消息多时才有意义；只有两轮以内不显示，免得挡正文。 */
@@ -813,22 +818,10 @@ body.tool-folded .tool-head{padding-bottom:0}
 .ai-fold-btn svg{width:13px;height:13px;transition:transform var(--t)}
 /* 这枚键只做一件事：把整块 AI 收成画布底部的角色。图标固定朝下，
    不再随对话区开合翻转，免得和「展开 / 折叠历史」混成同一个手势。 */
-.ai-fold-in{width:32px;height:32px;flex:0 0 32px;padding:0;border-radius:50%;justify-content:center;background:transparent}
-.ai-fold-in svg{width:16px;height:16px}
+.ai-fold-in{width:30px;height:30px;flex:0 0 30px;padding:0;border-radius:9px;justify-content:center;background:transparent}
+.ai-fold-in svg{width:15px;height:15px}
 .ai-ttl{flex:0 0 22px;width:22px;height:22px;align-self:center;display:flex;align-items:center;justify-content:center;color:var(--accent)}
 .ai-ttl svg{width:16px;height:16px}
-/* ── 思考强度：底部只留一个小按钮，点开才展开大滑条 ──
-   滑条视觉沿用 Codex effort slider（蓝→靛→紫能量填充 + 星尘 + 白色旋钮），
-   但只在面板里出现：底部不再占输入框的横向空间，小屏也不挤。 */
-.effort{
-  position:relative;flex:0 0 auto;display:flex;align-items:center;gap:6px;height:28px;
-  padding:0 9px 0 8px;border-radius:99px;background:var(--panel-2);color:var(--text-2);
-  border:.5px solid var(--border);transition:border-color var(--t);
-}
-.effort:hover,.effort:focus-within{border-color:var(--accent-dim)}
-.eff-ic{flex:0 0 13px;width:13px;height:13px;color:var(--accent)}
-.eff-caret{flex:0 0 11px;width:11px;height:11px;color:var(--text-3);transition:transform var(--t)}
-.effort[aria-expanded="true"] .eff-caret{transform:rotate(180deg)}
 /* ── Codex 滑条几何（逐像素规格）──
    轨道 26px、旋钮 30px（上下各悬出 2px）、填充止于旋钮圆心；
    旋钮 / 填充 / 刻度点共用同一套 15px 内缩，端点处的圆不会被裁成半圆。 */
@@ -1051,7 +1044,6 @@ body.dark .eff-warn{color:#c39bff}
   from{opacity:0;transform:translateY(6px) scale(.97)}
   to{opacity:1;transform:none}
 }
-.ai-sheet-head .spacer{flex:1}
 .seg{display:flex;background:var(--panel-3);border-radius:10px;padding:2px;gap:2px}
 .seg button{padding:5px 12px;border-radius:8px;font-size:12.5px;color:var(--text-2);transition:var(--t-ui);white-space:nowrap}
 .seg button:hover{color:var(--text)}
@@ -1229,29 +1221,39 @@ body.dark .eff-warn{color:#c39bff}
 /* 每一步进场：轻微上滑淡入，让「画一步看一步」的节奏感更明显（减弱动效时全局规则会自动停掉） */
 .ai-step{animation:aiStepIn .22s var(--ease-out)}
 @keyframes aiStepIn{from{opacity:0;transform:translateY(3px)}to{opacity:1;transform:none}}
-/* 输入区是一列：附件 → 工具排 → 输入胶囊。只有胶囊带玻璃底，
-   工具排与附件浮在它上方，视觉上不抢输入框的位置。 */
+/* 统一作曲家：附件 / 输入 / 工具排在同一枚玻璃卡片里。
+   原先是「浮着的图标排 + 输入胶囊」两层结构，工具与输入互相脱节；
+   现在收进一条圆角卡：上输入、下工具，和 iOS 输入条同一语法。
+   键全部换成安静的裸图标（没有圆形底），玻璃底自带层次。 */
 .ai-input{
-  position:relative;display:flex;flex-direction:column;gap:7px;padding:0;
+  position:relative;display:flex;flex-direction:column;padding:0;
 }
-/* 工具排：联网 / 图片 / 思考强度三枚图标键，左边对齐胶囊的左缘，右侧是关闭键。
-   轻量、贴边，不跟「输入 → 发送」抢视线。 */
-.ai-tools{position:relative;display:flex;align-items:center;gap:6px;padding:0 10px}
+.ai-box{
+  display:flex;flex-direction:column;gap:3px;padding:7px 8px 7px 12px;border-radius:24px;
+  background:var(--glass-2);border:.5px solid var(--glass-brd);
+  box-shadow:var(--shadow-lg),var(--hi-strong);
+  transition:border-color var(--t),box-shadow var(--t);
+  -webkit-backdrop-filter:var(--glass-blur);backdrop-filter:var(--glass-blur);
+}
+.ai-box:focus-within{border-color:var(--accent);box-shadow:0 0 0 3.5px var(--accent-dim),var(--shadow-lg)}
+/* 作家底排：品牌图标 + 工具靠左，展开 / 发送靠右；窄屏放不下时允许换行 */
+.ai-row{display:flex;align-items:center;gap:3px;flex-wrap:wrap}
+.ai-tools{position:relative;display:flex;align-items:center;gap:2px}
 .ai-tools .spacer{flex:1}
 .ai-tool{
-  width:32px;height:32px;flex:0 0 32px;border-radius:50%;display:flex;align-items:center;justify-content:center;
-  color:var(--text-2);background:var(--panel-2);border:.5px solid var(--border);transition:var(--t-ui);
+  width:30px;height:30px;flex:0 0 30px;border-radius:9px;display:flex;align-items:center;justify-content:center;
+  color:var(--text-2);transition:var(--t-ui);
 }
-.ai-tool svg{width:15px;height:15px}
+.ai-tool svg{width:16px;height:16px}
 /* 圆形键里只放图标：老代码塞进来的「联网 / 图片」文字在这里隐掉，名字走 title / aria-label */
 .ai-tool span{display:none}
-.ai-tool:hover{color:var(--accent);border-color:var(--accent);background:var(--accent-dim);transform:translateY(-1px)}
+.ai-tool:hover{color:var(--accent);background:var(--hover)}
 .ai-tool:active{transform:scale(.94)}
-.ai-tool.on{color:var(--accent);background:var(--accent-dim);border-color:transparent}
-/* 思考强度：圆形底 + 档位色小点 + 档位名，展开面板从这里向上弹出 */
+.ai-tool.on{color:var(--accent);background:var(--accent-dim)}
+/* 思考强度：档位色迷你轨道 + 档位名 + 箭头，展开面板从这里向上弹出 */
 .effort{
-  position:relative;flex:0 0 auto;display:flex;align-items:center;gap:6px;height:32px;
-  padding:0 11px 0 10px;border-radius:99px;background:var(--panel-2);color:var(--text-2);
+  position:relative;flex:0 0 auto;display:flex;align-items:center;gap:6px;height:26px;
+  padding:0 9px 0 8px;border-radius:99px;background:transparent;color:var(--text-2);
   border:.5px solid var(--border);transition:border-color var(--t),background var(--t);
 }
 .effort:hover,.effort:focus-within{border-color:var(--accent-dim);background:var(--accent-dim)}
@@ -1262,38 +1264,30 @@ body.dark .eff-warn{color:#c39bff}
   background:var(--eff-col,var(--text-3));transition:width .18s var(--ease-out),background-color .18s ease}
 .eff-caret{flex:0 0 11px;width:11px;height:11px;color:var(--text-3);transition:transform var(--t)}
 .effort[aria-expanded="true"] .eff-caret{transform:rotate(180deg)}
-/* 输入胶囊：一条长条，左图标 / 中输入 / 右「对话 / 发送」。
-   文字换行变高时圆角收小，从胶囊过渡成长方体圆角，删字再变回胶囊。 */
-.ai-box{
-  display:flex;align-items:flex-end;gap:6px;padding:4px 6px 4px 13px;border-radius:99px;
-  background:var(--glass-2);border:.5px solid var(--glass-brd);
-  box-shadow:var(--shadow-lg),var(--hi-strong);
-  transition:border-radius var(--t-slow),border-color var(--t),box-shadow var(--t);
-  -webkit-backdrop-filter:var(--glass-blur);backdrop-filter:var(--glass-blur);
-}
-.ai-box.grow{border-radius:20px}
-.ai-box:focus-within{border-color:var(--accent);box-shadow:0 0 0 3.5px var(--accent-dim),var(--shadow-lg)}
 #aiInput{
-  flex:1;min-width:0;resize:none;height:32px;max-height:140px;padding:6px 2px;
+  flex:1;min-width:0;width:100%;resize:none;height:34px;max-height:140px;padding:5px 2px;
   font-size:13.5px;line-height:1.6;background:transparent;
 }
 /* placeholder 不许折行：textarea 容器只有一行高，宽屏放得下整句、窄屏会截断，
    一折行第二行就会被容器裁出一条「鬼影」（只在窄屏看得到，所以加在基础规则上） */
 #aiInput::placeholder{color:var(--text-3);white-space:nowrap;text-overflow:ellipsis;overflow:hidden}
-.ai-send{margin-left:2px;flex:0 0 auto;display:flex;align-items:center;gap:6px;padding:7px 14px;border-radius:99px;background:var(--accent);color:#fff;font-size:12.5px;font-weight:600;transition:var(--t-ui);box-shadow:0 2px 10px var(--accent-soft)}
+/* 发送：一枚 30px 的实心圆钮（iOS 信息 App 的箭头键），不再带文字 */
+.ai-send{
+  flex:0 0 30px;width:30px;height:30px;padding:0;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  background:var(--accent);color:#fff;transition:var(--t-ui);box-shadow:0 2px 10px var(--accent-soft);
+}
 .ai-send:hover{background:var(--accent-h)}
-.ai-send:active{transform:scale(.95)}
+.ai-send:active{transform:scale(.92)}
 .ai-send:disabled{opacity:.45;pointer-events:none}
-.ai-send svg{width:14px;height:14px}
-/* 停止：不再是一枚红色大胶囊，而是和灵动岛同一种「玻璃圆钮 + 实心方块」，
+.ai-send svg{width:15px;height:15px}
+/* 停止：和灵动岛同一种「玻璃圆钮 + 实心方块」，
    平时安静，悬停才透出一点警示红——和 iOS 的停止录制是同一种语法。 */
 .ai-send.ai-stop{
-  margin-left:auto;width:32px;height:32px;padding:0;border-radius:50%;justify-content:center;
   background:var(--panel-3);color:var(--text);box-shadow:inset 0 0 0 .5px var(--border);
 }
 .ai-send.ai-stop:hover{background:rgba(255,69,58,.16);color:var(--danger)}
 .ai-send.ai-stop svg{width:11px;height:11px}
-.ai-send.ai-stop span{display:none}
 
 /* ---------- AI 折叠态：Grok 角色 + 细状态条 ----------
    对话区收起后不再是文字胶囊：画布底部浮着一颗 Grok 的 blob 角色，下面挂一条
@@ -1432,7 +1426,7 @@ body:has(.aii-eff.on) .ai-dock{z-index:230}
 .ai-island:not(.busy) .aii-stop{display:none}
 
 /* ---------- AI 图片附件（多模态识别） ---------- */
-.ai-attach{display:none;gap:8px;padding:4px 2px 6px;overflow-x:auto;scrollbar-width:thin}
+.ai-attach{display:none;gap:8px;padding:2px 2px 4px;margin:0 4px;overflow-x:auto;scrollbar-width:thin}
 .ai-attach.has{display:flex}
 .ai-thumb{position:relative;flex:0 0 auto;width:62px;height:62px;border-radius:12px;overflow:hidden;border:.5px solid var(--border);background:var(--panel-2);box-shadow:var(--shadow)}
 .ai-thumb img{width:100%;height:100%;object-fit:cover;display:block}
@@ -2086,15 +2080,12 @@ body.dark .modal,body.dark .cmd-search,body.dark .toolwrap{
       <!-- ══════════ AI 助手：悬浮在画布下方，可折叠 ══════════ -->
       <div class="ai-dock mini" id="aiPanel">
         <div class="ai-sheet" id="aiSheet">
-          <div class="ai-sheet-head">
-            <button class="ai-sh-fold" id="aiHistFold" aria-expanded="true" aria-controls="aiChat" title="收起历史记录（输入框不受影响）">
+          <div class="ai-chat-wrap">
+            <!-- 历史记录：右上角数量小药丸，点按只收历史（输入框不动），整块随面板一起收起 -->
+            <button class="ai-hist-pill" id="aiHistFold" aria-expanded="true" aria-controls="aiChat" title="收起历史记录（输入框不受影响）" aria-label="收起历史记录">
               <span class="ai-sh-chev" id="aiHistChev" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9.5 12 15.5l6-6"></path></svg></span>
-              <span class="ai-sh-name">历史记录</span>
               <span class="ai-sh-cnt" id="aiMsgCount" title="历史条数">0</span>
             </button>
-            <span class="spacer"></span>
-          </div>
-          <div class="ai-chat-wrap">
             <!-- 空态：手写 hello。发出第一条指令即收起，清空全部对话后又回来 -->
             <div class="ai-hello" id="aiHello" aria-hidden="true">
               <svg viewBox="0 0 582 197">
@@ -2124,7 +2115,6 @@ body.dark .modal,body.dark .cmd-search,body.dark .toolwrap{
 
         <div class="ai-input" id="aiDropZone">
           <div class="ai-drop">松开即可添加图片</div>
-          <div class="ai-attach" id="aiAttach"></div>
           <!-- DeepSeek API Key：极简卡片，主操作始终只有一个 -->
           <div class="api-pop" id="apiPop" role="dialog" aria-label="API Key">
             <div class="api-pop-head">
@@ -2159,8 +2149,13 @@ body.dark .modal,body.dark .cmd-search,body.dark .toolwrap{
           </div>
           <!-- 等待确认：单独一张澄清卡，浮在输入条上方，不展开历史对话 -->
           <div class="ask-pop" id="aiAskPop" role="dialog" aria-label="需要你补充"></div>
-          <!-- 工具排：Key / 联网 / 图片 / 思考强度，右侧是关闭键 -->
-          <div class="ai-tools" id="aiTools">
+          <!-- 统一作曲家：附件 / 输入 / 工具 / 发送收进同一枚玻璃卡片 -->
+          <div class="ai-box">
+            <div class="ai-attach" id="aiAttach"></div>
+            <textarea id="aiInput" placeholder="描述你要画的图形、要解的题，或粘贴 / 拖入一张图片…" spellcheck="false" style="height: 34px;"></textarea>
+            <div class="ai-row">
+              <span class="ai-ttl" id="aiHeadIcon" title="AI 助手"><canvas aria-hidden="true" style="width: 20px; height: 20px; display: block;"></canvas></span>
+            <div class="ai-tools" id="aiTools">
             <div class="ai-hist-mini" id="aiHistMini">
               <button class="ai-tool" id="aiHistBtn" title="展开历史记录" aria-label="展开历史记录" aria-expanded="false" aria-controls="aiChat">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6.5h16M4 12h16M4 17.5h10"></path></svg>
@@ -2206,14 +2201,11 @@ body.dark .modal,body.dark .cmd-search,body.dark .toolwrap{
               <span class="effort-name" id="effortName" style="color: rgb(47, 111, 208);">Low</span>
               <svg class="eff-caret" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M7 10l5 5 5-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
             </button>
+            </div>
             <span class="spacer"></span>
-          </div>
-          <!-- 输入胶囊：左图标、中输入、右「对话 / 发送」 -->
-          <div class="ai-box">
-            <span class="ai-ttl" id="aiHeadIcon" title="AI 助手"><canvas aria-hidden="true" style="width: 20px; height: 20px; display: block;"></canvas></span>
-            <textarea id="aiInput" placeholder="描述你要画的图形、要解的题，或粘贴 / 拖入一张图片…" spellcheck="false" style="height: 34px;"></textarea>
             <button class="ai-fold-btn ai-fold-in" id="aiFold" title="收起为底部角色（点角色再展开）" aria-label="收起为底部角色"><span id="aiFoldIc"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9.5 12 15.5l6-6"></path></svg></span></button>
-            <button class="ai-send" id="aiSend"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12 20 4l-6.5 16-2.4-6.2z" fill="currentColor" opacity=".2"></path><path d="M4 12 20 4l-6.5 16-2.4-6.2z"></path></svg><span>发送</span></button>
+            <button class="ai-send" id="aiSend" title="发送" aria-label="发送"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12 20 4l-6.5 16-2.4-6.2z" fill="currentColor" opacity=".2"></path><path d="M4 12 20 4l-6.5 16-2.4-6.2z"></path></svg></button>
+            </div>
           </div>
           <input type="file" id="aiImgFile" accept="image/png,image/jpeg,image/webp,image/gif" multiple="" style="display:none">
           <!-- 画布图片：选择本地文件后，放进「图片」工具待放的位置，或替换右键选中的那张图片 -->
@@ -16803,10 +16795,10 @@ function showHelp() {
       '点「绘制整列」把一列数值画成画布上的一串点',
     ]) +
     G('AI 助手', [
-      '输入区是一条胶囊长条（左图标 / 中输入 / 右「对话」「发送」）；联网、图片、思考强度三枚圆形图标键浮在胶囊上方，点右下角 × 可整条隐藏（右上「AI」按钮恢复）',
+      '输入区是一枚玻璃卡片：上输入文字，下排是历史 / Key / 联网 / 图片 / 思考强度与发送圆钮，附件缩略图贴在输入行上方；点右下角箭头键可整块收起为底部角色（点角色再展开）',
       '用自然语言直接作图与解题，回复里的 <code>geogebra</code> 代码块会被自动执行并画到画布',
       '支持看图：点图片按钮、直接粘贴或把图片拖进输入框，可让它「照着这张图作图」「这道题怎么解」',
-      '<b>思考强度</b>：默认 <b>Low</b>；点按钮展开 Codex 风格的推理滑条 —— <b>4 档</b>等距（Off / Low / Medium / High，每档一色，色相从灰经蓝推进到紫罗兰，轨道上带刻度点），拖动实时跟手、松手吸附；落到 <b>High</b> 时轨道换成蓝紫流动渐变并亮起星尘，同时提示「更快消耗使用额度」；面板右上角的回转箭头一键回到默认。输入多行文字时胶囊会自动长成圆角长方体，删字后变回长条。每次提问都会自动带上当前画布内容，AI 能直接复用已有的点、线、圆',
+      '<b>思考强度</b>：默认 <b>Low</b>；点按钮展开 Codex 风格的推理滑条 —— <b>4 档</b>等距（Off / Low / Medium / High，每档一色，色相从灰经蓝推进到紫罗兰，轨道上带刻度点），拖动实时跟手、松手吸附；落到 <b>High</b> 时轨道换成蓝紫流动渐变并亮起星尘，同时提示「更快消耗使用额度」；面板右上角的回转箭头一键回到默认。每次提问都会自动带上当前画布内容，AI 能直接复用已有的点、线、圆',
       '点「联网」可先检索实时网页：结果会作为资料给 AI，回答里标出来源链接；消息里直接贴网址也会抓取正文',
       '<b>AI 自己再联网</b>：资料不够时它可以在回答里写 <code>search</code> 块（每行一个检索词），控件会真的再查一轮并把结果补给它继续写，一次回答最多补搜两轮；界面只显示「已补充检索 N 条来源」',
       '<b>AI 先问你</b>：条件不清时它写 <code>ask</code> 块，控件把问题显示成一张澄清卡片，选项可以点，点了直接填进输入框；这时它不会凭猜测作图',
@@ -23414,7 +23406,7 @@ function bindAI() {
     });
   })();
 
-  $('#aiSend').innerHTML = ICON.send + '<span>发送</span>';
+  $('#aiSend').innerHTML = ICON.send;
   $('#aiSend').onclick = () => { if (state.aiBusy) stopAI(); else aiSend(); };
   $('#aiFold').onclick = () => toggleAI();
   /* 整块对话的收起由输入胶囊里的折叠键承担（#aiFold，收成画布底部的角色）；
@@ -24123,7 +24115,7 @@ async function aiSend() {
         state.aiAbort = null;
         state.aiBusy = false;
         sendBtn.classList.remove('ai-stop');
-        sendBtn.innerHTML = ICON.send + '<span>发送</span>';
+        sendBtn.innerHTML = ICON.send;
         sendBtn.title = '';
         aiIslandSettle('stopped', '已停止', '联网检索已中断', 600);
         return;
@@ -24625,7 +24617,7 @@ async function aiSend() {
     state.aiBusy = false;
     state.aiAbort = null;
     sendBtn.classList.remove('ai-stop');
-    sendBtn.innerHTML = ICON.send + '<span>发送</span>';
+    sendBtn.innerHTML = ICON.send;
     sendBtn.title = '';
     chat.scrollTop = chat.scrollHeight;
   }
