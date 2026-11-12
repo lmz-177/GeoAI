@@ -18758,6 +18758,37 @@ async function runUITest() {
       if (!isl.classList.contains('is-done')) throw new Error('补完后应是完成态，实际 kind=' + isl.dataset.kind);
     } finally { window.callAI = orig; toggleAI(false); }
   });
+  await A('AI:ReAct 不设步数上限（超过旧上限 10 步仍继续）', async () => {
+    const orig = window.callAI; let n = 0;
+    window.callAI = async () => {
+      n++;
+      if (n > 12) return { reasoning: '', content: '```done\n全部画完\n```' };
+      return { reasoning: '', content: '```geogebra\ns' + n + '=(' + n + ',' + (n % 3) + ')\n```' };
+    };
+    try {
+      toggleAI(true); await sleep(0);
+      $('#aiInput').value = '画一串点';
+      await aiSend();
+      for (let i = 0; i < 400 && state.aiBusy; i++) await sleep(10);
+      if (n !== 13) throw new Error('超过 10 步后应该继续作图，实际只调用了 ' + n + ' 次');
+      if (!state.objects.some(o => o.label === 's12')) throw new Error('第 12 步没有执行到位');
+    } finally {
+      window.callAI = orig; toggleAI(false);
+      state.objects = state.objects.filter(o => !/^s\d+$/.test(o.label)); recomputeAll();
+    }
+  });
+  await A('AI:连续空转时自动收尾（不无限循环）', async () => {
+    const orig = window.callAI; let n = 0;
+    window.callAI = async () => { n++; return { reasoning: '', content: '我看看，稍等。' }; };
+    try {
+      toggleAI(true); await sleep(0);
+      $('#aiInput').value = '画个东西';
+      await aiSend();
+      for (let i = 0; i < 200 && state.aiBusy; i++) await sleep(10);
+      if (state.aiBusy) throw new Error('AI 只回文字时没有收尾，卡在生成中');
+      if (n > 4) throw new Error('连续空转没有及时停下，调用次数=' + n);
+    } finally { window.callAI = orig; toggleAI(false); }
+  });
   await A('快捷键:Delete 删除选中', async () => {
     const o = obj(); state.selection = [o.id]; const n = state.objects.length;
     window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Delete', bubbles: true })); await sleep(0);
@@ -22941,7 +22972,7 @@ const AI_STEP_SYSTEM = `你是「GeoAI」动态几何画板的作图执行器，
 1. 执行结果会以 Observation 的形式返回给你：每条命令成功还是失败、现在画布上有哪些对象。照着 Observation 决定下一步。
 2. 命令失败时必须换一种写法或换一个构造（例如两线不相交就换一条线），不要原样重发同一条命令；失败的多半是对象名不对或条件不成立。
 3. 画布上已有的对象直接引用名字，绝对不要重复定义、也不要重画已经成功的部分。
-4. 一个动作只推进一小步（1~4 条命令）；总步数有限，不要在一步里塞整幅图，也不要拖到很多步只画一个点。
+4. 一个动作只推进一小步（1~4 条命令），逐步推进直到整幅图完成；不要在一步里塞整幅图，也不要拖很多步却只画一个点。
 5. 除了 Thought 和代码块，不要输出别的内容；不要输出 JSON、steps、ask 块。`;
 
 
@@ -24424,7 +24455,8 @@ async function aiSend() {
      ③ 正文只在同一帧内重排一次，且不再无条件抢滚动。 */
   const AI_PAINT_MS = 40;
   const AI_FIX_MAX = 2;   /* 作图命令执行失败时，回传 AI 重新生成的次数上限 */
-  const AI_REACT_MAX = 10;   /* ReAct 循环的步数上限：一步一个小动作，够画完一道中考压轴题 */
+  /* ReAct 不再设步数上限：由 AI 自己用 ```done 收尾。只用「连续几轮没有进展」兜底，
+     免得模型卡在同一个错误里空转；复杂题需要多少步就走多少步。 */
   const AI_OBJ_CAP = 60;     /* 单条命令最多允许新建的对象数，超过视为失控并整条撤回 */
   const SEARCH_MAX_ROUNDS = 2;   /* AI 自己发起「再联网检索」的次数上限，避免无限自搜 */
   let paintTimer = 0, paintedR = '', paintedC = '', pendingR = '', pendingC = '';
@@ -24729,7 +24761,10 @@ async function aiSend() {
         planMsgs.push({ role: 'user', content: obsText(streamResults, curContent) });
         if (/```done\b/i.test(curContent)) reactDone = true;
       }
-      for (let it = 0; it < AI_REACT_MAX && !reactDone; it++) {
+      /* 没有硬性步数上限，只兜「没有进展」：连续两轮只说不动手、或连续三轮画不出
+         新东西，就收尾。所有正常路径都由 ```done 结束。 */
+      let idleRounds = 0, stopNote = '';
+      while (!reactDone) {
         actionNo++;
         const stepEl = document.createElement('div');
         stepEl.className = 'ai-step';
@@ -24785,13 +24820,15 @@ async function aiSend() {
             ? 'Observation: 检索到 ' + hits + ' 条资料：\n' + more + '\n请据此继续作图。'
             : 'Observation: 没有检索到可用资料，请凭已有信息继续作图。' });
           stepLog.push('查资料（' + qs + '）');
+          idleRounds = 0;   /* 检索也算一轮有效动作，别被当成空转 */
           continue;
         }
         /* 动作一：执行这一步的命令，把结果作为 Observation 回传 */
         const cmds = extractGeoCommands(raw);
         const rs = cmds.length ? execLines(cmds, stepEl) : [];
         const bad = rs.filter(r => !r.ok);
-        stepOk += rs.filter(r => r.ok).length;
+        const okN = rs.filter(r => r.ok).length;
+        stepOk += okN;
         /* 失败数是「当前仍未解决」的口径，不是历史累计：第 2 步写错、第 3 步换构造
            写对之后，前面那条失败已经被补上了，不该还挂着让终态显示成「部分完成」。
            只要某一轮的命令全部成功，就把计数清零；一直失败的则保留最后一轮的数。 */
@@ -24799,14 +24836,19 @@ async function aiSend() {
         if (cmds.length) stepLog.push('第 ' + actionNo + ' 步：' + cmds.join('; '));
         planMsgs.push({ role: 'assistant', content: raw });
         planMsgs.push({ role: 'user', content: obsText(rs, raw) });
-        if (!cmds.length && !bad.length) {
-          /* 既没命令也没 done：给一次明确提示，再不行就停 */
+        /* 进展判定：这一轮有命令、且至少一条成功。没命令 = 只说话，没成功 = 白写一轮 */
+        if (!cmds.length) {
           stepEl.querySelector('.ai-step-go').textContent = '没有给出作图命令';
-          if (it >= 1) break;
+          if (++idleRounds >= 2) { stopNote = '（AI 没有再给出作图命令，先停在这里）'; break; }
+        } else if (!okN) {
+          if (++idleRounds >= 3) { stopNote = '（连续 3 步没有画出新内容，先停在这里）'; break; }
+        } else {
+          idleRounds = 0;
         }
         if (stepAborted) break;
       }
-      if (!reactDone && !stepAborted) stepLog.push('（达到步数上限，图可能还没画完）');
+      if (!reactDone && !stepAborted && !stopNote) stopNote = '（本轮作图提前结束，图可能还没画完）';
+      if (stopNote) stepLog.push(stopNote);
       state.aiHistory.push({ role: 'assistant', content: stepLog.join('\n') || '（分步作图）' });
       if (state.aiHistory.length > 24) state.aiHistory.splice(0, state.aiHistory.length - 24);
       aiCtxSync();
