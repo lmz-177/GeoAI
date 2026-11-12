@@ -529,6 +529,11 @@ body.tool-folded .tool-head{padding-bottom:0}
 .pt-seg > button.on{color:var(--text);font-weight:600}
 .pt-seg > button:not(.on):hover{color:var(--text)}
 .panel-body{flex:1;overflow-y:auto;overflow-x:hidden;background:transparent}
+/* 切页签：内容淡入。display 从 none 变回可见时动画会重新开始，不用 JS 插手。
+   只动 opacity —— 位移会让「表格布局」这类按矩形量的用例拿到动画中间值，
+   也容易和滚动容器的 sticky 表头打架。 */
+.panel-body:not(.hidden){animation:paneIn var(--t-quick) both}
+@keyframes paneIn{from{opacity:0}to{opacity:1}}
 
 .algebra-head{
   display:flex;align-items:center;gap:6px;padding:8px 14px;font-size:var(--fs-2xs);font-weight:600;
