@@ -11229,31 +11229,65 @@ function stripMathComment(s) {
   }
   return str;
 }
-/* 指令：可视区域截图 → 直接进 AI 附件。
-   shot(x1,y1,x2,y2) / 截图 x1,y1,x2,y2，坐标是世界坐标，按当前视图换算成画布像素。
-   只截当前可见的部分：区域越界时明确报错，而不是给一张被裁掉半边的图。 */
+/* 指令：框选区域截图 → 直接进 AI 附件。
+   shot(x1,y1,x2,y2) / 截图 x1,y1,x2,y2，坐标是世界坐标。
+   不要求这块区域当前可见：把主画布临时改成这块区域的尺寸与视野、同步画一遍、
+   取像素后立刻还原。全程不让出事件循环，浏览器不会把中间帧画出来，等于后台渲染。
+   输出边长 720（长边封顶），区域很小也能得到清晰图片。 */
 function canvasShotRegion(x1, y1, x2, y2) {
-  const dpr = canvas.width / Math.max(1, canvas.clientWidth);
-  const left = Math.round(toScreenX(Math.min(x1, x2)) * dpr);
-  const right = Math.round(toScreenX(Math.max(x1, x2)) * dpr);
-  /* 世界坐标 y 向上、画布 y 向下：取 max 的那条对应上边缘 */
-  const top = Math.round(toScreenY(Math.max(y1, y2)) * dpr);
-  const bottom = Math.round(toScreenY(Math.min(y1, y2)) * dpr);
-  const w = right - left, h = bottom - top;
-  if (w < 8 || h < 8) throw new Error('截图区域太小，请给出更大的坐标范围');
-  if (left < 0 || top < 0 || right > canvas.width || bottom > canvas.height) {
-    throw new Error('截图区域超出可见画布：先缩放 / 平移让这块区域完整显示'
-      + '（区域 ' + left + ',' + top + ' → ' + right + ',' + bottom + '，画布 ' + canvas.width + '×' + canvas.height + '）');
-  }
+  const sx = Math.min(x1, x2), sy = Math.min(y1, y2), ex = Math.max(x1, x2), ey = Math.max(y1, y2);
+  const wW = ex - sx, wH = ey - sy;
+  if (!(wW > 1e-9) || !(wH > 1e-9)) throw new Error('截图区域的宽或高为 0，请给出两个不同的角点');
   if (state.aiImages.length >= AI_IMG_MAX) throw new Error('一次最多 ' + AI_IMG_MAX + ' 张图片，先删一张再截');
-  const off = document.createElement('canvas');
-  off.width = w; off.height = h;
-  off.getContext('2d').drawImage(canvas, left, top, w, h, 0, 0, w, h);
-  const data = off.toDataURL('image/jpeg', .9);
+  const OUT = 720;
+  const k = Math.min(OUT / wW, OUT / wH);
+  const outW = Math.max(48, Math.round(wW * k)), outH = Math.max(48, Math.round(wH * k));
+  const dpr = window.devicePixelRatio || 1;
+  const saved = {
+    w: canvas.width, h: canvas.height, cssW: canvas.style.width, cssH: canvas.style.height,
+    view: { ...state.view }, sel: state.selection.slice(), hov: state.hover,
+  };
+  let data = '';
+  try {
+    canvas.style.width = outW + 'px';
+    canvas.style.height = outH + 'px';
+    canvas.width = Math.round(outW * dpr);
+    canvas.height = Math.round(outH * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    state.view.cx = (sx + ex) / 2;
+    state.view.cy = (sy + ey) / 2;
+    state.view.scale = k;
+    /* 截图里不要带选中框和悬停高亮：那是编辑态的东西，发给 AI 只会干扰判断 */
+    state.selection = []; state.hover = null;
+    draw();
+    data = canvas.toDataURL('image/jpeg', .92);
+  } finally {
+    canvas.style.width = saved.cssW;
+    canvas.style.height = saved.cssH;
+    canvas.width = saved.w;
+    canvas.height = saved.h;
+    state.view = saved.view;
+    state.selection = saved.sel;
+    state.hover = saved.hov;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    draw();
+  }
   const bytes = Math.round((data.length - data.indexOf(',') - 1) * 3 / 4);
-  state.aiImages.push({ id: 'img' + Date.now() + Math.random().toString(36).slice(2, 6), data, w, h, bytes });
+  state.aiImages.push({ id: 'img' + Date.now() + Math.random().toString(36).slice(2, 6), data, w: outW, h: outH, bytes });
   renderAiAttach();
-  return { w, h, bytes };
+  return { w: outW, h: outH, bytes };
+}
+/* 把待发送的截图取出来折成一条多模态消息（给 ReAct 的下一步用），取完即清空附件条 */
+function takeAiImagesMsg(prefix) {
+  if (!state.aiImages.length) return null;
+  const imgs = state.aiImages.slice();
+  state.aiImages = [];
+  renderAiAttach();
+  return {
+    role: 'user',
+    content: [{ type: 'text', text: prefix || '这是刚截取的画布区域图片，请据此继续。' }]
+      .concat(imgs.map(im => ({ type: 'image_url', image_url: { url: im.data, detail: 'high' } }))),
+  };
 }
 /* 指令：调整思考强度。effort high / 思考强度：高 / 思考档位=off 都认。
    返回 true 表示这行被这条指令消费掉了，不再走数学解析。 */
@@ -18939,25 +18973,46 @@ async function runUITest() {
     executeLine('effort off');
     if (state.aiEffort !== 'off') throw new Error('effort 指令没生效：' + state.aiEffort);
     state.aiEffort = eff0; aiSyncEffort();
-    /* 区域截图：世界坐标 → 画布像素 → AI 附件。
-       用当前视图算一块几乎铺满画布的区域，别写死 ±0.5 —— 视图可能被前面的用例缩放过。 */
-    if (!canvas.clientWidth) resizeCanvas();
-    const halfW = Math.max(.2, (canvas.clientWidth / 2 - 6) / state.view.scale);
-    const halfH = Math.max(.2, (canvas.clientHeight / 2 - 6) / state.view.scale);
-    const vcx = state.view.cx, vcy = state.view.cy;
+    /* 区域截图：后台渲染，只要求世界坐标，没要求这块区域当前可见 */
+    const cw0 = canvas.width, vw0 = { ...state.view };
     const before = state.aiImages.length;
-    executeLine('shot(' + (vcx - halfW).toFixed(3) + ',' + (vcy - halfH).toFixed(3) + ',' +
-      (vcx + halfW).toFixed(3) + ',' + (vcy + halfH).toFixed(3) + ')');
+    executeLine('shot(-3,-2,5,4)');
     if (state.aiImages.length !== before + 1) throw new Error('截图没有加入 AI 附件');
     const im = state.aiImages[state.aiImages.length - 1];
     if (!/^data:image\/(jpeg|png)/.test(im.data || '')) throw new Error('截图不是图片数据');
-    if (im.w < 8 || im.h < 8) throw new Error('截图尺寸异常：' + im.w + '×' + im.h);
+    if (Math.max(im.w, im.h) > 720 + 1) throw new Error('截图输出尺寸超了 720：' + im.w + '×' + im.h);
+    if (Math.abs(im.w / im.h - 8 / 6) > .05) throw new Error('截图宽高比与区域不一致：' + im.w + '×' + im.h);
+    /* 渲染必须还原现场：画布尺寸、视图、选中都不能被截图改掉 */
+    if (canvas.width !== cw0) throw new Error('截图后画布尺寸没有还原');
+    if (state.view.cx !== vw0.cx || state.view.cy !== vw0.cy || state.view.scale !== vw0.scale) throw new Error('截图后视图没有还原');
     let threw = false;
-    try { executeLine('shot(-9999,-9999,9999,9999)'); } catch (e) { threw = true; }
-    if (!threw) throw new Error('越界截图应该明确报错');
+    try { executeLine('shot(2,2,2,9)'); } catch (e) { threw = true; }
+    if (!threw) throw new Error('宽或高为 0 的区域应该报错');
     /* 清场 */
     state.aiImages = []; renderAiAttach();
     state.objects = state.objects.filter(o => o.label !== 'Cmm'); recomputeAll();
+  });
+  await A('AI:自己截图后下一步请求带上图片', async () => {
+    const orig = window.callAI; let n = 0, sawImage = false;
+    window.callAI = async (msgs) => {
+      n++;
+      if (n === 1) return { reasoning: '', content: '```geogebra\nshot(-2,-1,2,1)\n```' };
+      if (n === 2) {
+        /* 这一步必须能「看见」上一步的截图：消息里要有多模态图片块 */
+        sawImage = JSON.stringify(msgs).includes('"type":"image_url"');
+        return { reasoning: '', content: '```done\n看过了\n```' };
+      }
+      return { reasoning: '', content: '```done\n完成\n```' };
+    };
+    try {
+      toggleAI(true); await sleep(0);
+      $('#aiInput').value = '看看这块区域';
+      await aiSend();
+      for (let i = 0; i < 300 && state.aiBusy; i++) await sleep(10);
+      if (n < 2) throw new Error('AI 没有走到第二步：' + n);
+      if (!sawImage) throw new Error('AI 截图后，下一步请求里没有带上图片');
+      if (state.aiImages.length) throw new Error('用过的截图应该从附件条清掉');
+    } finally { window.callAI = orig; toggleAI(false); state.aiImages = []; renderAiAttach(); }
   });
   await A('快捷键:Delete 删除选中', async () => {
     const o = obj(); state.selection = [o.id]; const n = state.objects.length;
@@ -23143,7 +23198,8 @@ const AI_STEP_SYSTEM = `你是「GeoAI」动态几何画板的作图执行器，
 2. 命令失败时必须换一种写法或换一个构造（例如两线不相交就换一条线），不要原样重发同一条命令；失败的多半是对象名不对或条件不成立。
 3. 画布上已有的对象直接引用名字，绝对不要重复定义、也不要重画已经成功的部分。
 4. 一个动作只推进一小步（1~4 条命令），逐步推进直到整幅图完成；不要在一步里塞整幅图，也不要拖很多步却只画一个点。
-5. 除了 Thought 和代码块，不要输出别的内容；不要输出 JSON、steps、ask 块。`;
+5. 除了 Thought 和代码块，不要输出别的内容；不要输出 JSON、steps、ask 块。
+6. 你可以直接在代码块里使用这几条指令：<code>shot(x1,y1,x2,y2)</code> 把世界坐标矩形区域渲染成图片并在下一步回传给你（适合检查细节、核对标签是否重叠）；<code>effort high|medium|low|off</code> 调整你自己的推理强度。<code>#</code> 开头是注释，不会执行。`;
 
 
 function aiEffort() { return EFFORTS.find(e => e.id === state.aiEffort) || EFFORTS[EFFORT_DEFAULT]; }
@@ -24936,6 +24992,10 @@ async function aiSend() {
       let idleRounds = 0, stopNote = '';
       while (!reactDone) {
         actionNo++;
+        /* 上一步如果 AI 自己用 shot(...) 截了图，就在这一步的请求里带上：
+           模型需要「看见」自己刚画/截的区域才能继续修正。 */
+        const shotMsg = takeAiImagesMsg();
+        if (shotMsg) planMsgs.push(shotMsg);
         const stepEl = document.createElement('div');
         stepEl.className = 'ai-step';
         stepEl.innerHTML = '<div class="ai-step-hd"><span class="ai-step-n">第 ' + actionNo + ' 步</span><span class="ai-step-go">思考中…</span></div>';
@@ -25019,6 +25079,8 @@ async function aiSend() {
       }
       if (!reactDone && !stepAborted && !stopNote) stopNote = '（本轮作图提前结束，图可能还没画完）';
       if (stopNote) stepLog.push(stopNote);
+      /* 收尾时把没人接的截图清掉，别让它留到下一次提问里 */
+      if (state.aiImages.length) { state.aiImages = []; renderAiAttach(); }
       state.aiHistory.push({ role: 'assistant', content: stepLog.join('\n') || '（分步作图）' });
       if (state.aiHistory.length > 24) state.aiHistory.splice(0, state.aiHistory.length - 24);
       aiCtxSync();
