@@ -65,16 +65,21 @@
   --ease:cubic-bezier(.32,.72,0,1);            /* iOS 抽屉 / 面板滑入 */
   --ease-out:cubic-bezier(.23,1,.32,1);        /* 强 ease-out：进场、按压 */
   --ease-in-out:cubic-bezier(.77,0,.175,1);    /* 屏内位移 */
+  /* 松手回弹：终点略微冲过 1（按住 96% 松手会弹到 101% 上下再落回）。曲线 y 超过 1
+     就是过冲，y2 越大冲得越远；按下用 --ease-out 快速到位，抬起才交给它，
+     手感才「按下去—弹回来」。 */
+  --spring:cubic-bezier(.34,2.2,.64,1);
   --t-quick:.14s var(--ease);   /* 小面板弹出、色板展开 */
   --t:.22s var(--ease);         /* 通用交互过渡 */
   --t-slow:.3s var(--ease);     /* 模态、整块区域进场 */
   /* 只含时长的版本，专给 transition-delay 用：--t / --t-slow 里已经带了缓动函数，
      直接塞进 delay 位（visibility 0s linear var(--t-slow)）会让整条 transition 失效 */
-  --dur-quick:.14s; --dur:.22s; --dur-slow:.3s;
+  --dur-quick:.14s; --dur:.22s; --dur-slow:.3s; --dur-spring:.34s;
   /* 交互控件统一过渡：明确列出属性，不再用 all（all 会把 width/height 也算进去，
-     布局一变就跟着抖，而且改一个属性得连带重排全部）。 */
+     布局一变就跟着抖，而且改一个属性得连带重排全部）。
+     transform 这条走回弹曲线：按住缩到 96%，松手放回时冲过原尺寸一点点再落定。 */
   --t-ui:background-color .18s ease,color .18s ease,border-color .18s ease,
-    box-shadow .18s ease,transform .14s var(--ease-out),opacity .18s ease;
+    box-shadow .18s ease,transform var(--dur-spring) var(--spring),opacity .18s ease;
 }
 body.dark{
   --bg:#0a0c10; --chrome:rgba(30,32,38,.44); --panel:rgba(30,32,38,.68); --panel-2:rgba(255,255,255,.07);
@@ -131,13 +136,15 @@ button{cursor:pointer;touch-action:manipulation}
     #inputField,#aiInput,#helpSearch{font-size:var(--fs-ios-input)}
   }
 }
-/* 可按压控件统一给一点按压反馈：缩到 0.97、140ms 强 ease-out —— 按下去「立刻有反应」，
+/* 可按压控件统一给一点按压反馈：按住缩到 96%（快、直，按下要立刻有反应），
+   松手后回到 1 走 --t-ui 里的回弹曲线，会略微冲过原尺寸再落定。
+   按下这一段单独用 --ease-out 收紧，否则连「按下去」也会带回弹，手感发飘。
    这是界面手感里最容易漏、但用户最容易感觉到的一处。列表行有底色反馈，不跟着缩。
    （发送键 / 工具键已有更紧的 .92~.95，单独保留，不在这里覆盖。） */
 .icon-btn:active,.ps-panel:active,.ps-ai:active,.ps-share:active,.btn:active,.enter-btn:active,.ai-tool:active,
 .effort:active,.kb-key:active,.kb-tab:active,.help-chip:active,.ask-opt:active,.help-tool:active,
 .help-cmd:active,.gv-zoom button:active,.seg button:active,.fmenu-btn:active,.ai-fold-btn:active,
-.eff-pop-reset:active,.ai-img-btn:active{transform:scale(.97)}
+.eff-pop-reset:active,.ai-img-btn:active{transform:scale(.96);transition:transform var(--dur-quick) var(--ease-out)}
 /* 键盘 / 辅助设备聚焦时给一个可见焦点环；鼠标点击不出现（:focus-visible 只在键盘类聚焦时命中）。
    输入类控件自带高亮边框表示焦点，再叠外框就重了，所以排除掉。 */
 :focus-visible{outline:2px solid var(--accent);outline-offset:2px}
@@ -21543,12 +21550,15 @@ async function runUITest() {
     const cs = getComputedStyle(document.documentElement);
     if (norm(cs.getPropertyValue('--ease')) !== 'cubic-bezier(.32,.72,0,1)') throw new Error('--ease 不是统一曲线：' + cs.getPropertyValue('--ease'));
     if (norm(cs.getPropertyValue('--fs-xs')) !== '13px') throw new Error('--fs-xs 不是 13px');
+    if (norm(cs.getPropertyValue('--spring')) !== 'cubic-bezier(.34,2.2,.64,1)') throw new Error('--spring 回弹曲线缺失');
     /* 交互控件的过渡走统一令牌 --t-ui：属性要列全（不能是 all），时长必须落在令牌档位上 */
     const fc = getComputedStyle($('#layerPanelBtn'));
     const durs = norm(fc.transitionDuration).split(',');
-    if (durs.some(d => ['0.14s', '0.18s', '0.22s', '0.3s'].indexOf(d) < 0)) throw new Error('过渡时长超出令牌：' + fc.transitionDuration);
+    if (durs.some(d => ['0.14s', '0.18s', '0.22s', '0.3s', '0.34s'].indexOf(d) < 0)) throw new Error('过渡时长超出令牌：' + fc.transitionDuration);
     if (norm(fc.transitionProperty).indexOf('all') >= 0) throw new Error('控件过渡用了 all：' + fc.transitionProperty);
-    if (norm(fc.transitionTimingFunction).indexOf('cubic-bezier(0.23,1,0.32,1)') < 0) throw new Error('按压 / 进场没走强 ease-out：' + fc.transitionTimingFunction);
+    /* transform 走回弹曲线（松手过冲 2%），其余属性还是普通 ease；按下那一段由 :active
+       里的 --ease-out 单独收短，所以这里不再要求整条过渡都是强 ease-out */
+    if (norm(fc.transitionTimingFunction).indexOf('cubic-bezier(0.34,2.2,0.64,1)') < 0) throw new Error('transform 没走回弹曲线：' + fc.transitionTimingFunction);
     /* var(--t) 必须能展开成「时长 + 曲线」的合法简写 */
     const row = document.querySelector('.obj-row');
     if (row) {
