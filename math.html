@@ -726,8 +726,12 @@ body.tool-folded .tool-head{padding-bottom:0}
 .kb-key.accent{background:var(--accent);color:#fff;box-shadow:0 1px 0 var(--accent-h)}
 .kb-key.accent:hover{background:var(--accent-h);color:#fff}
 
+/* 拖动中关掉宽度过渡：过渡会把鼠标位移「追」成慢半拍的动画，拖起来发飘 */
+.sidebar.resizing{transition:none}
 /* ---------- 绘图区 ---------- */
 .splitter{width:6px;flex:0 0 6px;cursor:col-resize;background:transparent;position:relative;z-index:20}
+/* 拖动分栏时的透明遮罩：整页接管指针，侧栏与画布里的悬停态、文字选择都不会在拖动中闪 */
+.drag-shield{position:fixed;inset:0;z-index:9999;background:transparent;cursor:col-resize}
 .splitter::after{content:'';position:absolute;left:2.5px;top:0;bottom:0;width:1px;background:var(--border);transition:background var(--t)}
 .splitter:hover::after,.splitter.drag::after{background:var(--accent);width:2px;left:2px}
 .graphics{flex:1;position:relative;min-width:0;background:var(--canvas);overflow:hidden}
@@ -897,6 +901,22 @@ body.tool-folded .tool-head{padding-bottom:0}
 }
 .ai-msg-nav button:hover{background:var(--accent);opacity:1;transform:scale(1.35)}
 .ai-msg-nav button.on{height:18px;background:var(--accent);opacity:1}
+/* 「跳至最新」：用户往上读历史时浮在消息区底部，离底超过 120px 才出现。
+   和数量药丸同一种玻璃胶囊，位置居中，不挡住消息导航的小圆点。 */
+.ai-jump{
+  position:absolute;left:50%;bottom:10px;z-index:7;
+  display:flex;align-items:center;gap:5px;height:28px;padding:0 12px 0 10px;
+  border-radius:99px;background:var(--pop-bg);border:.5px solid var(--glass-brd);
+  color:var(--text-2);font-size:var(--fs-2xs);font-weight:600;
+  box-shadow:var(--shadow),var(--hi);
+  -webkit-backdrop-filter:var(--glass-blur);backdrop-filter:var(--glass-blur);
+  opacity:0;pointer-events:none;transform:translate(-50%,6px);
+  transition:opacity var(--t),transform var(--t-ui),color var(--t),background-color var(--t);
+}
+.ai-jump.on{opacity:1;pointer-events:auto;transform:translate(-50%,0)}
+.ai-jump:hover{color:var(--accent);background:var(--accent-dim)}
+.ai-jump:active{transform:translate(-50%,0) scale(.96)}
+.ai-jump svg{width:13px;height:13px}
 /* 折叠按钮 */
 .ai-fold-btn{display:flex;align-items:center;gap:5px;padding:6px 11px;border-radius:99px;font-size:var(--fs-xs);color:var(--text-2);background:var(--panel-2);transition:var(--t-ui)}
 .ai-fold-btn:hover{color:var(--accent);background:var(--accent-dim)}
@@ -1176,7 +1196,7 @@ body.dark .eff-warn{color:#c39bff}
 @media(prefers-reduced-motion:reduce){
   .ink-char{animation:none;opacity:1;filter:none;transform:none}
 }
-.ai-chat{flex:1 1 auto;min-height:0;overflow-y:auto;padding:10px 14px 14px 16px;display:flex;flex-direction:column;gap:0;scroll-behavior:smooth}
+.ai-chat{flex:1 1 auto;min-height:0;overflow-y:auto;padding:10px 14px 14px 16px;display:flex;flex-direction:column;gap:0}
 .msg{display:grid;grid-template-columns:16px minmax(0,1fr);column-gap:12px;align-items:stretch;
   padding:7px 6px 7px 0;border-radius:10px;max-width:100%;animation:fadeUp var(--t)}
 .msg:hover{background:var(--hover)}
@@ -2310,6 +2330,11 @@ body.dark .modal::after{
               <div class="ai-hello-txt">说一句，我把它画出来</div>
             </div>
             <div class="ai-chat" id="aiChat"></div>
+            <!-- 往上翻历史且离底超过 120px 时才出现：一条回到底部看最新回复的捷径 -->
+            <button class="ai-jump" id="aiJump" type="button" title="跳到最新消息" aria-label="跳到最新消息">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v13M6.5 12.5 12 18l5.5-5.5"></path></svg>
+              <span>最新</span>
+            </button>
             <div class="ai-msg-nav" id="aiMsgNav" role="navigation" aria-label="对话消息导航"></div>
           </div>
         </div>
@@ -15549,6 +15574,8 @@ function toggleAISheet(force) {
   const isl = $('#aiIsland'); if (isl) isl.setAttribute('aria-hidden', 'true');
   if (state.aiIslandTimer) { clearTimeout(state.aiIslandTimer); state.aiIslandTimer = 0; }
   aiSyncFoldUI();
+  /* 面板从收起变展开时消息区高度会变，重新判一次「跳至最新」该不该露面 */
+  requestAnimationFrame(syncAiJump);
   return true;
 }
 function switchPanel(p) {
@@ -18039,20 +18066,67 @@ function aiHelp() {
 }
 /* ── 布局与初始化 ── */
 function bindSplitters() {
+  const DEFAULT_SB_W = 302;      /* 与样式里的 --sb-w 默认值一致 */
+  let shield = null;             /* 拖动期间盖住整页的透明遮罩 */
   const mk = (el, target, side) => {
-    let start = 0, w0 = 0, active = false;
+    let start = 0, w0 = 0, active = false, armed = false;
+    const apply = w => {
+      target.style.width = w + 'px';
+      target.style.flexBasis = w + 'px';
+      resizeCanvas();
+    };
+    /* 真正开始拖（位移 ≥3px）才挂遮罩：不然单击 / 双击的第二下会被遮罩接走，
+       双击回默认比例就永远触发不了 */
+    const arm = () => {
+      if (!armed) return;
+      armed = false;
+      target.classList.add('resizing');   /* 拖动期间关掉宽度过渡，手指 / 鼠标才跟手 */
+      if (!shield) {
+        shield = document.createElement('div');
+        shield.className = 'drag-shield';
+        document.body.appendChild(shield);
+      }
+      window.addEventListener('keydown', onKey, true);
+    };
+    const clean = () => {
+      active = false; armed = false;
+      el.classList.remove('drag');
+      target.classList.remove('resizing');
+      document.body.style.cursor = '';
+      window.removeEventListener('keydown', onKey, true);
+      if (shield) { shield.remove(); shield = null; }
+      resizeCanvas();
+    };
+    /* Esc：放弃这次拖动，宽度回到按下去那一刻（「原来的比例」） */
+    const onKey = e => {
+      if (!active || e.key !== 'Escape') return;
+      e.preventDefault();
+      e.stopPropagation();         /* 只取消拖拽，不顺手关掉弹窗 / 菜单 */
+      apply(w0);
+      clean();
+    };
     el.addEventListener('mousedown', e => {
-      active = true; start = e.clientX; w0 = target.getBoundingClientRect().width;
-      el.classList.add('drag'); document.body.style.cursor = 'col-resize'; e.preventDefault();
+      if (e.button !== 0 || target.classList.contains('hidden')) return;
+      active = true; armed = true; start = e.clientX; w0 = target.getBoundingClientRect().width;
+      el.classList.add('drag');
+      document.body.style.cursor = 'col-resize';
+      e.preventDefault();
     });
     window.addEventListener('mousemove', e => {
       if (!active) return;
-      const d = side === 'left' ? e.clientX - start : start - e.clientX;
-      const w = clamp(w0 + d, 190, Math.min(720, innerWidth * .6));
-      target.style.width = w + 'px'; target.style.flexBasis = w + 'px';
-      resizeCanvas();
+      if (armed && Math.abs(e.clientX - start) >= 3) arm();
+      if (!armed) {
+        const d = side === 'left' ? e.clientX - start : start - e.clientX;
+        apply(clamp(w0 + d, 190, Math.min(720, innerWidth * .6)));
+      }
     });
-    window.addEventListener('mouseup', () => { if (active) { active = false; el.classList.remove('drag'); document.body.style.cursor = ''; resizeCanvas(); } });
+    window.addEventListener('mouseup', () => { if (active) clean(); });
+    /* 双击分隔条：回到默认比例（保留宽度过渡，自己会滑回去） */
+    el.addEventListener('dblclick', () => {
+      if (target.classList.contains('hidden')) return;
+      apply(DEFAULT_SB_W);
+      setTimeout(resizeCanvas, 320);   /* 过渡结束后再量一次画布 */
+    });
   };
   mk($('#splitterL'), $('#sidebar'), 'left');
 }
@@ -24674,11 +24748,31 @@ function bindAI() {
     if (!fitRaf) fitRaf = requestAnimationFrame(() => { fitRaf = 0; fitInput(); });
   });
   inpRO.observe(inp);
-  inp.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); if (!state.aiBusy) aiSend(); } });
+  /* 输入法：选字过程中的回车是「确认候选词」，不能当发送。
+     isComposing / keyCode 229 覆盖正在选字；compositionend 之后再留 500ms 冷却，
+     兜住「先结束合成、后补发 keydown」的输入法（否则上屏瞬间就被发出去）。 */
+  let aiImeGuardUntil = 0;
+  inp.addEventListener('compositionstart', () => { aiImeGuardUntil = Infinity; });
+  inp.addEventListener('compositionend', () => { aiImeGuardUntil = performance.now() + 500; });
+  inp.addEventListener('keydown', e => {
+    if (e.key !== 'Enter' || e.shiftKey) return;
+    if (e.isComposing || e.keyCode === 229) return;       /* 正在选字：回车交给输入法 */
+    e.preventDefault();
+    /* 刚结束选字：这脚回车多半是「确认候选词」的余波，不发也不让它插一个换行 */
+    if (performance.now() < aiImeGuardUntil) return;
+    if (!state.aiBusy) aiSend();
+  });
+  /* 「跳至最新」：滚动位置变化时决定露不露出，点了平滑回到底部 */
+  const aiChatEl = $('#aiChat'), aiJumpEl = $('#aiJump');
+  if (aiChatEl) aiChatEl.addEventListener('scroll', syncAiJump, { passive: true });
+  if (aiJumpEl) aiJumpEl.addEventListener('click', () => {
+    if (!aiChatEl) return;
+    aiChatEl.scrollTo({ top: aiChatEl.scrollHeight, behavior: 'smooth' });
+  });
   /* 澄清单里的选项可点：点了直接填进输入框，用户改一改就能发 */
   const chatHost = $('#aiChat');
   /* 消息增删（发送 / 重做 / 清空全部）后同步空态：只剩「一条都没有」时才露出 hello */
-  if (chatHost && window.MutationObserver) new MutationObserver(aiHelloSync).observe(chatHost, { childList: true });
+  if (chatHost && window.MutationObserver) new MutationObserver(() => { aiHelloSync(); syncAiJump(); }).observe(chatHost, { childList: true });
   /* 点 hello：转彩虹并重写一遍。动画由 CSS 的 animation 承担，
      重启的办法只有「摘掉 → 强制重排 → 还原」，transition 那套改 delay 的写法在这里不成立。 */
   const helloHost = $('#aiHello');
@@ -24882,13 +24976,25 @@ function aiRegenerate(btn) {
   inp.dispatchEvent(new Event('input', { bubbles: true }));
   aiSend();
 }
+/* ── 聊天区的滚动跟随 ──
+   只有本来就贴着底部（≤40px）才跟随新内容；用户一往上翻就停，不再被拽回去。
+   离底超过 120px 时露出「跳至最新」。两个阈值合在一处，流式输出与整条消息共用。 */
+const AI_FOLLOW_PX = 40, AI_JUMP_PX = 120;
+const aiChatDist = chat => chat.scrollHeight - chat.scrollTop - chat.clientHeight;
+/* 跟随必须瞬时到位：这里不再依赖 CSS 的 smooth（连续赋值会互相打断，
+   而且「是否贴底」会读到动画中间的位置，把跟随误判成用户上翻） */
+const aiChatBottom = chat => { chat.scrollTop = chat.scrollHeight; };
+function syncAiJump() {
+  const chat = $('#aiChat'), btn = $('#aiJump');
+  if (chat && btn) btn.classList.toggle('on', aiChatDist(chat) > AI_JUMP_PX);
+}
 function aiPush(role, text, opts) {
   /* 有新消息时展开对话区；但用户把历史记录折叠着，就别替他展开 */
   const dock = $('#aiPanel');
   if (!(opts && opts.noExpand) && !(dock && dock.classList.contains('hist-fold'))) toggleAISheet(true);
   const chat = $('#aiChat');
   /* 用户往上翻看历史时不抢滚动位置；只有本来就在底部附近才跟随新消息 */
-  const atBottom = chat.scrollHeight - chat.scrollTop - chat.clientHeight < 48;
+  const atBottom = aiChatDist(chat) <= AI_FOLLOW_PX;
   const wrap = document.createElement('div');
   wrap.className = 'msg ' + (role === 'user' ? 'user' : 'ai');
   const who = role === 'user' ? '你' : 'AI 助手';
@@ -24901,7 +25007,8 @@ function aiPush(role, text, opts) {
     '<div class="bubble">' + (role === 'user' ? esc(text) : renderAIContent(text)) + '</div>' + imgHtml + '</div>';
   chat.appendChild(wrap);
   aiHelloSync();
-  if (atBottom) chat.scrollTop = chat.scrollHeight;
+  if (atBottom) aiChatBottom(chat);
+  syncAiJump();
   const cnt = $('#aiMsgCount'); if (cnt) cnt.textContent = String(chat.children.length);
   const cnt2 = $('#aiHistCnt'); if (cnt2) cnt2.textContent = String(chat.children.length);
   const cnt3 = $('#aiHistCntOpen'); if (cnt3) cnt3.textContent = String(chat.children.length);
@@ -25519,7 +25626,8 @@ async function aiSend() {
       changed = true;
     }
     /* 只在用户本来就贴着底部时跟随：既省掉每帧的强制布局，也不会打断向上翻阅 */
-    if (changed && chat.scrollHeight - chat.scrollTop - chat.clientHeight < 90) chat.scrollTop = chat.scrollHeight;
+    if (changed && aiChatDist(chat) <= AI_FOLLOW_PX) aiChatBottom(chat);
+    if (changed) syncAiJump();
   };
   const paint = (reasoning, content) => {
     if (reasoning) pendingR = reasoning;
@@ -25560,7 +25668,7 @@ async function aiSend() {
     refreshAlgebra();
     return rs;
   };
-  const keepBottom = () => { if (chat.scrollHeight - chat.scrollTop - chat.clientHeight < 120) chat.scrollTop = chat.scrollHeight; };
+  const keepBottom = () => { if (aiChatDist(chat) <= AI_FOLLOW_PX) aiChatBottom(chat); };
   const renderExec = (rs, host) => {
     const el = document.createElement('div');
     el.className = 'exec-list';
@@ -25987,7 +26095,9 @@ async function aiSend() {
     sendBtn.classList.remove('ai-stop');
     sendBtn.innerHTML = ICON.send;
     sendBtn.title = '';
-    chat.scrollTop = chat.scrollHeight;
+    /* 收尾时只有仍然贴着底部才跟到底；用户正在上面读，就别把人拽回来 */
+    if (aiChatDist(chat) <= AI_FOLLOW_PX) aiChatBottom(chat);
+    syncAiJump();
   }
 }
 
