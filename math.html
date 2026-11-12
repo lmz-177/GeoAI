@@ -1793,6 +1793,25 @@ body:has(.aii-eff.on) .ai-dock{z-index:230}
 .switch.on::after{transform:translateX(20px)}
 .switch:active::after{width:31px}
 .switch.on:active::after{transform:translateX(16px)}
+/* 弹性开关：拨动瞬间圆点横向拉长成胶囊，越过轨道大半程后再收圆，末端带回弹。
+   只靠 :active 的「按住变胖」看不出「移动途中被拉长」——松手就开始位移了，
+   所以由 JS 在拨动的一帧挂 .spring，跑一次性关键帧，结束自动摘掉。
+   拉伸时同时改宽度和位移，保证前沿先走、后沿收尾，胶囊不会戳出轨道。 */
+.switch.spring::after{transition:none}
+.switch.spring.on::after{animation:swStretchOn .34s var(--ease-out) both}
+.switch.spring:not(.on)::after{animation:swStretchOff .34s var(--ease-out) both}
+@keyframes swStretchOn{
+  0%{width:27px;transform:translateX(0)}
+  45%{width:34px;transform:translateX(10.5px)}
+  78%{width:27.5px;transform:translateX(20.6px)}
+  100%{width:27px;transform:translateX(20px)}
+}
+@keyframes swStretchOff{
+  0%{width:27px;transform:translateX(20px)}
+  45%{width:34px;transform:translateX(6.5px)}
+  78%{width:27.5px;transform:translateX(-.6px)}
+  100%{width:27px;transform:translateX(0)}
+}
 /* 单对象设置：颜色色板 + 名称输入 */
 .oswatches{display:flex;gap:7px;flex-wrap:wrap;justify-content:flex-end;max-width:300px}
 .oswatches button{width:23px;height:23px;border-radius:50%;border:1.5px solid var(--border-2);transition:transform var(--t)}
@@ -15109,6 +15128,19 @@ function sheetBind() {
   sheetRender();
 }
 /* ── 设置面板 ── */
+/* 开关的弹性形变：拨动时给滑块挂一次 .spring，让它在移动途中拉成胶囊、末端回弹收圆。
+   只补一层动画，不碰状态本身，读屏与 aria-checked 完全不受影响。
+   连点时先摘再挂并强制重排，动画才能从头重放；animationend 没等到再用定时器兜底，
+   否则 .spring 里的 transition:none 会一直留着。 */
+function springSwitch(el) {
+  if (!el) return;
+  el.classList.remove('spring');
+  void el.offsetWidth;
+  el.classList.add('spring');
+  const off = () => { clearTimeout(el._springT); el.classList.remove('spring'); };
+  el.addEventListener('animationend', off, { once: true });
+  el._springT = setTimeout(off, 600);
+}
 let objSetTarget = null;   // 非空表示当前模态展示的是「单个对象」的设置
 function openSettings() {
   objSetTarget = null;
@@ -15148,6 +15180,7 @@ function bindSettings() {
     el.addEventListener('click', () => {
       const k = el.dataset.sw; SET[k] = !SET[k];
       el.classList.toggle('on', SET[k]); el.setAttribute('aria-checked', String(!!SET[k]));
+      springSwitch(el);
       saveSET();
       if (k === 'snapToObjects') { } else draw();
       recomputeAll(); syncMenuChecks();
@@ -15394,6 +15427,7 @@ function bindObjSettings(o) {
       pushUndo();
       const v = !spec[0](o); spec[1](o, v);
       el.classList.toggle('on', v); el.setAttribute('aria-checked', String(!!v));
+      springSwitch(el);
       sync();
     });
     const row = el.closest('.set-row');
