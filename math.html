@@ -2647,6 +2647,7 @@ const ICON = {
   arc: S('<path d="M4 18a11 11 0 0 1 16 0"/><circle cx="12" cy="18" r="1.7" fill="currentColor" stroke="none"/>'),
   sector: S('<path d="M3.5 16a8.5 8.5 0 0 1 17 0z" fill="currentColor" opacity=".18"/><path d="M3.5 16a8.5 8.5 0 0 1 17 0z"/>'),
   incircle: S('<path d="M12 3.5 20 19H4z"/><circle cx="11.6" cy="14.4" r="3.4" opacity=".85"/>'),
+  incenter: S('<path d="M12 4 20 19H4z" opacity=".55"/><circle cx="11.7" cy="14.6" r="3.2"/><path d="M11.7 11.4v6.4M8.5 14.6h6.4" stroke-width="1.2" opacity=".8"/>'),
   ellipse: S('<ellipse cx="12" cy="12" rx="9" ry="5.5"/><circle cx="6.2" cy="12" r="1.5" fill="currentColor" stroke="none"/><circle cx="17.8" cy="12" r="1.5" fill="currentColor" stroke="none"/>'),
   hyperbola: S('<path d="M3 19c6-1 7-11 9-14M21 5c-6 1-7 11-9 14" /><path d="M3 19c6-1 7-11 9-14"/>'),
   parabola: S('<path d="M12 20C12 10 6 8 3.5 8M12 20c0-10 6-12 8.5-12" transform="rotate(0 12 12)"/><path d="M5 20c0-9 4-13 7-13s7 4 7 13"/>'),
@@ -2741,6 +2742,33 @@ const ICON = {
   pen: S('<path d="M4 20c2.4-1.4 3.6-4.6 6-8.6S15.4 5 19.6 4.4c.6 3.6-2 7.4-6.4 10.6S6.6 19.8 4 20z"/><path d="M4 20l5.4-5.4" opacity=".6" stroke-width="1.3"/>'),
   inspect: S('<rect x="3" y="4" width="18" height="16" rx="2.6"/><path d="M6 15.5c2.4 0 2.8-7 5-7s2.6 7 5 7" /><circle cx="11" cy="8.5" r="1.5" fill="currentColor" stroke="none"/>'),
   vectorFromPoint: S('<path d="M5 19 19 6"/><path d="M19 6l-4.4.5M19 6l-.5 4.4"/><circle cx="5" cy="19" r="2" fill="currentColor" stroke="none"/><path d="M5 19h4M5 19v-4" opacity=".35" stroke-width="1.2"/>'),
+  /* —— 第二批：形状 / 手绘 / 标注 / 对象管理 ——
+     同样按 GeoGebra 的构图语言重绘（主对象粗、辅助虚线细、手柄实心），
+     不拷它的位图：GGB 图标是 GPL，本项目是 MIT。 */
+  complex: S('<path d="M3.5 20.5 20.5 3.5" opacity=".4" stroke-dasharray="2.5 2.5"/><circle cx="7.5" cy="16.5" r="2.2" fill="currentColor" stroke="none"/><circle cx="16.5" cy="7.5" r="2.2" fill="currentColor" stroke="none"/><path d="M12.5 13v5M11 15.5h3" stroke-width="1.3"/>'),
+  compass: S('<path d="M12 3.6 6.6 19M12 3.6 17.4 19"/><path d="M6.6 19a2 2 0 0 0 4 0M17.4 19a2 2 0 0 0-4 0" opacity=".5"/><circle cx="12" cy="3.6" r="1.7" fill="currentColor" stroke="none"/><path d="M8 12.5h8" stroke-width="1.2" opacity=".55"/>'),
+  invert: S('<circle cx="12" cy="12" r="8.4" opacity=".5"/><path d="M3.6 12h16.8" stroke-dasharray="2.4 2.4" opacity=".4"/><circle cx="6.6" cy="12" r="2" fill="currentColor" stroke="none"/><circle cx="19" cy="12" r="2.6" fill="currentColor" stroke="none"/>'),
+  rigidPoly: S('<path d="M3.6 17.4 9 6.2l10 1.4-1.4 8z" opacity=".8"/><rect x="14.6" y="13.2" width="6.6" height="6.4" rx="1.4" fill="currentColor" stroke="none"/>'),
+  vectorPoly: S('<path d="M4 18.4h8.4V9.6H4z" opacity=".55"/><path d="M4 18.4 12.4 9.6"/><path d="M12.4 9.6l-2.7.1M12.4 9.6l-.1 2.7"/><path d="M12.4 9.6 20 6.2"/><path d="M20 6.2l-2.6-.1M20 6.2l-.2 2.6"/>'),
+  rectangle: S('<rect x="3.6" y="6.2" width="16.8" height="11.6" rx="1.4"/><circle cx="3.6" cy="17.8" r="1.7" fill="currentColor" stroke="none"/><circle cx="20.4" cy="6.2" r="1.7" fill="currentColor" stroke="none"/>'),
+  square: S('<rect x="4.6" y="4.6" width="14.8" height="14.8" rx="1.2"/><circle cx="4.6" cy="19.4" r="1.7" fill="currentColor" stroke="none"/><circle cx="19.4" cy="4.6" r="1.7" fill="currentColor" stroke="none"/>'),
+  parallelogram: S('<path d="M6.6 18.4h13.4l-2.6-12.8H4z"/><circle cx="4" cy="18.4" r="1.7" fill="currentColor" stroke="none"/><circle cx="20" cy="5.6" r="1.7" fill="currentColor" stroke="none"/>'),
+  stadium: S('<path d="M8 7.6h8a4.4 4.4 0 0 1 0 8.8H8a4.4 4.4 0 0 1 0-8.8z"/><path d="M8 7.6v8.8M16 7.6v8.8" opacity=".35" stroke-width="1.2" stroke-dasharray="2 2"/>'),
+  freeShape: S('<path d="M6 6.6c3-2.6 8.8-3 11.8.4s2.4 8.2-.8 10.4-9 2.2-11.8-.8S3 9.2 6 6.6z" stroke-dasharray="2.6 2.2"/><circle cx="6" cy="6.6" r="1.6" fill="currentColor" stroke="none"/>'),
+  freeFunc: S('<path d="M3 17.2c2.6 0 3.4-9.4 6-9.4s2.6 6.6 5 6.6S17.6 5.4 21 5.4" stroke-dasharray="2.6 2.2"/><circle cx="9" cy="7.8" r="1.6" fill="currentColor" stroke="none"/>'),
+  highlighter: S('<path d="M4.6 20.6h14.8" opacity=".75"/><path d="M7 17.4 6 11.8l8.4-8.4 4 4L10 16z"/><path d="M6 11.8l4 1.4" opacity=".45" stroke-width="1.3"/>'),
+  eraser: S('<path d="M4 15.6 12.6 7l6.8 6.8-6.4 6.6H7z"/><path d="M9.6 20.4 4 20.6" opacity=".55"/><path d="M9.2 10.4l6.8 6.8" opacity=".4" stroke-dasharray="2.2 2"/>'),
+  sticky: S('<path d="M4.6 4.6h11.8l3 3v11.8h-14.8z"/><path d="M16.4 4.6v3h3" opacity=".55"/><path d="M7.6 9.6h8M7.6 12.6h8M7.6 15.6h4.6" stroke-width="1.3" opacity=".65"/>'),
+  mindmap: S('<circle cx="12" cy="12" r="3"/><circle cx="4.6" cy="5.6" r="2.1" opacity=".8"/><circle cx="19.4" cy="5.6" r="2.1" opacity=".8"/><circle cx="12" cy="20.4" r="2.1" opacity=".8"/><path d="M9.7 10.3 6.2 7.4M14.3 10.3l3.5-2.9M12 15v3.3" stroke-width="1.3"/>'),
+  copyStyle: S('<path d="M4.6 15.4c0-2 3-2.6 5.4-3.5 2.4-1 4-2.6 4-5.4"/><path d="M14 4.6c2.4.4 4.4 2.6 4.4 5.3 0 2-1.4 3.4-3.2 4.2" opacity=".7"/><path d="M5.6 20.4h12.8" opacity=".5"/>'),
+  eyeOff: S('<path d="M3 12s3.4-6 9-6 9 6 9 6-3.4 6-9 6-9-6-9-6z" opacity=".7"/><path d="M4.2 19.8 19.8 4.2"/>'),
+  labelOff: S('<path d="M5.6 7.6h9.4a3 3 0 0 1 2.4 1.2L21 12l-3.6 3.2a3 3 0 0 1-2.4 1.2H5.6z" opacity=".65"/><path d="M4.2 19.8 19.8 4.2"/>'),
+  protractor: S('<path d="M3 16.6a9 9 0 0 1 18 0z"/><path d="M3 16.6h18"/><path d="M7.4 16.6v-2.2M12 16.6v-3.6M16.6 16.6v-2.2" stroke-width="1.2" opacity=".65"/>'),
+  ruler: S('<rect x="2.6" y="8.6" width="18.8" height="6.8" rx="1.6"/><path d="M6.4 8.6v2.6M9.8 8.6v3.6M13.2 8.6v2.6M16.6 8.6v3.6" stroke-width="1.2" opacity=".7"/>'),
+  triangleRuler: S('<path d="M4 19.6h16L4 4z"/><path d="M7 16.6v-2.2M10 16.6v-4.2M13 16.6v-2.2" stroke-width="1.2" opacity=".65"/>'),
+  equation: S('<path d="M4.8 8.6h6.4M8 5.4v6.4" opacity=".85"/><path d="M14 6.6l6 5M20 6.6l-6 5" opacity=".85"/><path d="M4 18.2h16" stroke-dasharray="2.6 2.2" opacity=".5"/>'),
+  listIcon: S('<path d="M4 7h3M4 12h3M4 17h3"/><path d="M10 7h10M10 12h10M10 17h10" opacity=".7"/>'),
+  lasso: S('<path d="M20.4 11c0 3.6-3.8 6.4-8.4 6.4S3.6 14.6 3.6 11 7.4 4.6 12 4.6s8.4 2.8 8.4 6.4z" stroke-dasharray="2.6 2.2"/><path d="M6.2 17.4c-.6 1.4-.3 2.6.8 3"/><circle cx="9" cy="20.6" r="1.6" fill="currentColor" stroke="none"/>'),
 };
 /* ── GeoGebra 同款构图的核心绘图图标 ──
    参照 GGB 计算器工具面板的画法（不是照搬它的位图资源：GGB 的图标是 GPL，
@@ -4289,10 +4317,19 @@ function labelText(o) {
   const mode = o.labelMode == null ? 0 : o.labelMode;
   const cap = (o.caption != null && o.caption !== '') ? String(o.caption) : o.label;
   if (mode === 3) return cap;
+  /* 复数点：标签直接写成 a + bi（GeoGebra 里复数就是点，只是显示方式不同） */
+  if (o.type === 'point' && o.def && o.def.complex && isPt(o.value) && !o.error)
+    return o.label + ' = ' + fmtComplexNum(o.value);
   const hasVal = o.value !== undefined && !o.error;
   if (mode === 2) return hasVal ? fmtVal(o.value) : cap;
   if (mode === 1) return hasVal ? o.label + ' = ' + fmtVal(o.value) : cap;
   return o.label;
+}
+/* 复数写法：实部用普通数字，虚部按 ±bi 收尾；虚部为 1 时省掉 1 */
+function fmtComplexNum(v) {
+  const a = fmt(v.x, 2), b = Math.abs(v.y), bs = fmt(b, 2);
+  if (b < 1e-12) return a;
+  return a + (v.y < 0 ? ' − ' : ' + ') + (Math.abs(b - 1) < 1e-9 ? '' : bs) + 'i';
 }
 
 /* ── 二次曲线系数 ── */
@@ -4740,6 +4777,8 @@ function computeObject(o) {
          带 ast 的列表（l = {1, k, 3}）在 k 动的时候要整条重算；
          命令造出来的列表没有 ast，值由命令自己按父对象算，这里不用管。 */
       case 'list': {
+        /* 手工收集出来的列表（创建列表工具）：值就是父对象的当前值，父对象一动跟着变 */
+        if (o.kind === 'raw') { o.value = P.map(x => x && (x.value !== undefined ? x.value : x.label)); break; }
         /* 矩阵运算结果（Invert / Transpose / RREF）：父矩阵一变就重新算 */
         if (o.def && o.def.op) {
           const src = P[0];
@@ -5124,6 +5163,42 @@ function computeObject(o) {
           let r = o.def.r;
           if (P[1] && isNum(P[1].value)) r = Math.abs(P[1].value);
           o.data.c = c.value; o.data.r = Math.abs(r) || 0;
+        } else if (o.kind === 'radiusRef') {
+          /* 圆规：半径实时取自另一个对象的长度 / 半径，拖动那个对象圆跟着变 */
+          const c = P[0], ref = P[1];
+          if (!c || !c.value || !ref) break;
+          let r = 0;
+          if (ref.type === 'segment' || ref.type === 'polyline') {
+            const q = (ref.data && ref.data.pts) || [];
+            if (q.length >= 2) {
+              /* 折线按各段长度累加 */
+              for (let i = 1; i < q.length; i++) r += GEO.dist(q[i - 1], q[i]);
+            } else if (ref.data && ref.data.p && ref.data.q) {
+              /* 线段的数据存在 p / q，没有 pts —— 这里漏判会让圆规永远画出半径为 0 的圆 */
+              r = GEO.dist(ref.data.p, ref.data.q);
+            }
+          } else if (ref.data && isNum(ref.data.r)) r = Math.abs(ref.data.r);
+          else if (ref.data && ref.data.p && ref.data.q) r = GEO.dist(ref.data.p, ref.data.q);
+          o.data.c = c.value; o.data.r = Math.abs(r) || 0;
+        } else if (o.kind === 'inverted') {
+          /* 关于圆的反演：圆反演还是圆。取原圆上三个等分点反演，再求过三点的圆，
+             整个过程都在 compute 里算，所以两个圆的父对象一动它跟着动。 */
+          const src = P[0], ref = P[1];
+          if (!src || !ref || !src.data || !ref.data || !isNum(src.data.r) || !isNum(ref.data.r)) break;
+          const c0 = ref.data.c, R0 = ref.data.r;
+          if (!(R0 > 1e-12)) { o.error = '反演圆的半径为 0'; break; }
+          const inv = p => {
+            const dx = p.x - c0.x, dy = p.y - c0.y, d2 = dx * dx + dy * dy;
+            if (!(d2 > 1e-12)) return null;
+            const k = R0 * R0 / d2;
+            return { x: c0.x + dx * k, y: c0.y + dy * k };
+          };
+          const q = [0, 2 * Math.PI / 3, 4 * Math.PI / 3]
+            .map(t => inv({ x: src.data.c.x + src.data.r * Math.cos(t), y: src.data.c.y + src.data.r * Math.sin(t) }));
+          if (q.some(x => !x)) { o.error = '圆经过反演中心，反演后是一条直线'; break; }
+          const cr = GEO.circ3(q[0], q[1], q[2]);
+          if (!cr) { o.error = '反演后退化成直线'; break; }
+          o.data.c = cr.c; o.data.r = cr.r;
         } else if (o.kind === 'threePoints') {
           const r = GEO.circ3(P[0].value, P[1].value, P[2].value);
           if (!r) { o.error = '三点共线'; break; }
@@ -5195,9 +5270,54 @@ function computeObject(o) {
           o.data.pts = list;
           o.data.center = c0;
         } else {
-          const pts = P.map(p => p && p.value).filter(Boolean);
-          if (pts.length < 3) { o.error = '顶点不足'; break; }
-          o.data.pts = pts;
+          const pt = i => P[i] && P[i].value;
+          if (o.kind === 'rigid') {
+            /* 刚性多边形：形状在建对象时按「P0→P1」这一条基准边归一化存下来，
+               之后 P0 负责平移、P1 负责旋转与缩放，其余顶点只是参考点，形状永远不变。 */
+            const a = pt(0), b = pt(1), sh = o.def.shape;
+            if (!a || !b || !Array.isArray(sh) || sh.length < 3) { o.error = '缺少控制点'; break; }
+            const ux = b.x - a.x, uy = b.y - a.y;
+            if (!(Math.hypot(ux, uy) > 1e-9)) { o.error = '两个控制点重合'; break; }
+            o.data.pts = sh.map(q => ({ x: a.x + q.x * ux - q.y * uy, y: a.y + q.x * uy + q.y * ux }));
+          } else if (o.kind === 'rect') {
+            /* 矩形：两个对角点，边与坐标轴平行（GeoGebra 的 Rectangle 也是轴对齐的） */
+            const a = pt(0), b = pt(1);
+            if (!a || !b) { o.error = '缺少角点'; break; }
+            if (Math.abs(a.x - b.x) < 1e-9 || Math.abs(a.y - b.y) < 1e-9) { o.error = '两个角点不能共线'; break; }
+            o.data.pts = [{ x: a.x, y: a.y }, { x: b.x, y: a.y }, { x: b.x, y: b.y }, { x: a.x, y: b.y }];
+          } else if (o.kind === 'square') {
+            /* 正方形：P0→P1 是一条边，向左侧再补两个顶点 */
+            const a = pt(0), b = pt(1);
+            if (!a || !b) { o.error = '缺少端点'; break; }
+            const vx = b.x - a.x, vy = b.y - a.y;
+            if (!(Math.hypot(vx, vy) > 1e-9)) { o.error = '两个端点重合'; break; }
+            o.data.pts = [a, b, { x: b.x - vy, y: b.y + vx }, { x: a.x - vy, y: a.y + vx }];
+          } else if (o.kind === 'parallelogram') {
+            /* 平行四边形：A、B、C 三点，D = A + C − B */
+            const a = pt(0), b = pt(1), c = pt(2);
+            if (!a || !b || !c) { o.error = '缺少三个顶点'; break; }
+            o.data.pts = [a, b, c, { x: a.x + c.x - b.x, y: a.y + c.y - b.y }];
+          } else if (o.kind === 'freehand') {
+            /* 手绘图形：落笔轨迹直接当顶点，闭合后就是一个多边形 */
+            const raw = (o.def && o.def.pts) || [];
+            if (raw.length < 3) { o.error = '笔迹太短'; break; }
+            o.data.pts = raw;
+          } else if (o.kind === 'stadium') {
+            /* 体育场形（胶囊）：P0、P1 是两端圆心，半径取轴长的一部分，两段用圆弧采样近似 */
+            const a = pt(0), b = pt(1);
+            if (!a || !b) { o.error = '缺少端点'; break; }
+            const dx = b.x - a.x, dy = b.y - a.y, L = Math.hypot(dx, dy);
+            if (!(L > 1e-9)) { o.error = '两个端点重合'; break; }
+            const r = L * (isNum(o.def.w) ? o.def.w : .3);
+            const phi = Math.atan2(dy, dx), seg = 14, out = [];
+            for (let i = 0; i <= seg; i++) { const t = phi - Math.PI / 2 + Math.PI * i / seg; out.push({ x: b.x + r * Math.cos(t), y: b.y + r * Math.sin(t) }); }
+            for (let i = 0; i <= seg; i++) { const t = phi + Math.PI / 2 + Math.PI * i / seg; out.push({ x: a.x + r * Math.cos(t), y: a.y + r * Math.sin(t) }); }
+            o.data.pts = out;
+          } else {
+            const pts = P.map(p => p && p.value).filter(Boolean);
+            if (pts.length < 3) { o.error = '顶点不足'; break; }
+            o.data.pts = pts;
+          }
         }
         o.data.area = Math.abs(GEO.polyArea(o.data.pts));
         break;
@@ -5516,10 +5636,12 @@ function computeObject(o) {
           /* 上方向 = AB 逆时针转 90°，长度按图片的像素高宽比缩放 → 等比不拉伸 */
           V = { x: -U.y * imageAspect(o), y: U.x * imageAspect(o) };
         } else {
-          /* 单点 / 居中：屏幕像素尺寸固定，世界宽高 = 像素数 ÷ 当前缩放比例 */
+          /* 单点 / 居中：屏幕像素尺寸固定，世界宽高 = 像素数 ÷ 当前缩放比例。
+             显式给了 imgW/imgH 就按它（尺规这类「屏幕工具」要的就是指定像素宽，
+             不能被图片自身的固有尺寸顶掉）。 */
           const im = o.img;
-          const pixW = (im && im.naturalWidth) || (isNum(o.def.imgW) ? o.def.imgW : 1);
-          const pixH = (im && im.naturalHeight) || (isNum(o.def.imgH) ? o.def.imgH : 1);
+          const pixW = isNum(o.def.imgW) ? o.def.imgW : ((im && im.naturalWidth) || 1);
+          const pixH = isNum(o.def.imgH) ? o.def.imgH : ((im && im.naturalHeight) || 1);
           const s = state.view.scale || 1, ww = pixW / s, hh = pixH / s;
           U = { x: ww, y: 0 }; V = { x: 0, y: hh };
           O = o.centered ? { x: A.value.x - ww / 2, y: A.value.y - hh / 2 } : A.value;
@@ -6201,6 +6323,18 @@ function applyTransform(o, P) {
     return { x: P[0].value.x + v.x, y: P[0].value.y + v.y };
   }
   if (op === 'dilate') { const k = liveNumId(P, o.def.kRef, o.def.k ?? 2); return GEO.dil(P[0].value, k, ctrOf()); }
+  /* 关于圆的反演：p' = O + R²/|OP|² · (P − O)。
+     反演圆本身拿到了 O 与 R；P 正好落在圆心时结果是无穷远，返回 null 让对象报错而不是画到 (0,0)。 */
+  if (op === 'invert') {
+    const C0 = P[1];
+    if (!C0 || !C0.data || !isNum(C0.data.r) || !C0.data.c) return null;
+    const c0 = C0.data.c, R0 = C0.data.r;
+    const dx = P[0].value.x - c0.x, dy = P[0].value.y - c0.y;
+    const d2 = dx * dx + dy * dy;
+    if (!(d2 > 1e-12) || !(R0 > 1e-12)) return null;
+    const k = R0 * R0 / d2;
+    return { x: c0.x + dx * k, y: c0.y + dy * k };
+  }
   /* 沿垂直直线方向拉伸：p' = 垂足 + k·(p - 垂足) */
   if (op === 'stretch') {
     const L = lineOf(P[1]); if (!L) return null;
@@ -7166,11 +7300,17 @@ function drawTextObject(o) {
   ctx.textAlign = 'left'; ctx.textBaseline = 'top';
   if (o.bgColor) {
     const bx = txtBlockBox(o, lines, base, X, Y, al);
+    /* 便签（Sticky Note）：底色外面还要一圈内边距和一条细边，读起来才像一张贴纸 */
+    const pad = o.def.card ? Math.max(9, base * .78) : 0;
     ctx.fillStyle = o.bgColor;
     ctx.beginPath();
-    if (ctx.roundRect) ctx.roundRect(bx.x, bx.y, bx.w, bx.h, Math.min(8, base * .35));
-    else ctx.rect(bx.x, bx.y, bx.w, bx.h);
+    if (ctx.roundRect) ctx.roundRect(bx.x - pad, bx.y - pad, bx.w + pad * 2, bx.h + pad * 2, o.def.card ? 12 : Math.min(8, base * .35));
+    else ctx.rect(bx.x - pad, bx.y - pad, bx.w + pad * 2, bx.h + pad * 2);
     ctx.fill();
+    if (o.def.card) {
+      ctx.strokeStyle = hexA(rc(o.color), .16); ctx.lineWidth = 1;
+      ctx.stroke();
+    }
   }
   let y = Y;
   for (const L of lines) {
@@ -7739,6 +7879,13 @@ function transformOne(obj, spec, hidden) {
     return finish(mkObj('polygon', { kind: 'vertices', parents: np.map(p => p.id), color: obj.color }));
   }
   if (obj.type === 'circle') {
+    /* 反演不是相似变换，不能只变换圆心和半径：整圆反演后仍是圆，
+       交给 circle 的 'inverted' kind 在 compute 里用三点反演重建 */
+    if (spec.op === 'invert') {
+      const ref = (spec.refs || [])[0];
+      if (!ref || ref.type !== 'circle') throw new Error('反演需要一个圆');
+      return finish(mkObj('circle', { kind: 'inverted', parents: [obj.id, ref.id], aux: hidden, color: obj.color }));
+    }
     const cpt = obj.parents.map(getObj).find(p => p && p.type === 'point');
     if (!cpt || !cpt.value) throw new Error('无法变换该圆');
     const r = (obj.data && isNum(obj.data.r)) ? obj.data.r : (obj.kind === 'centerPoint' ? GEO.dist(cpt.value, (getObj(obj.parents[1]) || {}).value || cpt.value) : 1);
@@ -8265,6 +8412,9 @@ C('Circle', 'Circle(圆心, 半径) / Circle(圆心, 圆上点) / Circle(点1,�
   const c = ensurePoint(a[0]);
   const second = a[1];
   if (second && second.obj && second.obj.type === 'point') return [mkObj('circle', { kind: 'centerPoint', parents: [c.id, second.obj.id], label: ctx.label })];
+  /* 圆规：第二个参数是线段 / 折线 / 圆 / 弧，半径取它的长度（GeoGebra 的 Compasses 工具） */
+  if (second && second.obj && ['segment', 'polyline', 'circle', 'arc', 'sector', 'conic', 'curve'].includes(second.obj.type))
+    return [mkObj('circle', { kind: 'radiusRef', parents: [c.id, second.obj.id], label: ctx.label })];
   if (second && second.obj && (second.obj.type === 'number' || second.obj.type === 'slider')) return [mkObj('circle', { kind: 'centerRadius', parents: [c.id, second.obj.id], def: { r: Math.abs(second.obj.value) }, label: ctx.label })];
   if (second && isNum(second.val)) return [mkObj('circle', { kind: 'centerRadius', parents: [c.id], def: { r: Math.abs(second.val) }, label: ctx.label })];
   if (second && isPt(second.val)) { const p2 = ensurePoint(second); return [mkObj('circle', { kind: 'centerPoint', parents: [c.id, p2.id], label: ctx.label })]; }
@@ -8345,6 +8495,50 @@ C('RegularPolygon', 'RegularPolygon(点1, 点2, 边数)', '正多边形', (a, ct
   const nObj = numObjOf(a[2]);
   return [mkObj('polygon', { kind: 'regular', parents: [p1.id, p2.id].concat(nObj ? [nObj.id] : []), def: { n, nId: nObj ? nObj.id : null }, label: ctx.label || '', fill: true })];
 }, ['正多边形']);
+
+/* ── GeoGebra 平面工具箱的形状类命令 ──
+   Rectangle / Square / Parallelogram / Stadium 都在 polygon 的 compute 里按控制点实时重建，
+   所以拖动控制点形状整体跟着变，不是一次性的死图。 */
+C('Rectangle', 'Rectangle(角点1, 角点2)', '矩形（两个对角点，边与坐标轴平行）', (a, ctx) => {
+  const p1 = ensurePoint(a[0]), p2 = ensurePoint(a[1]);
+  return [mkObj('polygon', { kind: 'rect', parents: [p1.id, p2.id], label: ctx.label || '', fill: true })];
+}, ['矩形']);
+C('Square', 'Square(点1, 点2)', '正方形（两点是一条边）', (a, ctx) => {
+  const p1 = ensurePoint(a[0]), p2 = ensurePoint(a[1]);
+  return [mkObj('polygon', { kind: 'square', parents: [p1.id, p2.id], label: ctx.label || '', fill: true })];
+}, ['正方形']);
+C('Parallelogram', 'Parallelogram(点1, 点2, 点3)', '平行四边形', (a, ctx) => {
+  const p = a.slice(0, 3).map(x => ensurePoint(x));
+  if (p.length < 3) throw new Error('需要 3 个顶点');
+  return [mkObj('polygon', { kind: 'parallelogram', parents: p.map(x => x.id), label: ctx.label || '', fill: true })];
+}, ['平行四边形']);
+C('Stadium', 'Stadium(端点1, 端点2)', '体育场形（胶囊形）', (a, ctx) => {
+  const p1 = ensurePoint(a[0]), p2 = ensurePoint(a[1]);
+  return [mkObj('polygon', { kind: 'stadium', parents: [p1.id, p2.id], def: { w: .3 }, label: ctx.label || '', fill: true })];
+}, ['体育场形', '胶囊形']);
+/* 刚性多边形：形状由前两个点定基准，之后只能整体平移 / 旋转 / 缩放 */
+C('RigidPolygon', 'RigidPolygon(点1, 点2, …)', '刚性多边形（形状固定，可整体拖动 / 旋转 / 缩放）', (a, ctx) => {
+  const p = a.map(x => ensurePoint(x));
+  if (p.length < 3) throw new Error('至少需要 3 个顶点');
+  const pts = p.map(x => x.value);
+  const a0 = pts[0], b0 = pts[1];
+  const ux = b0.x - a0.x, uy = b0.y - a0.y;
+  const L2 = ux * ux + uy * uy;
+  if (!(L2 > 1e-12)) throw new Error('前两个顶点不能重合');
+  const shape = pts.map(q => {
+    const vx = q.x - a0.x, vy = q.y - a0.y;
+    return { x: (vx * ux + vy * uy) / L2, y: (-vx * uy + vy * ux) / L2 };
+  });
+  return [mkObj('polygon', { kind: 'rigid', parents: p.map(x => x.id), def: { shape }, label: ctx.label || '', fill: true })];
+}, ['刚性多边形']);
+/* 向量多边形 = 多边形 + 每条边一个向量（GeoGebra 的 VectorPolygon 就是这样组的） */
+C('VectorPolygon', 'VectorPolygon(点1, 点2, …)', '向量多边形（多边形 + 每条边的向量）', (a, ctx) => {
+  const p = a.map(x => ensurePoint(x));
+  if (p.length < 3) throw new Error('至少需要 3 个顶点');
+  const poly = mkObj('polygon', { kind: 'vertices', parents: p.map(x => x.id), label: ctx.label || '', fill: true });
+  const vecs = p.map((q, i) => mkObj('vector', { kind: 'twoPoints', parents: [q.id, p[(i + 1) % p.length].id], label: '' }));
+  return [poly].concat(vecs);
+}, ['向量多边形']);
 
 C('Side', 'Side(多边形, 第n条边)', '多边形的第 n 条边（线段，1 起）', (a, ctx) => {
   const poly = ensureObj(a[0], ['polygon']);
@@ -10834,15 +11028,17 @@ transformCmd('Translate', 'Translate(对象, 向量)', '平移', 'translate', fa
 transformCmd('Dilate', 'Dilate(对象, 比例, 中心)', '位似', 'dilate', false, ['位似']);
 /* Reflect 的判定：第二参数是点则为中心对称 */
 COMMANDS['reflect'] = {
-  name: 'Reflect', syntax: 'Reflect(对象, 直线或点)', desc: '轴对称 / 中心对称', fn: (a, ctx) => {
+  name: 'Reflect', syntax: 'Reflect(对象, 直线 / 点 / 圆)', desc: '轴对称 / 中心对称 / 关于圆反演', fn: (a, ctx) => {
     const target = (a[0] && a[0].obj) ? a[0].obj : ensurePoint(a[0], true); const ref = ensureObj(a[1]);
-    const op = (ref.type === 'point') ? 'reflectPoint' : 'reflectLine';
+    /* 第三个参数是圆时按「关于圆反演」处理（GeoGebra 的 Mirror at Circle） */
+    const op = (ref.type === 'point') ? 'reflectPoint' : (ref.type === 'circle' ? 'invert' : 'reflectLine');
     const out = transformOne(target, { op, refs: [ref] }, false);
     if (ctx.label) out.label = uniqueLabel(ctx.label, out.id);
     return [out];
   }
 };
 COMMANDS['反射'] = COMMANDS['reflect'];
+COMMANDS['反演'] = COMMANDS['reflect'];
 C('ReflectLine', 'Reflect(对象, 直线)', '关于直线对称', (a, ctx) => {
   const target = ensureObj(a[0]); const ref = ensureObj(a[1]);
   const out = transformOne(target, { op: 'reflectLine', refs: [ref] }, false);
@@ -12190,22 +12386,341 @@ T({
   run: p => { showFunctionInspect(p[0].obj); return []; },
 });
 
+/* ═══════════════════════════════════════════════════════════════════
+   第二批：把 GeoGebra 平面工具箱里还没搬过来的工具补齐。
+   几何本身大多已有命令（Rectangle / Square / VectorPolygon …），
+   这里补的是「工具 → 命令」这一步，以及几类新交互：
+   手绘系（手绘图形 / 手绘函数 / 荧光笔 / 橡皮擦）、标注系（便签 / 思维导图 /
+   量角器 / 直尺 / 三角尺）、对象管理系（复制样式 / 显示隐藏 / 标签 / 列表 / 套索）。
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* ── 复数点：点还是那个点，只是标签按 a + bi 写 ── */
+T({
+  id: 'complex', icon: 'complex', name: '复数点',
+  hint: '单击创建一个复数点，标签按 a + bi 显示；拖动时实部与虚部一起变',
+  steps: [stepPt('单击创建复数点')],
+  run: p => {
+    const q = p[0] && p[0].obj;
+    if (!q || q.type !== 'point') return [];
+    q.def = Object.assign({}, q.def, { complex: true });
+    q.kind = q.kind === 'free' ? 'free' : q.kind;
+    return [q];
+  },
+});
+
+/* ── 圆规 / 关于圆的反演 ── */
+T({
+  id: 'compass', icon: 'compass', name: '圆规',
+  hint: '先单击圆心，再单击一条线段或一个圆：半径取它的长度 / 半径，拖动它圆跟着变',
+  steps: [stepPt('选择圆心'), stepObj('选择半径来源（线段 / 圆）', ['segment', 'polyline', 'circle', 'arc', 'sector'])],
+  run: p => execStr('Circle(' + pickRef(p[0]) + ', ' + lb(p[1].obj) + ')'),
+});
+T({
+  id: 'invert', icon: 'invert', name: '关于圆反演',
+  hint: '先选要反演的对象，再选反演圆；点反演成点，圆反演成圆',
+  steps: [stepObj('选择要反演的对象'), stepObj('选择反演圆', ['circle'])],
+  run: p => execStr('Reflect(' + lb(p[0].obj) + ', ' + lb(p[1].obj) + ')'),
+});
+
+/* ── 形状组：都是两点 / 三点定形状，控制点可拖 ── */
+T({ id: 'rectangle', icon: 'rectangle', name: '矩形', hint: '单击两个对角点，边与坐标轴平行', steps: [stepPt('选择角点 1'), stepPt('选择角点 2（对角）')], run: p => execStr('Rectangle(' + pickRef(p[0]) + ', ' + pickRef(p[1]) + ')') });
+T({ id: 'squareShape', icon: 'square', name: '正方形', hint: '两点是一条边，向左侧补齐另外两点', steps: [stepPt('选择一边的起点'), stepPt('选择一边的终点')], run: p => execStr('Square(' + pickRef(p[0]) + ', ' + pickRef(p[1]) + ')') });
+T({ id: 'parallelogram', icon: 'parallelogram', name: '平行四边形', steps: [stepPt('顶点 1'), stepPt('顶点 2'), stepPt('顶点 3')], run: p => execStr('Parallelogram(' + p.map(x => pickRef(x)).join(', ') + ')') });
+T({ id: 'stadium', icon: 'stadium', name: '体育场形', hint: '两个端点定胶囊的轴，两端自动补半圆', steps: [stepPt('选择端点 1'), stepPt('选择端点 2')], run: p => execStr('Stadium(' + pickRef(p[0]) + ', ' + pickRef(p[1]) + ')') });
+T({ id: 'rigidPoly', icon: 'rigidPoly', name: '刚性多边形', hint: '依次单击各顶点：形状被锁死，之后可以整体平移、旋转、缩放', repeat: true, min: 3, steps: [stepPt('依次单击各顶点，按 Enter 完成')], run: p => execStr('RigidPolygon(' + p.map(x => pickRef(x)).join(', ') + ')') });
+T({ id: 'vectorPoly', icon: 'vectorPoly', name: '向量多边形', hint: '依次单击各顶点：除了多边形，每条边还会生成一个向量', repeat: true, min: 3, steps: [stepPt('依次单击各顶点，按 Enter 完成')], run: p => execStr('VectorPolygon(' + p.map(x => pickRef(x)).join(', ') + ')') });
+
+/* ── 手绘组：kind 都是 pen，收笔时按当前工具决定生成什么 ── */
+T({ id: 'freeShape', icon: 'freeShape', name: '手绘图形', kind: 'pen', hint: '按住拖动画一个闭合形状，松开后自动收成一个多边形' });
+T({ id: 'freeFunc', icon: 'freeFunc', name: '手绘函数', kind: 'pen', hint: '按住拖动随手画一段曲线，松开后拟合出一条函数' });
+T({ id: 'highlighter', icon: 'highlighter', name: '荧光笔', kind: 'pen', hint: '按住拖动涂一笔高亮，颜色半透明、不遮挡底下的图' });
+T({ id: 'eraser', icon: 'eraser', name: '橡皮擦', kind: 'pen', hint: '按住拖动擦掉碰到的笔迹（只擦手绘 / 荧光笔，不动几何对象）' });
+
+/* ── 标注组 ── */
+T({
+  id: 'sticky', icon: 'sticky', name: '便签',
+  hint: '单击放置位置，再输入内容；便签带底色，不会被图盖住',
+  steps: [stepPt('单击放置位置'), stepText('便签内容', '在这里写点什么')],
+  run: p => {
+    const dark = document.body.classList.contains('dark');
+    const o = createObject('text', {
+      kind: 'plain', value: String(p[1].text == null ? '' : p[1].text),
+      def: { pos: p[0].value, card: true, align: 'left' },
+      color: dark ? '#ffe9a8' : '#6b4b00',
+    });
+    o.bgColor = dark ? 'rgba(255,214,10,.16)' : 'rgba(255,214,10,.34)';
+    addObject(o, true);
+    return [o];
+  },
+});
+T({
+  id: 'mindMap', icon: 'mindmap', name: '思维导图',
+  hint: '单击中心位置，先填主题，再用逗号分隔写出一级分支',
+  steps: [stepPt('单击中心位置'), stepText('中心主题', '主题'), stepText('一级分支（用逗号分隔）', '分支 1, 分支 2, 分支 3')],
+  run: p => {
+    const c = p[0].value;
+    const rootTxt = String(p[1].text == null ? '主题' : p[1].text).trim() || '主题';
+    const kids = String(p[2].text == null ? '' : p[2].text).split(/[,，、;；]/).map(s => s.trim()).filter(Boolean);
+    const out = [];
+    /* 每个节点用一个隐藏点定位：文本与连线都挂在这个点上，拖动点整体就跟着走 */
+    const mkNode = (pos, txt, bg, fg) => {
+      const pt = makePoint(pos, '', { aux: true, visible: false, showLabel: false });
+      const o = createObject('text', { kind: 'plain', value: txt, parents: [pt.id], def: { card: true, align: 'center' }, color: fg });
+      o.bgColor = bg; addObject(o, true);
+      return { pt, o };
+    };
+    const root = mkNode(c, rootTxt, '#0a6ed1', '#fff');
+    out.push(root.o);
+    const R = 1.9;
+    kids.forEach((t, i) => {
+      const th = -Math.PI / 2 + (kids.length === 1 ? 0 : i * 2 * Math.PI / kids.length);
+      const q = { x: c.x + R * Math.cos(th), y: c.y + R * Math.sin(th) };
+      const node = mkNode(q, t, document.body.classList.contains('dark') ? 'rgba(255,255,255,.14)' : 'rgba(255,255,255,.92)', 'inherit');
+      out.push(node.o);
+      out.push(mkObj('segment', { kind: 'twoPoints', parents: [root.pt.id, node.pt.id], lineWidth: 2 }));
+    });
+    return out;
+  },
+});
+T({
+  id: 'equation', icon: 'equation', name: '方程',
+  hint: '输入一个方程，例如 x^2+y^2=4、y=2x+1、x^2/4-y^2/9=1',
+  steps: [stepText('输入方程', 'x^2+y^2=4')],
+  run: p => {
+    const src = String(p[0].text == null ? '' : p[0].text).trim();
+    if (!src) throw new Error('请输入方程');
+    if (!src.includes('=')) throw new Error('方程里要有等号，例如 x^2+y^2=4');
+    return execStr(src);
+  },
+});
+
+/* ── 对象管理组 ── */
+T({
+  id: 'copyStyle', icon: 'copyStyle', name: '复制样式',
+  hint: '先单击样式来源，再单击要应用的对象：颜色 / 线宽 / 线型 / 点径 / 填充一次带过去',
+  steps: [stepObj('选择样式来源'), stepObj('选择要应用的对象')],
+  run: p => {
+    const a = p[0].obj, b = p[1].obj;
+    if (!a || !b) return [];
+    ['color', 'lineWidth', 'lineStyle', 'pointSize', 'fill', 'fillOpacity', 'lineOpacity'].forEach(k => {
+      if (a[k] !== undefined) b[k] = a[k];
+    });
+    toast('已把样式应用到 ' + lb(b), 'ok', 1600);
+    return [];
+  },
+});
+T({
+  id: 'hideObject', icon: 'eyeOff', name: '显示 / 隐藏对象',
+  hint: '单击对象切换显示状态；隐藏后仍可在代数区选中',
+  steps: [stepObj('选择要显示 / 隐藏的对象')],
+  run: p => { const o = p[0].obj; o.visible = o.visible === false; return []; },
+});
+T({
+  id: 'hideLabel', icon: 'labelOff', name: '显示 / 隐藏标签',
+  hint: '单击对象切换标签显示',
+  steps: [stepObj('选择对象')],
+  run: p => { const o = p[0].obj; o.showLabel = o.showLabel === false; return []; },
+});
+T({
+  id: 'createList', icon: 'listIcon', name: '创建列表',
+  hint: '依次单击要放进列表的对象，按 Enter 完成',
+  repeat: true, min: 1,
+  steps: [stepObj('依次选择对象，按 Enter 完成')],
+  run: p => {
+    const objs = p.map(x => x.obj).filter(Boolean);
+    if (!objs.length) throw new Error('至少选择一个对象');
+    const o = createObject('list', { kind: 'raw', parents: objs.map(x => x.id), value: objs.map(x => x.label) });
+    addObject(o, true);
+    return [o];
+  },
+});
+/* 套索选择：自由画一圈，圈里的对象全部选中 */
+T({ id: 'lasso', icon: 'lasso', name: '套索选择', kind: 'lasso', hint: '按住拖动画一个闭合圈，松开后选中圈住的对象' });
+
+/* ── 尺规游标：图片对象，可拖两个角点缩放、整体拖动 ── */
+function svgDataUri(s) { return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(s); }
+const PROTRACTOR_SVG = svgDataUri(
+  '<svg xmlns="http://www.w3.org/2000/svg" width="240" height="136" viewBox="0 0 240 136">' +
+  '<path d="M12 128a108 108 0 0 1 216 0z" fill="#ffffff" fill-opacity=".82" stroke="#334155" stroke-width="1.6"/>' +
+  '<path d="M44 128a76 76 0 0 1 152 0" fill="none" stroke="#334155" stroke-width="1" opacity=".55"/>' +
+  Array.from({ length: 37 }, (_, i) => {
+    const a = Math.PI - i * Math.PI / 36, long = i % 6 === 0, mid = i % 3 === 0;
+    const r0 = mid ? 100 : 108, r1 = 108;
+    return '<line x1="' + (120 + r0 * Math.cos(a)).toFixed(1) + '" y1="' + (128 - r0 * Math.sin(a)).toFixed(1) +
+      '" x2="' + (120 + r1 * Math.cos(a)).toFixed(1) + '" y2="' + (128 - r1 * Math.sin(a)).toFixed(1) +
+      '" stroke="#334155" stroke-width="' + (long ? 1.4 : .8) + '"/>';
+  }).join('') +
+  Array.from({ length: 7 }, (_, i) => {
+    const a = Math.PI - i * Math.PI / 6, x = 120 + 88 * Math.cos(a), y = 128 - 88 * Math.sin(a);
+    return '<text x="' + x.toFixed(1) + '" y="' + (y + 4).toFixed(1) + '" font-size="8" fill="#475569" text-anchor="middle" font-family="sans-serif">' + (i * 30) + '</text>';
+  }).join('') +
+  '<path d="M112 128h16M120 120v16" stroke="#475569" stroke-width="1.2"/></svg>');
+const RULER_SVG = svgDataUri(
+  '<svg xmlns="http://www.w3.org/2000/svg" width="240" height="64" viewBox="0 0 240 64">' +
+  '<rect x="2" y="6" width="236" height="52" rx="4" fill="#ffffff" fill-opacity=".86" stroke="#334155" stroke-width="1.6"/>' +
+  Array.from({ length: 25 }, (_, i) => {
+    const x = 4 + i * 9.67, long = i % 5 === 0;
+    return '<line x1="' + x.toFixed(1) + '" y1="6" x2="' + x.toFixed(1) + '" y2="' + (long ? 22 : 14) + '" stroke="#334155" stroke-width="' + (long ? 1.2 : .8) + '"/>';
+  }).join('') +
+  Array.from({ length: 5 }, (_, i) => '<text x="' + (8 + i * 48.35).toFixed(1) + '" y="34" font-size="9" fill="#475569" font-family="sans-serif">' + i + '</text>').join('') +
+  '</svg>');
+const TRIANGLE_RULER_SVG = svgDataUri(
+  '<svg xmlns="http://www.w3.org/2000/svg" width="200" height="130" viewBox="0 0 200 130">' +
+  '<path d="M8 122h184L8 8z" fill="#ffffff" fill-opacity=".82" stroke="#334155" stroke-width="1.6"/>' +
+  '<path d="M8 104h18M8 86h18M8 68h26M8 50h18M8 32h18" stroke="#334155" stroke-width="1" opacity=".7"/>' +
+  '<text x="30" y="116" font-size="8" fill="#475569" font-family="sans-serif">0</text>' +
+  '<text x="164" y="118" font-size="8" fill="#475569" font-family="sans-serif">90°</text>' +
+  '</svg>');
+function placeRulerOverlay(src, c, pxW, aspect) {
+  /* 尺规是「屏幕工具」：按像素定尺寸（kind='pixel' + centered），缩放视图时大小不变，
+     拖动中间的点整体移动 —— 和 GeoGebra 里量角器 / 直尺的手感一致。 */
+  const pt = makePoint({ x: c.x, y: c.y }, '', { showLabel: false, pointSize: 5 });
+  const o = createObject('image', {
+    kind: 'pixel', parents: [pt.id], centered: true,
+    def: { src, imgW: pxW, imgH: Math.round(pxW * aspect) }, fill: true, fillOpacity: 1,
+  });
+  addObject(o, true);
+  return o;
+}
+
+/* ── 手绘辅助：降采样 / 拟合 / 擦除 / 套索 ── */
+function thinStroke(pts, step) {
+  const out = [];
+  for (let i = 0; i < pts.length; i += Math.max(1, step | 0)) out.push(pts[i]);
+  if (pts.length && out[out.length - 1] !== pts[pts.length - 1]) out.push(pts[pts.length - 1]);
+  if (out.length > 2 && GEO.dist(out[0], out[out.length - 1]) * state.view.scale < 2) out.pop();
+  return out;
+}
+/* 高斯消元解小型线性方程组（多项式拟合的法方程） */
+function solveLinear(A, b) {
+  const n = b.length;
+  for (let i = 0; i < n; i++) {
+    let p = i;
+    for (let r = i + 1; r < n; r++) if (Math.abs(A[r][i]) > Math.abs(A[p][i])) p = r;
+    if (Math.abs(A[p][i]) < 1e-14) return null;
+    const t = A[i]; A[i] = A[p]; A[p] = t;
+    const tb = b[i]; b[i] = b[p]; b[p] = tb;
+    for (let r = i + 1; r < n; r++) {
+      const f = A[r][i] / A[i][i];
+      if (!f) continue;
+      for (let c = i; c < n; c++) A[r][c] -= f * A[i][c];
+      b[r] -= f * b[i];
+    }
+  }
+  const x = new Array(n).fill(0);
+  for (let i = n - 1; i >= 0; i--) {
+    let s = b[i];
+    for (let j = i + 1; j < n; j++) s -= A[i][j] * x[j];
+    x[i] = s / A[i][i];
+  }
+  return x;
+}
+/* 手绘函数：把笔迹按 x 分桶取平均，再最小二乘拟合一条多项式，落到真正的函数对象上 */
+function freehandFunction(pts) {
+  const bucket = new Map();
+  for (const p of pts) {
+    const k = Math.round(p.x * 50);
+    const cur = bucket.get(k);
+    if (!cur) bucket.set(k, { x: p.x, y: p.y, n: 1 });
+    else { cur.x += p.x; cur.y += p.y; cur.n++; }
+  }
+  const arr = Array.from(bucket.values()).map(q => ({ x: q.x / q.n, y: q.y / q.n })).sort((a, b) => a.x - b.x);
+  if (arr.length < 4) throw new Error('笔迹太短，画一段更长的曲线再松手');
+  const deg = Math.min(6, arr.length - 1);
+  const x0 = arr[0].x, span = Math.max(1e-9, arr[arr.length - 1].x - x0);
+  const us = arr.map(q => (q.x - x0) / span);
+  const n = deg + 1;
+  const A = Array.from({ length: n }, () => new Array(n).fill(0));
+  const b = new Array(n).fill(0);
+  arr.forEach((q, i) => {
+    const pw = [1];
+    for (let j = 1; j < n; j++) pw.push(pw[j - 1] * us[i]);
+    for (let r = 0; r < n; r++) {
+      b[r] += pw[r] * q.y;
+      for (let c = 0; c < n; c++) A[r][c] += pw[r] * pw[c];
+    }
+  });
+  const co = solveLinear(A, b);
+  if (!co) throw new Error('这条笔迹拟合不出函数，画得平缓一点');
+  const t = '((x-(' + fmt(x0, 6) + '))/(' + fmt(span, 6) + '))';
+  const terms = [];
+  co.forEach((c, i) => {
+    if (Math.abs(c) < 1e-7) return;
+    terms.push(fmt(c, 6) + (i ? '*' + (i === 1 ? t : t + '^' + i) : ''));
+  });
+  if (!terms.length) throw new Error('这条笔迹拟合不出函数');
+  const r = executeLine('y = ' + terms.join(' + '));
+  return r.created && r.created[0];
+}
+function eraseStrokes(pts) {
+  if (!pts.length) return;
+  const rad = 9 / state.view.scale;
+  const kill = new Set();
+  for (const o of state.objects) {
+    if (o.type !== 'pen' || !o.data || !Array.isArray(o.data.pts)) continue;
+    if (o.data.pts.some(q => pts.some(p => GEO.dist(q, p) < rad))) kill.add(o.id);
+  }
+  if (!kill.size) { toast('没有擦到笔迹（橡皮只擦手绘 / 荧光笔）', 'err', 1800); return; }
+  pushUndo();
+  state.objects = state.objects.filter(o => !kill.has(o.id));
+  state.selection = state.selection.filter(id => !kill.has(id));
+  recomputeAll(); refreshAlgebra();
+  toast('已擦掉 ' + kill.size + ' 条笔迹', 'ok', 1400);
+}
+function pointInPoly(p, poly) {
+  let inside = false;
+  for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+    const xi = poly[i].x, yi = poly[i].y, xj = poly[j].x, yj = poly[j].y;
+    if (((yi > p.y) !== (yj > p.y)) && (p.x < (xj - xi) * (p.y - yi) / (yj - yi) + xi)) inside = !inside;
+  }
+  return inside;
+}
+/* 对象的代表点：点用自己，折线 / 多边形取几个采样顶点，圆取圆心，线取两端 */
+function objAnchorPts(o) {
+  if (o.type === 'point' && isPt(o.value)) return [o.value];
+  if (o.data && Array.isArray(o.data.pts) && o.data.pts.length) {
+    const a = o.data.pts;
+    return [a[0], a[(a.length / 2) | 0], a[a.length - 1]];
+  }
+  if (o.data && o.data.c && isNum(o.data.r)) return [o.data.c];
+  if (o.data && o.data.p && o.data.q) return [o.data.p, o.data.q];
+  if (o.data && o.data.c) return [o.data.c];
+  return [];
+}
+function lassoSelect(pts) {
+  const ring = thinStroke(pts, 1);
+  if (ring.length < 3) return;
+  const hit = [];
+  for (const o of state.objects) {
+    if (!shown(o) || o.aux || layerHidden(o)) continue;
+    const aps = objAnchorPts(o);
+    if (aps.length && aps.every(p => pointInPoly(p, ring))) hit.push(o);
+  }
+  state.selection = hit.map(o => o.id);
+  refreshAlgebra(); draw();
+  toast(hit.length ? '已选中 ' + hit.length + ' 个对象' : '圈里没有对象', hit.length ? 'ok' : 'err', 1400);
+}
+
+T({ id: 'protractor', icon: 'protractor', name: '量角器', hint: '单击放置量角器：尺寸固定，拖动圆心点移动', steps: [stepPt('单击放置量角器')], run: p => [placeRulerOverlay(PROTRACTOR_SVG, p[0].value, 260, 136 / 240)] });
+T({ id: 'ruler', icon: 'ruler', name: '直尺', hint: '单击放置直尺：尺寸固定，拖动它移动', steps: [stepPt('单击放置直尺')], run: p => [placeRulerOverlay(RULER_SVG, p[0].value, 280, 64 / 240)] });
+T({ id: 'triangleRuler', icon: 'triangleRuler', name: '三角尺', hint: '单击放置 45° 三角板：尺寸固定，拖动它移动', steps: [stepPt('单击放置三角尺')], run: p => [placeRulerOverlay(TRIANGLE_RULER_SVG, p[0].value, 220, 130 / 200)] });
+
 const TOOLGROUPS = [
   /* 分组照 GeoGebra 工具箱的次序排：移动 → 点 → 直线 → 特殊直线 → 多边形 →
      圆与弧 → 圆锥曲线 → 度量 → 变换 → 函数 → 文本/媒体 → 其它 → 代数。
      每组第一个是「组脸」，点它展开浮出条选组内其它工具。 */
-  ['move', 'pan', 'zoom', 'zoomOut', 'select'],
-  ['point', 'pointOn', 'attach', 'intersect', 'midpoint', 'centroid', 'incenter'],
+  ['move', 'pan', 'zoom', 'zoomOut', 'select', 'lasso'],
+  ['point', 'pointOn', 'attach', 'intersect', 'midpoint', 'centroid', 'incenter', 'complex'],
   ['line', 'segment', 'segmentFix', 'ray', 'vector', 'vectorFromPoint', 'polyline'],
   ['perp', 'parallel', 'perpBisector', 'angleBisector', 'tangent', 'polar', 'diameter', 'bestFitLine'],
-  ['polygon', 'regularPolygon'],
-  ['circleCP', 'circleCR', 'circle3', 'semicircle', 'arc', 'circumArc', 'sector', 'circumSector', 'incircle'],
+  ['polygon', 'regularPolygon', 'rectangle', 'squareShape', 'parallelogram', 'stadium', 'rigidPoly', 'vectorPoly'],
+  ['circleCP', 'circleCR', 'circle3', 'semicircle', 'arc', 'circumArc', 'sector', 'circumSector', 'incircle', 'compass'],
   ['ellipse', 'hyperbola', 'parabola', 'conic5', 'curve'],
-  ['angle', 'angleFix', 'distance', 'area', 'slope', 'relation'],
-  ['reflectLine', 'reflectPoint', 'rotate', 'translate', 'dilate'],
+  ['angle', 'angleFix', 'distance', 'area', 'slope', 'relation', 'protractor', 'ruler', 'triangleRuler'],
+  ['reflectLine', 'reflectPoint', 'invert', 'rotate', 'translate', 'dilate'],
   ['functionPlot', 'fnLinear', 'fnQuadratic', 'fnCubic', 'fnExp', 'fnLog', 'fnPow', 'fnSin', 'inspect', 'zeroes', 'extremum', 'turningPoint', 'derivative', 'integral'],
-  ['text', 'image', 'button', 'inputBox', 'dropdown', 'slider', 'checkbox'],
-  ['locus', 'pen', 'animate', 'deleteTool'],
+  ['text', 'sticky', 'mindMap', 'equation', 'image', 'button', 'inputBox', 'dropdown', 'slider', 'checkbox'],
+  ['locus', 'pen', 'freeShape', 'freeFunc', 'highlighter', 'eraser', 'copyStyle', 'hideObject', 'hideLabel', 'createList', 'animate', 'deleteTool'],
   ['solve', 'factor', 'expand', 'simplify'],
 ];
 /* 工具栏各组的名字：浮出条的小标题与帮助页都用它。必须定义在 TOOLGROUPS 旁边，
@@ -12539,7 +13054,7 @@ function bindCanvas() {
     if (kind === 'zoom') { zoomAt(px, py, e.altKey ? .8 : 1.25); return; }
     if (kind === 'zoomOut') { zoomAt(px, py, e.altKey ? 1.25 : .8); return; }
     /* 手绘工具：按下开始落笔（mousemove 收点，mouseup 成形） */
-    if (kind === 'pen') { penDraw = { pts: [toWorld(px, py)] }; draw(); return; }
+    if (kind === 'pen' || kind === 'lasso') { penDraw = { pts: [toWorld(px, py)], lasso: kind === 'lasso' }; draw(); return; }
     if (kind === 'move' || kind === 'select') {
       /* 画布控件（按钮 / 输入框 / 下拉列表）：按下可拖动位置，松开时若几乎没动就当作「单击」 */
       const hw = kind === 'move' ? widgetHit(px, py) : null;
@@ -12634,8 +13149,15 @@ function bindCanvas() {
         const ps = penDraw.pts;
         ctx.save(); ctx.beginPath();
         ps.forEach((p, i) => i ? ctx.lineTo(toScreenX(p.x), toScreenY(p.y)) : ctx.moveTo(toScreenX(p.x), toScreenY(p.y)));
-        ctx.lineWidth = 3.4; ctx.lineJoin = 'round'; ctx.lineCap = 'round';
-        ctx.strokeStyle = cssVar('--accent'); ctx.stroke(); ctx.restore();
+        if (penDraw.lasso) {
+          ctx.setLineDash([5, 4]); ctx.lineWidth = 1.6;
+          ctx.strokeStyle = cssVar('--accent');
+        } else {
+          ctx.lineWidth = state.tool === 'highlighter' ? 14 : (state.tool === 'eraser' ? 10 : 3.4);
+          ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+          ctx.strokeStyle = state.tool === 'highlighter' ? 'rgba(255,214,10,.45)' : cssVar('--accent');
+        }
+        ctx.stroke(); ctx.restore();
       }
       return;
     }
@@ -12698,16 +13220,41 @@ function bindCanvas() {
   });
   window.addEventListener('mouseup', e => {
     stopAutoPan();
-    /* 手绘收笔：点数够就成一个手绘对象 */
+    /* 手绘收笔：按当前工具决定生成什么 */
     if (penDraw) {
-      const pts = penDraw.pts; penDraw = null;
-      if (pts.length >= 2) {
-        pushUndo();
-        const o = createObject('pen', { kind: 'stroke', label: '', def: { pts }, value: null });
-        addObject(o, true);
-        recomputeAll(); refreshAlgebra();
-        toast('已手绘一条笔迹', 'ok', 1400);
-      }
+      const pts = penDraw.pts, wasLasso = penDraw.lasso; penDraw = null;
+      const tid = state.tool;
+      try {
+        if (wasLasso || tid === 'lasso') {
+          lassoSelect(pts);
+        } else if (tid === 'eraser') {
+          eraseStrokes(pts);
+        } else if (tid === 'highlighter') {
+          if (pts.length >= 2) {
+            pushUndo();
+            const o = createObject('pen', { kind: 'stroke', label: '', def: { pts }, value: null, color: '#ffd60a', lineWidth: 14, lineOpacity: .38 });
+            addObject(o, true); recomputeAll(); refreshAlgebra();
+            toast('已涂一笔高亮', 'ok', 1400);
+          }
+        } else if (tid === 'freeShape') {
+          const ring = thinStroke(pts, 4);
+          if (ring.length >= 3) {
+            pushUndo();
+            const o = createObject('polygon', { kind: 'freehand', def: { pts: ring }, label: '', fill: true });
+            addObject(o, true); recomputeAll(); refreshAlgebra();
+            toast('已生成手绘图形', 'ok', 1400);
+          } else toast('笔迹太短，画大一点再松手', 'err', 1800);
+        } else if (tid === 'freeFunc') {
+          const made = freehandFunction(pts);
+          if (made) toast('已拟合出一条函数', 'ok', 1600);
+        } else if (pts.length >= 2) {
+          pushUndo();
+          const o = createObject('pen', { kind: 'stroke', label: '', def: { pts }, value: null });
+          addObject(o, true);
+          recomputeAll(); refreshAlgebra();
+          toast('已手绘一条笔迹', 'ok', 1400);
+        }
+      } catch (e) { toast(e.message, 'err', 2600); }
       draw();
       return;
     }
