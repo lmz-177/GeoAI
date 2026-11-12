@@ -21,7 +21,7 @@
   --panel-3:rgba(120,120,128,.14); --hover:rgba(120,120,128,.13); --active:rgba(0,98,204,.14);
   --border:rgba(60,60,67,.13); --border-2:rgba(60,60,67,.26);
   --text:#1c1c1e; --text-2:#56565c; --text-3:#66666b;
-  --canvas:#ffffff; --grid:#e8edf4; --grid-sub:#f3f6fa; --axis:#b3b3b8;
+  --canvas:#ffffff; --grid:#e8edf4; --grid-sub:#f3f6fa; --axis:#b3b3b8; --axis-num:#66666b;
   --danger:#ff3b30; --ok:#34c759; --warn:#ff9500; --purple:#af52de;
   /* 文字版的语义色：品牌色/系统色直接当正文色时对比度不够，单独给一组深色 */
   --danger-ink:#c3271e; --ok-ink:#1f7a36; --warn-ink:#8a5300;
@@ -81,7 +81,7 @@ body.dark{
   --panel-3:rgba(120,120,128,.26); --hover:rgba(120,120,128,.22); --active:rgba(10,132,255,.26);
   --border:rgba(255,255,255,.12); --border-2:rgba(255,255,255,.22);
   --text:#f2f2f7; --text-2:#c2c2c7; --text-3:#9a9aa0;
-  --canvas:#0b0d11; --grid:#232830; --grid-sub:#171b21; --axis:#5a5a5e;
+  --canvas:#0b0d11; --grid:#232830; --grid-sub:#171b21; --axis:#5a5a5e; --axis-num:#82828a;
   --accent:#0a84ff; --accent-h:#3a9bff; --accent-dim:rgba(10,132,255,.18); --accent-soft:rgba(10,132,255,.28);
   --danger:#ff453a; --ok:#30d158; --warn:#ff9f0a; --purple:#bf5af2;
   --danger-ink:#ff6b61; --ok-ink:#4cd964; --warn-ink:#ffb340;
@@ -7749,7 +7749,9 @@ function drawAxes(W, H) {
   ctx.beginPath(); ctx.moveTo(x0, 1); ctx.lineTo(x0 - 4.5, 10); ctx.lineTo(x0 + 4.5, 10); ctx.fill();
   // 刻度
   ctx.font = (SET.fontSize - 1) + 'px ' + cssVar('--font');
-  ctx.fillStyle = cssVar('--text-3'); ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+  /* 刻度数字单独一档颜色：直接借 --text-3 的话，深色模式下 #9a9aa0 在纯黑画布上
+     会显得发白，比轴线本身还亮。--axis-num 深色下压到 #82828a，和轴线同一层。 */
+  ctx.fillStyle = cssVar('--axis-num'); ctx.textAlign = 'center'; ctx.textBaseline = 'top';
   const x0w = toWorldX(0), x1w = toWorldX(W);
   for (let x = Math.floor(x0w / step) * step; x <= x1w; x += step) {
     if (Math.abs(x) < step / 2) continue;
@@ -7766,11 +7768,12 @@ function drawAxes(W, H) {
     if (SET.showGridNumbers) ctx.fillText(fmt(y, 6), clamp(x0 - 7, 4, W - 2), Y);
   }
   ctx.textAlign = 'right'; ctx.textBaseline = 'top';
-  ctx.fillStyle = cssVar('--text-2'); ctx.font = 'italic 600 ' + (SET.fontSize + 1) + 'px ' + cssVar('--font');
+  /* x / y / O 和刻度数字共用一档颜色：深色下不再比轴线亮出好几级 */
+  ctx.fillStyle = cssVar('--axis-num'); ctx.font = 'italic 600 ' + (SET.fontSize + 1) + 'px ' + cssVar('--font');
   ctx.fillText('x', W - 14, clamp(y0 + 6, 0, H - 16));
   ctx.textAlign = 'left'; ctx.textBaseline = 'bottom';
   ctx.fillText('y', clamp(x0 + 6, 2, W - 14), 14);
-  ctx.fillStyle = cssVar('--text-2'); ctx.textAlign = 'right'; ctx.textBaseline = 'top';
+  ctx.textAlign = 'right'; ctx.textBaseline = 'top';
   ctx.font = (SET.fontSize - 1) + 'px ' + cssVar('--font');
   ctx.fillText('O', x0 - 4, y0 + 3);
 }
