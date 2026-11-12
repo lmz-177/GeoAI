@@ -2007,6 +2007,77 @@ body.dark .layer-pop,body.dark .fmenu,body.dark .ai-sheet,
 body.dark .modal,body.dark .cmd-search,body.dark .toolwrap{
   background-image:linear-gradient(180deg,rgba(255,255,255,.08),rgba(255,255,255,.01) 46%,rgba(255,255,255,0) 72%);
 }
+
+/* ===================================================================
+   浮层动效细节
+   参考 reactbits.dev 的 FadeContent / SpotlightCard / AnimatedList / GlareHover，
+   只取「退场、聚光、级联、扫光」四种交互语言，重写成与液态玻璃一致的克制版本。
+   =================================================================== */
+/* ── 1. 退场 ──
+   以前关闭只是把 .on 摘掉，display:none 立刻生效，弹窗是「啪」地消失的。
+   现在关闭逻辑照旧同步改状态（aria / 测试不受影响），再由 .closing 接管显示，
+   播一段 130~190ms 的退场动画；动画结束（或兜底定时器到点）才真正隐藏。 */
+@keyframes fadeOut{to{opacity:0}}
+@keyframes modalOut{to{opacity:0;transform:translateY(10px) scale(.965)}}
+@keyframes popOut{to{opacity:0;transform:scale(.94)}}
+@keyframes lpOut{to{opacity:0;transform:translateY(8px) scale(.97)}}
+@keyframes kbOut{to{opacity:0;transform:translateY(8px) scale(.985)}}
+@keyframes cardOut{to{opacity:0;transform:translateY(6px) scale(.97)}}
+.backdrop.closing{display:flex;pointer-events:none;animation:fadeOut .16s var(--ease) forwards}
+.backdrop.closing .modal{animation:modalOut .19s var(--ease) forwards}
+.ctx.closing{display:block;pointer-events:none;transform-origin:0 0;animation:popOut .13s var(--ease) forwards}
+.layer-pop.closing{display:flex;pointer-events:none;animation:lpOut .16s var(--ease) forwards}
+.mathkb.closing{display:block;pointer-events:none;animation:kbOut .14s var(--ease) forwards}
+.ask-pop.closing{display:block;pointer-events:none;animation:cardOut .14s var(--ease) forwards}
+.eff-pop.closing{display:block;pointer-events:none;animation:cardOut .14s var(--ease) forwards}
+
+/* ── 2. 聚光（SpotlightCard）──
+   指针在模态框里移动时，一圈柔光跟着走。白底弹窗上用白色高光看不出来，
+   所以浅色模式取的是一层极淡的品牌蓝（5% 上下），像玻璃把环境色映进来；
+   深色模式才用白光。放在最上层但不吃事件。 */
+.modal{position:relative}
+.modal::after{
+  content:'';position:absolute;inset:0;border-radius:inherit;pointer-events:none;z-index:3;
+  background:radial-gradient(320px circle at var(--mx,50%) var(--my,0%),rgba(0,98,204,.055),transparent 64%);
+  opacity:0;transition:opacity .3s ease;
+}
+.modal:hover::after{opacity:1}
+body.dark .modal::after{
+  background:radial-gradient(320px circle at var(--mx,50%) var(--my,0%),rgba(255,255,255,.10),transparent 64%);
+}
+
+/* ── 3. 级联进场（AnimatedList）──
+   右键菜单 / 追问卡里的条目按行错开 18~35ms 落下。容器本身已有缩放动画，
+   条目只补 3px 位移，轻到几乎察觉不到，但打开的一瞬间不再是一整块出现。 */
+@keyframes itemIn{from{opacity:0;transform:translateY(3px)}to{opacity:1;transform:none}}
+.ctx.on>*{animation:itemIn .2s var(--ease-out) both}
+.ctx.on>*:nth-child(2){animation-delay:.018s}
+.ctx.on>*:nth-child(3){animation-delay:.036s}
+.ctx.on>*:nth-child(4){animation-delay:.054s}
+.ctx.on>*:nth-child(5){animation-delay:.072s}
+.ctx.on>*:nth-child(6){animation-delay:.09s}
+.ctx.on>*:nth-child(7){animation-delay:.108s}
+.ctx.on>*:nth-child(8){animation-delay:.126s}
+.ctx.on>*:nth-child(n+9){animation-delay:.144s}
+.ask-pop.on .ask-opt{animation:itemIn .2s var(--ease-out) both}
+.ask-pop.on .ask-opt:nth-child(2){animation-delay:.04s}
+.ask-pop.on .ask-opt:nth-child(3){animation-delay:.08s}
+.ask-pop.on .ask-opt:nth-child(4){animation-delay:.12s}
+
+/* ── 4. 扫光（GlareHover）──
+   主按钮悬停时一道 105° 的窄光扫过，颜色只在白色透明区间里走，深色模式同样成立。
+   只在悬停时播放一次，不循环、不停留。 */
+.btn.primary,.ai-send{position:relative;overflow:hidden}
+.btn.primary::after,.ai-send::after{
+  content:'';position:absolute;top:-6%;bottom:-6%;left:-70%;width:45%;pointer-events:none;
+  background:linear-gradient(105deg,transparent,rgba(255,255,255,.42),transparent);
+  transform:skewX(-16deg);opacity:0;
+}
+.btn.primary:hover::after,.ai-send:hover::after{animation:glare .6s ease}
+@keyframes glare{
+  0%{transform:skewX(-16deg) translateX(0);opacity:1}
+  100%{transform:skewX(-16deg) translateX(430%);opacity:1}
+}
 </style>
 <meta name="theme-color" id="metaThemeColor" content="#f2f2f7">
 </head>
@@ -6147,6 +6218,7 @@ function showDropdownMenu(o, x, y) {
     '<span>' + esc(fmtVal(v)) + '</span>' +
     '<span class="k" style="opacity:' + (i === (o.def.sel || 0) ? 1 : 0) + '">✓</span></button>'
   ).join('') || '<button class="ctx-item" disabled>列表为空</button>';
+  m.classList.remove('closing');
   m.classList.add('on');
   const r = m.getBoundingClientRect();
   m.style.left = Math.min(x, innerWidth - r.width - 8) + 'px';
@@ -6156,7 +6228,7 @@ function showDropdownMenu(o, x, y) {
     pushUndo();
     o.def.sel = +b.dataset.di;
     recomputeAll(); refreshAlgebra(); draw();
-    m.classList.remove('on');
+    playExit(m, 160);
   };
 }
 /* 控件的「单击」行为：按钮执行命令，输入框改绑定对象，下拉列表展开选项 */
@@ -13747,12 +13819,12 @@ function renderLayerPanel() {
 function openLayerPanel() {
   const p = $('#layerPanel'); if (!p) return;
   const on = !p.classList.contains('on');
-  if (on) renderLayerPanel();
+  if (on) { renderLayerPanel(); p.classList.remove('closing'); }
   p.classList.toggle('on', on);
   const pb = $('#layerPanelBtn'); if (pb) pb.setAttribute('aria-expanded', String(on));
 }
 function closeLayerPanel() {
-  const p = $('#layerPanel'); if (p) p.classList.remove('on');
+  const p = $('#layerPanel'); if (p) playExit(p, 180);
   const pb = $('#layerPanelBtn'); if (pb) pb.setAttribute('aria-expanded', 'false');
 }
 /* ── 拖拽排序 ──
@@ -14262,8 +14334,41 @@ function modalFocusables(root) {
   )).filter(el => el.offsetParent !== null);
 }
 function modalRoot(b) { return b.querySelector('.modal') || b; }
+/* 浮层退场：同步摘掉 .on（状态 / 无障碍 / 测试立刻生效），再由 .closing 接管显示
+   播一段退场动画，播完真正隐藏。没打开时是空操作，重复调用也不会重播。 */
+function playExit(el, ms) {
+  if (!el) return;
+  const wasOn = el.classList.contains('on');
+  el.classList.remove('on');
+  if (!wasOn) return;
+  el.classList.add('closing');
+  clearTimeout(el.__exitTimer);
+  el.__exitTimer = setTimeout(() => el.classList.remove('closing'), ms || 200);
+}
+/* 退场期间又打开了新弹窗：立刻收掉旧的残影，不让两个模态叠着淡出 */
+function clearExitingOverlays() {
+  document.querySelectorAll('.closing').forEach(x => { clearTimeout(x.__exitTimer); x.classList.remove('closing'); });
+}
+/* 模态框聚光：指针位置写进 --mx / --my，CSS 里的径向渐变跟着走（rAF 合并移动事件） */
+(function bindModalSpotlight() {
+  let m = null, raf = 0, px = 0, py = 0;
+  document.addEventListener('pointermove', e => {
+    const el = e.target && e.target.closest ? e.target.closest('.modal') : null;
+    if (!el) { m = null; return; }
+    m = el; px = e.clientX; py = e.clientY;
+    if (raf) return;
+    raf = requestAnimationFrame(() => {
+      raf = 0;
+      if (!m) return;
+      const r = m.getBoundingClientRect();
+      m.style.setProperty('--mx', (px - r.left) + 'px');
+      m.style.setProperty('--my', (py - r.top) + 'px');
+    });
+  }, { passive: true });
+})();
 function openBackdrop(id) {
   const b = document.getElementById(id); if (!b) return;
+  clearExitingOverlays();
   if (!document.querySelector('.backdrop.on')) modalReturnFocus = document.activeElement;
   b.classList.add('on');
   const m = modalRoot(b);
@@ -14281,7 +14386,8 @@ function openBackdrop(id) {
 }
 function closeBackdrop(id) {
   const b = document.getElementById(id); if (!b) return;
-  b.classList.remove('on');
+  /* 退场动画交给 .closing；.on 仍是同步摘掉，焦点归还 / 状态判断都不用等动画 */
+  if (b.classList.contains('on')) playExit(b, 220);
   /* 帮助页把 settingsBody 的顶部内边距清零以贴合吸顶栏（见 showHelp）；
      关闭时在这里恢复，其它设置页就不用各自操心 */
   if (id === 'settingsBackdrop') $('#settingsBody').style.padding = '';
@@ -14344,6 +14450,7 @@ function showCtxMenu(x, y, obj) {
     html += '<button class="ctx-item" data-a="resetView">标准视图</button>';
   }
   m.innerHTML = html;
+  m.classList.remove('closing');
   m.classList.add('on');
   const r = m.getBoundingClientRect();
   m.style.left = Math.min(x, innerWidth - r.width - 8) + 'px';
@@ -14352,7 +14459,7 @@ function showCtxMenu(x, y, obj) {
     const c = ev.target.closest('[data-c]');
     if (c) { pushUndo(); if (ctxTarget) { ctxTarget.color = c.dataset.c; delete ctxTarget.dynColor; applyStyleChange(ctxTarget); } return; }
     const b = ev.target.closest('[data-a]'); if (!b) return;
-    handleCtx(b.dataset.a); m.classList.remove('on');
+    handleCtx(b.dataset.a); playExit(m, 160);
   };
 }
 function handleCtx(a) {
@@ -15282,7 +15389,7 @@ function bindMenus() {
     doMenuAction(it.dataset.act);
   });
   /* 点空白关右键菜单（原来顺带管着顶部下拉，现在菜单只有抽屉这一处） */
-  document.addEventListener('click', () => { $('#ctxMenu').classList.remove('on'); });
+  document.addEventListener('click', () => { playExit($('#ctxMenu'), 160); });
 }
 /* 左侧菜单抽屉的开关。抽屉本身是固定定位的浮层，不参与布局，所以画布不受影响；
    开合只改 class，滑入 / 滑出交给 CSS 过渡，收起后不可点（pointer-events 由 transform 带出视口决定）。 */
@@ -18163,7 +18270,13 @@ function init() {
     if (!state.objects.some(isAnimatable)) { toggleAllAnimation(); return; }
     pushUndo(); toggleAllAnimation(); syncAnimUI();
   };
-  $('#kbToggle').onclick = () => { $('#mathKb').classList.toggle('on'); $('#kbToggle').classList.toggle('on'); setTimeout(resizeCanvas, 60); };
+  $('#kbToggle').onclick = () => {
+    const kb = $('#mathKb');
+    const on = !kb.classList.contains('on');
+    if (on) { kb.classList.remove('closing'); kb.classList.add('on'); } else playExit(kb, 180);
+    $('#kbToggle').classList.toggle('on', on);
+    setTimeout(resizeCanvas, 60);
+  };
   $('#btnEnter').onclick = runInput;
   $('#inputField').addEventListener('input', e => autoGrow(e.target));
   $('#inputField').addEventListener('keydown', e => {
@@ -24252,7 +24365,8 @@ function bindAI() {
   const pop = $('#effPop');
   const effOpen = on => {
     if (!pop) return;
-    pop.classList.toggle('on', on);
+    if (on) { pop.classList.remove('closing'); pop.classList.add('on'); }
+    else playExit(pop, 170);
     const box = $('#effortBox');
     if (box) box.setAttribute('aria-expanded', on ? 'true' : 'false');
     if (on) aiSyncEffort();
@@ -24982,9 +25096,10 @@ function aiAskPop(code, prevFold) {
     (lines.length ? '<div class="ask-pop-opts">' + lines.map(o => '<button class="ask-opt" type="button">' + esc(o) + '</button>').join('') + '</div>' : '') +
     '<div class="ask-pop-foot"><button class="ask-pop-skip" type="button">自己补充</button>' +
     '<button class="ask-pop-close" type="button" aria-label="关闭">关闭</button></div>';
+  pop.classList.remove('closing');
   pop.classList.add('on');
   const close = () => {
-    pop.classList.remove('on');
+    playExit(pop, 170);
     if (prevFold !== undefined && prevFold !== null) setHistFold(!!prevFold);
   };
   pop.querySelectorAll('.ask-opt').forEach(b => b.addEventListener('click', () => {
@@ -25186,7 +25301,7 @@ function setHistFold(folded) {
     /* 头部图标是从角色态回来：补一次定妆帧，避免露脸瞬间是空白画布 */
     if (wasMini) morphKick();
     /* 手动展开历史时，浮层澄清卡收掉：问题本身就在消息里，不再叠一层 */
-    const ap = $('#aiAskPop'); if (ap) ap.classList.remove('on');
+    const ap = $('#aiAskPop'); if (ap) playExit(ap, 170);
     const c = $('#aiChat'); if (c) c.scrollTop = c.scrollHeight;
   }
   aiSyncFoldUI();
