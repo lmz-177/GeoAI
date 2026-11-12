@@ -104,7 +104,7 @@ body.dark .api-key-change:hover,body.dark .api-primary,body.dark .seg.blue butto
 body.dark .ai-send,body.dark .btn.primary,body.dark .bubble .md-task.done{background:#0a6ed1}
 body.dark .btn-primary:hover,body.dark .api-primary:hover,body.dark .ai-send:hover{background:#095cb0}
 
-html,body{height:100%}
+html,body{height:100%;margin:0}
 body{
   font-family:var(--font);font-size:14px;letter-spacing:-.012em;color:var(--text);background:var(--bg);
   overflow:hidden;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-rendering:optimizeLegibility;
@@ -1063,6 +1063,22 @@ body.dark .eff-warn{color:#c39bff}
 .api-field input{flex:1;min-width:0;height:100%;padding:0 4px 0 13px;background:transparent;border:0;
   font-size:15px;color:var(--text);outline:none}
 .api-field input::placeholder{color:var(--text-3)}
+/* 浮动标签：没输入时落在框内当占位；聚焦或有内容后缩到上边框并一直显示。
+   只用 placeholder 的话，一开始输入就不知道这格填的是什么，长提示还会被
+   46px 的框裁掉半行。 */
+.api-field .fl-label{
+  position:absolute;left:13px;top:50%;z-index:3;margin-left:-5px;padding:0 5px;
+  font-size:15px;line-height:1;color:var(--text-3);border-radius:4px;
+  background:var(--pop-bg);pointer-events:none;white-space:nowrap;
+  max-width:calc(100% - 62px);overflow:hidden;text-overflow:ellipsis;
+  transform:translateY(-50%);transform-origin:left center;
+  transition:top .16s var(--ease-out),transform .16s var(--ease-out),
+    font-size .16s var(--ease-out),color .16s ease;
+}
+.api-field input:focus + .fl-label,
+.api-field input:not(:placeholder-shown) + .fl-label{
+  top:0;font-size:var(--fs-3xs);color:var(--accent);
+}
 .api-eye{flex:0 0 42px;width:42px;height:100%;display:grid;place-items:center;color:var(--text-3);
   border-radius:0 12px 12px 0;transition:var(--t-ui)}
 .api-eye:hover{color:var(--text)}
@@ -2278,7 +2294,7 @@ try {
       <div class="input-bar">
         <div class="input-wrap">
           <div class="prefix" id="inputPrefix"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 7 4 12l5 5M15 7l5 5-5 5"></path></svg></div>
-          <textarea id="inputField" rows="1" placeholder="在此输入，例如 A=(1,2)  或  线段(A,B)…" spellcheck="false"></textarea>
+          <textarea id="inputField" rows="1" spellcheck="false"></textarea>
           <button class="kb-toggle" id="kbToggle" title="数学键盘" aria-label="数学键盘"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="5.5" width="19" height="13" rx="2.4"></rect><path d="M7 9.2h.1M10.3 9.2h.1M13.6 9.2h.1M16.9 9.2h.1M7.8 12.6h.1M11 12.6h.1M14.3 12.6h.1M17.5 12.6h.1M8.5 15.8h7"></path></svg></button>
         </div>
         <button class="enter-btn" id="btnEnter" title="执行 (Enter)" aria-label="执行 (Enter)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 5v7a3 3 0 0 1-3 3H5"></path><path d="M9 11l-4.5 4L9 19"></path></svg></button>
@@ -2381,7 +2397,8 @@ try {
             <!-- 编辑态：输入框 + 主按钮 + 获取入口 -->
             <div class="api-editor" id="apiEditor">
               <div class="api-field" id="apiField">
-                <input type="password" id="dsKeyInput" placeholder="sk-… 粘贴 API Key" autocomplete="new-password" spellcheck="false" aria-label="API Key">
+                <input type="password" id="dsKeyInput" placeholder=" " autocomplete="new-password" spellcheck="false" aria-label="API Key">
+                <label class="fl-label" for="dsKeyInput">API Key</label>
                 <button class="api-eye" id="dsKeyEye" title="显示 / 隐藏" aria-label="显示 Key"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 12S6 5.8 12 5.8 21.5 12 21.5 12 18 18.2 12 18.2 2.5 12 2.5 12z"></path><circle cx="12" cy="12" r="2.6"></circle></svg></button>
                 <!-- 封存动画的「密文幕布」：盖在输入行上，字符逐位翻成密文再锁定 -->
                 <div class="api-seal" id="apiSeal" aria-hidden="true"><span class="api-seal-txt"></span></div>
@@ -3332,7 +3349,7 @@ function apiBusy(on, label) {
   if (txt) txt.textContent = on ? (label || '验证中…') : apiDefaultLabel();
 }
 function aiSyncKeyUI() {
-  const btn = $('#aiKeyBtn'), inp = $('#dsKeyInput'), clr = $('#dsKeyClear');
+  const btn = $('#aiKeyBtn'), clr = $('#dsKeyClear');
   const has = !!AI_CONF.key;
   if (btn) {
     btn.classList.toggle('on', has);
@@ -3344,7 +3361,6 @@ function aiSyncKeyUI() {
   const card = $('#apiKeyCard'), editor = $('#apiEditor');
   if (card) card.hidden = editing;
   if (editor) editor.hidden = !editing;
-  if (inp) inp.placeholder = has ? '粘贴新 Key 将替换当前的' : 'sk-… 粘贴 API Key';
   if (clr) {
     clr.hidden = !has;
     if (!has) { delete clr.dataset.confirm; clr.textContent = '清除'; }
