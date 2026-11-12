@@ -11215,13 +11215,81 @@ function normalizeMathLine(s) {
   }
   return out;
 }
+/* 行内注释：`#` 或 `//` 之后一律不执行（引号里的原样保留）。
+   整行注释、行尾注释走同一条规则，粘贴带说明的代码不会因为一句中文注解就报错。 */
+function stripMathComment(s) {
+  let q = null;
+  const str = String(s);
+  for (let i = 0; i < str.length; i++) {
+    const ch = str[i];
+    if (q) { if (ch === q && str[i - 1] !== '\\') q = null; continue; }
+    if (ch === '"' || ch === "'") { q = ch; continue; }
+    if (ch === '#') return str.slice(0, i);
+    if (ch === '/' && str[i + 1] === '/') return str.slice(0, i);
+  }
+  return str;
+}
+/* 指令：可视区域截图 → 直接进 AI 附件。
+   shot(x1,y1,x2,y2) / 截图 x1,y1,x2,y2，坐标是世界坐标，按当前视图换算成画布像素。
+   只截当前可见的部分：区域越界时明确报错，而不是给一张被裁掉半边的图。 */
+function canvasShotRegion(x1, y1, x2, y2) {
+  const dpr = canvas.width / Math.max(1, canvas.clientWidth);
+  const left = Math.round(toScreenX(Math.min(x1, x2)) * dpr);
+  const right = Math.round(toScreenX(Math.max(x1, x2)) * dpr);
+  /* 世界坐标 y 向上、画布 y 向下：取 max 的那条对应上边缘 */
+  const top = Math.round(toScreenY(Math.max(y1, y2)) * dpr);
+  const bottom = Math.round(toScreenY(Math.min(y1, y2)) * dpr);
+  const w = right - left, h = bottom - top;
+  if (w < 8 || h < 8) throw new Error('截图区域太小，请给出更大的坐标范围');
+  if (left < 0 || top < 0 || right > canvas.width || bottom > canvas.height) {
+    throw new Error('截图区域超出可见画布：先缩放 / 平移让这块区域完整显示'
+      + '（区域 ' + left + ',' + top + ' → ' + right + ',' + bottom + '，画布 ' + canvas.width + '×' + canvas.height + '）');
+  }
+  if (state.aiImages.length >= AI_IMG_MAX) throw new Error('一次最多 ' + AI_IMG_MAX + ' 张图片，先删一张再截');
+  const off = document.createElement('canvas');
+  off.width = w; off.height = h;
+  off.getContext('2d').drawImage(canvas, left, top, w, h, 0, 0, w, h);
+  const data = off.toDataURL('image/jpeg', .9);
+  const bytes = Math.round((data.length - data.indexOf(',') - 1) * 3 / 4);
+  state.aiImages.push({ id: 'img' + Date.now() + Math.random().toString(36).slice(2, 6), data, w, h, bytes });
+  renderAiAttach();
+  return { w, h, bytes };
+}
+/* 指令：调整思考强度。effort high / 思考强度：高 / 思考档位=off 都认。
+   返回 true 表示这行被这条指令消费掉了，不再走数学解析。 */
+function applyEffortCommand(line) {
+  const m = line.match(/^(?:effort|thinking|思考强度|思考档位|推理强度)\s*[:=：]?\s*["']?([a-zA-Z\u4e00-\u9fa5]+)["']?$/i);
+  if (!m) return false;
+  const raw = m[1].toLowerCase();
+  const alias = {
+    off: 'off', 关闭: 'off', 关: 'off', 无: 'off', none: 'off', 0: 'off',
+    low: 'low', 低: 'low', 低档: 'low', 1: 'low',
+    medium: 'medium', mid: 'medium', 中: 'medium', 中等: 'medium', 中档: 'medium', 2: 'medium',
+    high: 'high', 高: 'high', 高档: 'high', 强: 'high', 3: 'high',
+  };
+  const id = alias[raw];
+  if (!id) { toast('思考强度只支持 off / low / medium / high', 'err', 2600); return true; }
+  state.aiEffort = id;
+  aiSyncEffort();
+  const label = (EFFORTS.find(e => e.id === id) || {}).label || id;
+  toast('思考强度已切换为 ' + label, 'ok', 1800);
+  return true;
+}
 function _executeLine(raw, opts) {
   opts = opts || {};
-  let line = normalizeMathLine(raw).trim();
+  let line = stripMathComment(normalizeMathLine(raw)).trim();
   if (!line) return { skipped: true };
-  if (line.startsWith('//') || line.startsWith('#')) return { skipped: true };
   line = line.replace(/[;；]\s*$/, '').replace(/≤/g, '<=').replace(/≥/g, '>=').replace(/≔/g, ':=').trim();
   const created = [];
+
+  /* —— 自带指令（在数学解析之前拦下，避免被当成标签或函数）—— */
+  if (applyEffortCommand(line)) return { skipped: true, note: '思考强度已调整' };
+  const shot = line.match(/^(?:shot|screenshot|截图|截屏)\s*[\(（]?\s*(-?[\d.]+)\s*[,，]\s*(-?[\d.]+)\s*[,，]\s*(-?[\d.]+)\s*[,，]\s*(-?[\d.]+)\s*[\)）]?$/i);
+  if (shot) {
+    const r = canvasShotRegion(+shot[1], +shot[2], +shot[3], +shot[4]);
+    toast('已截取 ' + r.w + '×' + r.h + ' 区域，随下一条消息发给 AI', 'ok', 2400);
+    return { skipped: true, note: '已加入截图附件' };
+  }
 
   /* 「标签: 定义」：先把标签摘出来，后面所有分支都用它命名对象 */
   const named = splitLabelColon(line);
@@ -13456,7 +13524,9 @@ function runInput() {
   const text = inp.value.trim();
   if (!text) return;
   inp.value = ''; autoGrow(inp);
-  const lines = text.split(/\r?\n/).filter(l => l.trim());
+  /* # / // 之后是注释：整行注释先剔掉，免得「只有注释」也弹一句「已执行」并占一条撤销记录 */
+  const lines = text.split(/\r?\n/).filter(l => stripMathComment(l).trim());
+  if (!lines.length) { toast('这些内容都是注释（# 之后不会执行）', 'ok', 1800); return; }
   pushUndo();
   beginBatch();
   let okCount = 0, errs = [];
@@ -16949,6 +17019,9 @@ function showHelp() {
     ], 'tool') +
     G('输入框与命令', [
       '一行一条命令，回车执行；支持一次粘贴多行批量执行',
+      '<b>注释</b>：<code>#</code> 或 <code>//</code> 之后的内容不执行（支持行尾注释，如 <code>A=(1,2) # 顶点</code>）；整段只有注释时不会产生任何对象，也不占一条撤销',
+      '<b>思考强度</b>：<code>effort high</code>、<code>思考强度：中</code>、<code>思考档位=off</code> 直接切换 AI 的推理档位（off / low / medium / high）',
+      '<b>区域截图发给 AI</b>：<code>shot(-2,-1,2,1)</code> 或 <code>截图 -2,-1,2,1</code>，按世界坐标框选当前可见画布，裁成图片塞进 AI 附件，下一条消息自动带上；区域超出可视范围会明确报错',
       '赋值即命名：<code>A=(1,2)</code>、<code>f(x)=x^2-1</code>、<code>a=3</code>、<code>s=Segment(A,B)</code>，也可写成 <code>a := 3</code>；要起中文名或给方程命名就用 <code>名字: 定义</code>，如 <code>eq: x^2 + y^2 = r^2</code>，之后 <code>SetColor(eq, "#2b6cb0")</code> 就能按名字找到它',
       '直接写表达式也能识别：<code>y=x^2</code>、<code>x^2+y^2=1</code>、<code>x^2/9+y^2/4=1</code>、<code>y&gt;2x+1</code>',
       '命令名支持中文别名，可与英文混用，如 <code>线段(A,B)</code>、<code>圆(O,2)</code>、<code>解方程(x^2-5x+6=0)</code>',
@@ -18849,6 +18922,42 @@ async function runUITest() {
     apiSetState('err', '连接失败', '去充值');
     if (!$('#dsKeyStatus').textContent.includes('去充值')) throw new Error('状态行没有附上建议');
     apiSetState('empty', '');
+  });
+  await A('输入:注释 / 思考强度 / 区域截图指令', async () => {
+    /* 注释：整行与行尾都不执行，引号里的 # 保留 */
+    if (!executeLine('# 整行注释').skipped) throw new Error('整行 # 注释没有跳过');
+    if (!executeLine('// 另一种注释').skipped) throw new Error('// 注释没有跳过');
+    if (stripMathComment('"a#b"') !== '"a#b"') throw new Error('引号内的 # 被当成注释了');
+    executeLine('Cmm=(7,7) # 行尾注释');
+    const cm = state.objects.find(o => o.label === 'Cmm');
+    if (!cm) throw new Error('带行尾注释的命令没有执行');
+    if (Math.abs(cm.value.x - 7) > 1e-9 || Math.abs(cm.value.y - 7) > 1e-9) throw new Error('行尾注释影响了参数');
+    /* 思考强度指令 */
+    const eff0 = state.aiEffort;
+    executeLine('思考强度：high');
+    if (state.aiEffort !== 'high') throw new Error('中文思考强度指令没生效：' + state.aiEffort);
+    executeLine('effort off');
+    if (state.aiEffort !== 'off') throw new Error('effort 指令没生效：' + state.aiEffort);
+    state.aiEffort = eff0; aiSyncEffort();
+    /* 区域截图：世界坐标 → 画布像素 → AI 附件。
+       用当前视图算一块几乎铺满画布的区域，别写死 ±0.5 —— 视图可能被前面的用例缩放过。 */
+    if (!canvas.clientWidth) resizeCanvas();
+    const halfW = Math.max(.2, (canvas.clientWidth / 2 - 6) / state.view.scale);
+    const halfH = Math.max(.2, (canvas.clientHeight / 2 - 6) / state.view.scale);
+    const vcx = state.view.cx, vcy = state.view.cy;
+    const before = state.aiImages.length;
+    executeLine('shot(' + (vcx - halfW).toFixed(3) + ',' + (vcy - halfH).toFixed(3) + ',' +
+      (vcx + halfW).toFixed(3) + ',' + (vcy + halfH).toFixed(3) + ')');
+    if (state.aiImages.length !== before + 1) throw new Error('截图没有加入 AI 附件');
+    const im = state.aiImages[state.aiImages.length - 1];
+    if (!/^data:image\/(jpeg|png)/.test(im.data || '')) throw new Error('截图不是图片数据');
+    if (im.w < 8 || im.h < 8) throw new Error('截图尺寸异常：' + im.w + '×' + im.h);
+    let threw = false;
+    try { executeLine('shot(-9999,-9999,9999,9999)'); } catch (e) { threw = true; }
+    if (!threw) throw new Error('越界截图应该明确报错');
+    /* 清场 */
+    state.aiImages = []; renderAiAttach();
+    state.objects = state.objects.filter(o => o.label !== 'Cmm'); recomputeAll();
   });
   await A('快捷键:Delete 删除选中', async () => {
     const o = obj(); state.selection = [o.id]; const n = state.objects.length;
