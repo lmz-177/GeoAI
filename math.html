@@ -23199,7 +23199,7 @@ const AI_STEP_SYSTEM = `你是「GeoAI」动态几何画板的作图执行器，
 3. 画布上已有的对象直接引用名字，绝对不要重复定义、也不要重画已经成功的部分。
 4. 一个动作只推进一小步（1~4 条命令），逐步推进直到整幅图完成；不要在一步里塞整幅图，也不要拖很多步却只画一个点。
 5. 除了 Thought 和代码块，不要输出别的内容；不要输出 JSON、steps、ask 块。
-6. 你可以直接在代码块里使用这几条指令：<code>shot(x1,y1,x2,y2)</code> 把世界坐标矩形区域渲染成图片并在下一步回传给你（适合检查细节、核对标签是否重叠）；<code>effort high|medium|low|off</code> 调整你自己的推理强度。<code>#</code> 开头是注释，不会执行。`;
+6. 你可以直接在代码块里使用这几条指令：shot(x1,y1,x2,y2) —— 把世界坐标矩形区域渲染成图片并在下一步回传给你（适合检查细节、核对标签是否重叠）；effort high|medium|low|off —— 调整你自己的推理强度；以 # 开头的行是注释，不会执行。`;
 
 
 function aiEffort() { return EFFORTS.find(e => e.id === state.aiEffort) || EFFORTS[EFFORT_DEFAULT]; }
