@@ -843,6 +843,9 @@ body.tool-folded .tool-head{padding-bottom:0}
   padding:0 6px;border-radius:99px;line-height:1.7;min-width:16px;text-align:center;font-variant-numeric:tabular-nums}
 .ai-dock.hist-fold .ai-chat{display:none}
 .ai-dock.hist-fold .ai-chat-wrap{display:none}
+/* 有消息时给顶部让出胶囊的高度：右上角「条数 + 收起」是浮层，不留位置的话
+   第一条消息的时间戳会从它底下钻出来，两行字叠在一起 */
+.ai-chat-wrap:has(.ai-hist-pill:not(.empty)) .ai-chat{padding-top:38px}
 /* 折叠态：整条历史头收掉，只留工具排里的一枚小键，不再占一整行 */
 .ai-dock.hist-fold .ai-sheet{display:none}
 /* 工具排里的历史键跟着「历史是否真的可见」走（hist-on），不再只看折叠标记：
