@@ -204,9 +204,29 @@ body.dark .app::before{
   user-select:none;
 }
 .fmenu-btn:hover{background:var(--glass-2)}
-.fmenu-btn[aria-expanded="true"]{background:var(--accent-dim);border-color:transparent}
+/* 打开态：底色切换 + 抬到抽屉 / 遮罩之上，让「汉堡 → 叉」的形变看得见 */
+.fmenu-btn[aria-expanded="true"]{background:var(--accent-dim);border-color:transparent;z-index:230}
 .fmenu-btn .fmb-ic{display:flex;width:18px;height:18px;flex:0 0 18px;color:var(--accent)}
 .fmenu-btn .fmb-ic svg{width:18px;height:18px}
+/* 图标三条线各自形变：绕自身中心转到中线上再横过来，合起来就是叉号。
+   transform-box 用 view-box，原点按每条线自己的中心写死，避免 fill-box 在
+   「零高度的横线」上取不到有效包围盒。 */
+.fmenu-btn .fmb-ic svg path{
+  transform-box:view-box;
+  transition:transform var(--t-slow) var(--ease),opacity var(--t-quick) ease;
+}
+.fmenu-btn .fmb-ic svg path:nth-child(1){transform-origin:12px 7.5px}
+.fmenu-btn .fmb-ic svg path:nth-child(2){transform-origin:12px 12px}
+.fmenu-btn .fmb-ic svg path:nth-child(3){transform-origin:12px 16.5px}
+.fmenu-btn[aria-expanded="true"] .fmb-ic svg path:nth-child(1){transform:translateY(4.5px) rotate(45deg)}
+.fmenu-btn[aria-expanded="true"] .fmb-ic svg path:nth-child(2){opacity:0;transform:scaleX(.2)}
+.fmenu-btn[aria-expanded="true"] .fmb-ic svg path:nth-child(3){transform:translateY(-4.5px) rotate(-45deg)}
+/* 打开后按钮只剩叉号：文字收起来，免得抽屉边上飘着「× GeoAI」 */
+.fmenu-btn .wm{
+  max-width:70px;overflow:hidden;
+  transition:max-width var(--t) var(--ease),opacity var(--t-quick) ease,margin-left var(--t) var(--ease);
+}
+.fmenu-btn[aria-expanded="true"] .wm{max-width:0;opacity:0;margin-left:-7px}
 .fmenu-btn .wm b{color:var(--accent);font-weight:800}
 .brand{display:flex;align-items:center;gap:9px;padding-right:14px;font-weight:800;font-size:16.5px;letter-spacing:-.4px;white-space:nowrap}
 .brand .gml-cv{width:26px;height:26px}
@@ -232,15 +252,16 @@ body.dark .app::before{
   transition:transform var(--t-slow),visibility 0s linear var(--dur-slow);
   user-select:none;
 }
-/* 抽屉打开时把触发按钮淡出：否则半透明遮罩下的按钮会隔着抽屉边缘透出来，看着像两个入口 */
-.fmenu-btn.behind{opacity:0;pointer-events:none;visibility:hidden}
 /* 抽屉容器自己接焦点（tabindex=-1）只为把焦点带进抽屉，不需要焦点环 */
 .fmenu:focus,.fmenu:focus-visible{outline:none}
 .fmenu.on{transform:none;visibility:visible;transition:transform var(--t-slow),visibility 0s}
 .fmenu-head{display:flex;align-items:center;gap:8px;padding:13px 10px 11px 16px;border-bottom:.5px solid var(--border)}
+/* 抽屉打开时，触发按钮就地变成叉号浮在抽屉左上角；抽屉头给这枚按钮让位，
+   否则品牌字会压在叉号下面。只有「按钮真的落在抽屉头上」时才需要让：
+   窄屏，或者宽屏但侧栏已收起（画布从最左边开始）。 */
+body:has(#sidebar.hidden):has(#fmenu.on) .fmenu-head{padding-left:62px}
 .fmenu-head .brand{padding-right:0;font-size:15px}
 .fmenu-head .brand .gml-cv{width:22px;height:22px}
-.fmenu-head .icon-btn{margin-left:auto}
 .fmenu-body{flex:1;overflow-y:auto;padding:8px 8px 20px;overscroll-behavior:contain}
 /* 四个分组做成手风琴：一次只展开一组。四组全铺开有三十多项，要滚很久才找得到；
    收起时只占四行，一眼看全有哪些类别。 */
@@ -1875,6 +1896,12 @@ body.dark .toast{background:rgba(58,58,60,.9);color:#f2f2f7}
      既不被压住，也不会压住「代数 / CAS / 命令 / 表格」这排页签。 */
   .fmenu-btn{position:fixed;top:10px;left:12px;z-index:210}
   body:has(#sidebar:not(.hidden)) .fmenu-btn{left:calc(var(--sb-w) + 12px)}
+  /* 展开态按钮就地变叉号，必须回到左上角（侧栏开着也回原位），并给抽屉头让位 */
+  body:has(#fmenu.on) .fmenu-btn{left:12px}
+  body:has(#fmenu.on) .fmenu-head{padding-left:62px}
+  /* 窄屏缩放条挪到了右上角；对话区展开是从底部往上长到 84vh，矮窗口会一路顶到顶，
+     把缩放条压在下面。给顶部留出一行（按钮 + 间距），缩放条任何时候都点得到。 */
+  .ai-dock.sheet-open .ai-sheet{max-height:min(84vh,calc(100vh - 240px))}
   .persp-float{z-index:210}
   /* 工具网格现在是侧栏的一部分（侧栏本身是浮层），不用再单独提层级 */
   /* 窄屏画布本来就矮，AI 输入条又会铺满底部：缩放条挪到右上角并改成横排，
@@ -1895,6 +1922,11 @@ body.dark .toast{background:rgba(58,58,60,.9);color:#f2f2f7}
 @media(max-width:600px){
   .sidebar{width:min(var(--sb-w),calc(100vw - 24px))}
   body:not(.basic):has(#sidebar:not(.hidden)) .ai-dock{left:10px;right:10px;width:auto;transform:none;z-index:200}
+  /* 手机上侧栏几乎铺满屏：按钮再「右让」到侧栏右边（302 + 12）会整枚跑到屏幕外，
+     手机上就再也点不到菜单。宽屏那套让位逻辑在这里换成「原地留图标 + 页签让位」。 */
+  body:has(#sidebar:not(.hidden)) .fmenu-btn{left:12px}
+  body:has(#sidebar:not(.hidden)) .fmenu-btn .wm{max-width:0;opacity:0;margin-left:-7px}
+  body:has(#sidebar:not(.hidden)) .panel-tabs{padding-left:62px}
 }
 /* ≥1000：AI 输入条居中；右下角只剩缩放 / 图层两列小按钮，不再给图层卡让位 */
 @media(min-width:1000px){
@@ -2151,7 +2183,6 @@ try {
         <span class="gml-cv" id="brandLogo" aria-hidden="true"><canvas aria-hidden="true" style="width: 22px; height: 22px; display: block;" width="33" height="33"></canvas></span>
         <span class="wm">Geo<b>AI</b></span>
       </div>
-      <button class="icon-btn" id="fmenuClose" aria-label="关闭菜单"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6 6 18"></path></svg></button>
     </div>
     <div class="fmenu-body" id="menus">
       <div class="fgroup open" data-fgroup="">
@@ -2851,7 +2882,9 @@ const ICON = {
   dist: S('<path d="M2.5 19.5C6 19.5 7.4 5.5 12 5.5s6 14 9.5 14"/><path d="M2.5 19.5h19"/>'),
   chevUp: S('<path d="M6 14.5 12 8.5l6 6"/>'),
   chevDown: S('<path d="M6 9.5 12 15.5l6-6"/>'),
-  menuLines: S('<path d="M4.5 7.5h15M4.5 12h15M4.5 16.5h15"/>'),
+  /* 三条横线拆成三个 path：菜单打开时上下两条绕自身中心转 ±45° 并挪到中线，
+     中间一条淡出 —— 汉堡变叉，关闭时反向还原。合成一条 path 没法单独做形变。 */
+  menuLines: S('<path d="M4.5 7.5h15"/><path d="M4.5 12h15"/><path d="M4.5 16.5h15"/>'),
   curve: S('<path d="M3.5 17.5C7 17.5 6 6.5 12 6.5s5 11 8.5 11"/><circle cx="12" cy="6.5" r="2" fill="currentColor" stroke="none"/>'),
   root: S('<path d="M3 12.5h4l2.6 6.5L14 5.5l3 7h4"/><circle cx="14" cy="5.5" r="1.9" fill="currentColor" stroke="none"/>'),
   extremum: S('<path d="M3 18.5c4 0 5.5-11.5 9-11.5s5 11.5 9 11.5"/><circle cx="12" cy="7" r="2" fill="currentColor" stroke="none"/><path d="M12 7v6" stroke-dasharray="2.5 2.5" opacity=".55"/>'),
@@ -15495,7 +15528,6 @@ function bindMenus() {
   if (!btn || !dr) return;
   btn.addEventListener('click', e => { e.stopPropagation(); setFmenu(!fmenuState); });
   if (scrim) scrim.addEventListener('click', () => setFmenu(false));
-  const cl = $('#fmenuClose'); if (cl) cl.addEventListener('click', () => { setFmenu(false); btn.focus(); });
   /* 分组手风琴：点组头展开 / 收起，同时只留一组——四组全铺开有三十多项，要滚很久 */
   $('#menus').addEventListener('click', e => {
     const g = e.target.closest('.fgroup');
@@ -15523,9 +15555,11 @@ function setFmenu(open) {
   if (!d || !b) return;
   fmenuState = !!open;
   d.classList.toggle('on', fmenuState);
-  b.classList.toggle('behind', fmenuState);
   if (s) s.classList.toggle('on', fmenuState);
   b.setAttribute('aria-expanded', fmenuState ? 'true' : 'false');
+  /* 同一枚按钮，展开后它就是收起键：无障碍名称和悬停提示跟着换，否则读屏会念「菜单」 */
+  b.setAttribute('aria-label', fmenuState ? '关闭菜单' : '菜单：文件、编辑、视图、帮助');
+  b.title = fmenuState ? '关闭菜单' : '菜单（文件 / 编辑 / 视图 / 帮助）';
   d.setAttribute('aria-hidden', fmenuState ? 'false' : 'true');
   /* 焦点进抽屉容器（不落在具体条目上，免得一开抽屉就出现一圈焦点环）；
      Tab 会自然从容器走到第一个组头 */
@@ -15534,6 +15568,8 @@ function setFmenu(open) {
     morphSetLive($('#brandLogo'), true);   /* 抽屉开着时品牌 loader 走循环，关上就定妆 */
   } else {
     morphSetLive($('#brandLogo'), false);
+    /* 抽屉收起后焦点若还留在里面，会掉到 body 上：还给触发按钮，键盘用户不迷路 */
+    if (d.contains(document.activeElement)) b.focus({ preventScroll: true });
   }
 }
 function openFmenu() { setFmenu(true); }
@@ -18403,7 +18439,6 @@ function init() {
   /* 恢复上次的折叠状态（在渲染工具栏之前设置，图标即为正确状态） */
   if (foldStored('ggai_toolfold')) document.body.classList.add('tool-folded');
   $('#fmenuIc').innerHTML = ICON.menuLines;
-  $('#fmenuClose').innerHTML = ICON.close;
 
   /* AI 输入条左侧、菜单品牌图标、Grok 思考时头顶那颗：同一套 Gemini 形变 loader */
   const aiLogoHost = $('#aiHeadIcon');
@@ -18637,6 +18672,31 @@ async function runUITest() {
     });
   }
   if (fmenuEl) fmenuEl.style.transition = fmenuTrans;
+
+  /* 1a. 菜单按钮：展开时就地变成叉号、抬到抽屉之上（原来整枚淡出，形变看不见） */
+  await A('菜单:按钮变形与层级', async () => {
+    setFmenu(false); await sleep(0);
+    const b = $('#fmenuBtn'), dr = $('#fmenu');
+    const bars = b.querySelectorAll('.fmb-ic svg path');
+    if (bars.length !== 3) throw new Error('汉堡图标不是三条独立线：' + bars.length);
+    setFmenu(true); await sleep(380);          /* 形变过渡 300ms，等它走完再量 */
+    if (b.getAttribute('aria-expanded') !== 'true') throw new Error('展开后 aria-expanded 未同步');
+    if (+getComputedStyle(b).zIndex <= +getComputedStyle(dr).zIndex) throw new Error('展开态按钮仍压在抽屉之下');
+    /* 上下两条转到 ±45°（矩阵 b 分量 ≈ ±sin45），中间一条淡出 */
+    const skew = el => {
+      const t = getComputedStyle(el).transform;
+      if (!t || t === 'none') return 0;
+      const m = t.match(/matrix\(([^)]+)\)/);
+      return m ? Math.abs(parseFloat(m[1].split(',')[1])) : 0;
+    };
+    if (Math.abs(skew(bars[0]) - Math.SQRT1_2) > 0.05) throw new Error('上横线没有转成 45°：' + getComputedStyle(bars[0]).transform);
+    if (Math.abs(skew(bars[2]) - Math.SQRT1_2) > 0.05) throw new Error('下横线没有转成 45°：' + getComputedStyle(bars[2]).transform);
+    if (+getComputedStyle(bars[1]).opacity > 0.05) throw new Error('中间横线没有淡出');
+    if (b.getAttribute('aria-label') !== '关闭菜单') throw new Error('展开后名称没有改成「关闭菜单」');
+    setFmenu(false); await sleep(380);
+    if (b.getAttribute('aria-label') !== '菜单：文件、编辑、视图、帮助') throw new Error('收起后名称没有还原');
+    if (skew(bars[0]) > 0.05) throw new Error('收起后上横线没有转回水平');
+  });
 
   /* 1b. 布局体检：所有可见控件都必须可点击（不遮挡、不溢出视口） */
   await A('布局:控件无遮挡', async () => {
