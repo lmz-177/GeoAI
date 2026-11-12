@@ -1236,19 +1236,30 @@ body.dark .eff-warn{color:#c39bff}
 .bubble .md-task.done::after{content:'✓'}
 .bubble .md-img{max-width:100%;border-radius:10px;margin:6px 0;border:.5px solid var(--border)}
 /* 思考链：折叠时是一枚安静的胶囊；展开后摘要行压成小标题栏（有底色 + 发丝分隔线），
-   正文按等宽小字排版、240px 封顶内滚 —— 像终端记录，而不是一大段散文 */
+   正文按等宽小字排版、240px 封顶内滚 —— 像终端记录，而不是一大段散文。
+   展开 / 收起走自适应网格（grid-template-rows: 0fr → 1fr）：高度由内容自己撑开，
+   不需要用 JS 去量 scrollHeight 再写 height —— 那种写法在流式增长时每次都量、每次都抖，
+   0fr → 1fr 是浏览器自己插值，内容继续变长也不会打断动画。 */
 .think{
   margin:6px 0 10px;border:.5px solid var(--border);border-radius:14px;background:var(--panel-2);
   overflow:hidden;font-size:12.5px;
 }
-.think[open]{border-color:transparent;box-shadow:inset 0 0 0 .5px var(--border)}
-.think summary{padding:7px 11px;cursor:pointer;color:var(--text-3);font-weight:600;font-size:var(--fs-xs);display:flex;align-items:center;gap:7px;user-select:none;list-style:none;transition:color var(--t),background var(--t)}
-.think summary::-webkit-details-marker{display:none}
-.think summary::before{content:'▸';transition:transform var(--t);font-size:var(--fs-3xs)}
-.think[open] summary::before{transform:rotate(90deg)}
-.think summary .spin{width:11px;height:11px;border:1.5px solid var(--border-2);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite}
+.think.open{border-color:transparent;box-shadow:inset 0 0 0 .5px var(--border)}
+.think-hd{
+  width:100%;display:flex;align-items:center;gap:7px;padding:7px 11px;text-align:left;
+  color:var(--text-3);font-weight:600;font-size:var(--fs-xs);user-select:none;
+  transition:color var(--t),background var(--t);
+}
+.think-hd::before{content:'▸';flex:0 0 auto;transition:transform var(--t);font-size:var(--fs-3xs)}
+.think.open .think-hd::before{transform:rotate(90deg)}
+.think-hd .spin{width:11px;height:11px;flex:0 0 11px;border:1.5px solid var(--border-2);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
-.think[open] summary{color:var(--text-2);background:var(--hover);border-bottom:.5px solid var(--border)}
+.think.open .think-hd{color:var(--text-2);background:var(--hover);border-bottom:.5px solid var(--border)}
+/* 网格动画本体：闭合时轨道 0fr，打开时 1fr；.think-clip 负责把溢出的内容裁掉
+   （grid 子项默认 min-height:auto 会拒绝收缩到 0，必须显式给 0）。 */
+.think-grid{display:grid;grid-template-rows:0fr;transition:grid-template-rows .28s var(--ease)}
+.think.open .think-grid{grid-template-rows:1fr}
+.think-clip{min-height:0;overflow:hidden}
 .think .body{padding:2px 12px 11px;color:var(--text-3);white-space:pre-wrap;font-family:var(--mono);font-size:var(--fs-xs);line-height:1.65;max-height:240px;overflow-y:auto;overscroll-behavior:contain}
 .exec-list{margin-top:8px;display:flex;flex-direction:column;gap:4px}
 .exec{display:flex;align-items:center;gap:8px;font-family:var(--mono);font-size:var(--fs-xs);padding:6px 10px;border-radius:10px;background:var(--panel-2)}
@@ -24348,6 +24359,29 @@ function mdCodeHtml(lang, code) {
     esc(lang || 'code') + '</span><button class="md-copy" type="button">复制</button></div>' +
     '<pre><code>' + esc(code) + '</code></pre></div>';
 }
+/* 思考链面板：外壳自己管开合，展开 / 收起交给 .think-grid 的 0fr → 1fr 过渡。
+   不用 <details>，因为原生 details 的 open 是瞬时的、没有过渡，收起时内容还会被
+   直接 display:none 掉；这里换成按钮 + 网格，动画和内容裁切都由 CSS 完成。 */
+function makeThinkPanel(titleHtml) {
+  const el = document.createElement('div');
+  el.className = 'think open';
+  el.innerHTML = '<button class="think-hd" type="button" aria-expanded="true">' + titleHtml + '</button>' +
+    '<div class="think-grid"><div class="think-clip"><div class="body"></div></div></div>';
+  const hd = el.querySelector('.think-hd');
+  hd.addEventListener('click', () => {
+    const open = !el.classList.contains('open');
+    el.classList.toggle('open', open);
+    hd.setAttribute('aria-expanded', open ? 'true' : 'false');
+  });
+  return el;
+}
+/* 收 / 开一个思考链面板，顺带同步 aria（无标题时只改状态） */
+function thinkPanelSetOpen(el, open) {
+  if (!el) return;
+  el.classList.toggle('open', !!open);
+  const hd = el.querySelector('.think-hd');
+  if (hd) hd.setAttribute('aria-expanded', open ? 'true' : 'false');
+}
 function renderAIContent(text) {
   const parts = mdCloseFence(String(text)).split(/```(\w*)\n?([\s\S]*?)```/g);
   let html = '';
@@ -24632,11 +24666,10 @@ async function aiSend() {
         note.innerHTML = ICON.warn + '联网检索没有找到可用结果，本次按普通对话回答';
         aiIsland('think', '思考中', '未找到可用来源 · 直接作答', { busy: true });
       } else {
-        const box = document.createElement('details');
-        box.className = 'think';
-        box.innerHTML = '<summary>联网检索：' + results.length + ' 条来源' +
-          (pages.length ? '，已抓取 ' + pages.length + ' 个网页' : '') + '</summary>' +
-          '<div class="body">' + esc(webSourcesText(results, pages)) + '</div>';
+        const box = makeThinkPanel('联网检索：' + results.length + ' 条来源' +
+          (pages.length ? '，已抓取 ' + pages.length + ' 个网页' : ''));
+        box.querySelector('.body').textContent = webSourcesText(results, pages);
+        thinkPanelSetOpen(box, false);   /* 来源明细默认收起，摘要行留着 */
         body.replaceChild(box, note);
         aiIsland('think', '思考中', '已联网 · ' + results.length + ' 条来源 · ' + eff.label, { busy: true });
       }
@@ -24662,17 +24695,13 @@ async function aiSend() {
   let thinkEl = null, thinkBody = null, thinkText = null, thinkFollow = true;
   const ensureThink = () => {
     if (thinkEl) return;
-    thinkEl = document.createElement('details');
-    thinkEl.className = 'think';
-    thinkEl.open = true;
-    thinkEl.innerHTML = '<summary><span class="spin"></span>思考过程</summary><div class="body"></div>';
+    thinkEl = makeThinkPanel('<span class="spin"></span>思考过程');
     body.insertBefore(thinkEl, bubble);
     thinkBody = thinkEl.querySelector('.body');
     /* 思维链是限高的滚动区：新内容到达时自动贴底；用户手动上翻后就不再抢滚动 */
     thinkBody.addEventListener('scroll', () => {
       thinkFollow = thinkBody.scrollHeight - thinkBody.scrollTop - thinkBody.clientHeight < 24;
     });
-    thinkEl.querySelector('summary').addEventListener('click', () => { });
   };
   /* ── 流式渲染 ──
      思维链逐 token 到达。若每个 token 都重建 DOM（整段 textContent 覆盖、整篇正文重新解析 markdown、
@@ -24705,7 +24734,7 @@ async function aiSend() {
       if (pendingC) {
         if (thinkEl) {
           const sp = thinkEl.querySelector('.spin'); if (sp) sp.remove();
-          const sm = thinkEl.querySelector('summary'); if (sm && !sm.dataset.done) { sm.dataset.done = '1'; sm.textContent = '思考完成（点击展开）'; thinkEl.open = false; }
+          const sm = thinkEl.querySelector('.think-hd'); if (sm && !sm.dataset.done) { sm.dataset.done = '1'; sm.textContent = '思考完成（点击展开）'; thinkPanelSetOpen(thinkEl, false); }
         }
         bubble.innerHTML = renderAIContent(pendingC);
         /* 正文流式到达：胶囊显示最近一句，让人知道它正在写什么 */
@@ -24813,10 +24842,7 @@ async function aiSend() {
     let el = null, tb = null, txt = null, follow = true;
     const ensure = () => {
       if (el) return;
-      el = document.createElement('details');
-      el.className = 'think';
-      el.open = true;
-      el.innerHTML = '<summary><span class="spin"></span>' + esc(title) + '</summary><div class="body"></div>';
+      el = makeThinkPanel('<span class="spin"></span>' + esc(title));
       body.appendChild(el);   /* 挂进本条消息的 .body（这里的 tb 才是面板自己的滚动区） */
       tb = el.querySelector('.body');
       tb.addEventListener('scroll', () => { follow = tb.scrollHeight - tb.scrollTop - tb.clientHeight < 24; });
@@ -24833,8 +24859,8 @@ async function aiSend() {
       done() {
         if (!el) return;
         const sp = el.querySelector('.spin'); if (sp) sp.remove();
-        const sm = el.querySelector('summary'); if (sm) sm.textContent = title + '（点击展开）';
-        el.open = false;
+        const sm = el.querySelector('.think-hd'); if (sm) sm.textContent = title + '（点击展开）';
+        thinkPanelSetOpen(el, false);
       }
     };
   };
@@ -24887,7 +24913,7 @@ async function aiSend() {
     const { reasoning, content } = await callAI(msgs, eff, paint);
     stopPaint(); flushPaint();   /* 把最后一帧补齐，避免结尾几个 token 丢失 */
     bubble.innerHTML = renderAIContent(content || '（没有返回内容）');
-    if (thinkEl) { const sp = thinkEl.querySelector('.spin'); if (sp) sp.remove(); const sm = thinkEl.querySelector('summary'); if (sm) { sm.textContent = '思考完成（点击展开）'; thinkEl.open = false; } }
+    if (thinkEl) { const sp = thinkEl.querySelector('.spin'); if (sp) sp.remove(); const sm = thinkEl.querySelector('.think-hd'); if (sm) { sm.textContent = '思考完成（点击展开）'; thinkPanelSetOpen(thinkEl, false); } }
     pruneAiImages();
 
     /* ── AI 自主补搜（```search）与澄清（```ask）──
