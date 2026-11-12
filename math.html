@@ -126,6 +126,17 @@ input:focus-visible,textarea:focus-visible,select:focus-visible,
 .input-wrap :focus-visible,.sheet-bar input:focus-visible{outline:none}
 .hidden{display:none!important}
 .spacer{flex:1}
+/* 等宽数字：数字占位宽度一致，缩放比例 / 代数值 / 计数 / 百分比刷新时不会左右跳。
+   浏览器不支持 font-variant-numeric 时，由 setNumberText() 把数字包进 .num-fallback，
+   退回等宽字体（只影响数字那几段，不换整行字体）。 */
+.number-stable{font-variant-numeric:tabular-nums lining-nums;font-feature-settings:"tnum" 1,"lnum" 1}
+@supports not (font-variant-numeric:tabular-nums){
+  .num-fallback{font-family:'Courier New',Consolas,monospace;font-variant-ligatures:none}
+}
+/* 应用内所有「会变的数字」都吃同一条规则：画布比例徽标、代数行的定义与数值、
+   分步计数、历史条数、上下文百分比、图层 / 分组计数 */
+.gv-badge,.obj-row .val,.obj-row .def,.ai-step-n,.ai-sh-cnt,.ai-ctx-txt,
+.algebra-head .cnt,.layer-head .cnt,.group-head .cnt{font-variant-numeric:tabular-nums lining-nums;font-feature-settings:"tnum" 1,"lnum" 1}
 /* 尊重系统「减弱动态效果」：动画 / 过渡 / 平滑滚动一律停掉，但保留 .001ms 以便 transitionend 仍会触发 */
 @media(prefers-reduced-motion:reduce){
   *,*::before,*::after{
@@ -1128,9 +1139,19 @@ body.dark .eff-warn{color:#c39bff}
 .ai-dock.sheet-open .ai-hello .p4{animation:hkDot .12s linear 2.38s forwards}
 @keyframes hkDraw{to{stroke-dashoffset:0}}
 @keyframes hkDot{to{stroke-width:18px}}
-.ai-hello-txt{font-size:var(--fs-sm);font-weight:500;color:var(--text-3);letter-spacing:.1px;opacity:0}
-.ai-dock.sheet-open .ai-hello-txt{animation:helloHint .55s var(--ease-out) 1.5s both}
-@keyframes helloHint{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
+.ai-hello-txt{font-size:var(--fs-sm);font-weight:500;color:var(--text-3);letter-spacing:.1px}
+/* 水墨晕染式逐字出现：每个字从「模糊 + 微放大」落回清晰，相邻字错开 30ms。
+   逐字拆 span 由 inkReveal() 完成；will-change 只在动画期间挂着，结束后释放。 */
+.ink-char{
+  display:inline-block;white-space:pre;opacity:0;filter:blur(6px);transform:scale(1.05);
+  animation:inkReveal 120ms cubic-bezier(.16,1,.3,1) forwards;
+  animation-delay:calc(var(--ink-start,0ms) + var(--i,0) * 30ms);
+  will-change:filter,opacity,transform;
+}
+@keyframes inkReveal{to{opacity:1;filter:blur(0);transform:scale(1)}}
+@media(prefers-reduced-motion:reduce){
+  .ink-char{animation:none;opacity:1;filter:none;transform:none}
+}
 .ai-chat{flex:1 1 auto;min-height:0;overflow-y:auto;padding:10px 14px 14px 16px;display:flex;flex-direction:column;gap:0;scroll-behavior:smooth}
 .msg{display:grid;grid-template-columns:16px minmax(0,1fr);column-gap:12px;align-items:stretch;
   padding:7px 6px 7px 0;border-radius:10px;max-width:100%;animation:fadeUp var(--t)}
@@ -7435,7 +7456,8 @@ function drawAxes(W, H) {
 const ZOOM_BASE = 46;
 function updateBadge() {
   const b = $('#viewBadge');
-  if (b) b.textContent = '比例 ' + fmt(state.view.scale / ZOOM_BASE, 2) + '×   ' + fmt(state.view.scale, 0) + ' px/单位';
+  /* 缩放过程中这行会连续刷新：数字用等宽口径写入，避免小数位变化时整行左右抖 */
+  if (b) setNumberText(b, '比例 ' + fmt(state.view.scale / ZOOM_BASE, 2) + '×   ' + fmt(state.view.scale, 0) + ' px/单位');
 }
 function drawPreview() {
   const ts = state.toolState; if (!ts || !ts.picks || !ts.picks.length) return;
@@ -23964,10 +23986,12 @@ function bindAI() {
   const helloHost = $('#aiHello');
   if (helloHost) helloHost.addEventListener('click', () => {
     helloHost.classList.add('rb');
-    const els = Array.from(helloHost.querySelectorAll('.hk, .ai-hello-txt'));
-    els.forEach(el => { el.style.animation = 'none'; });
+    /* 手写笔画靠「摘掉动画 → 强制重排 → 还原」重播；提示语直接重建字符节点（inkReveal 自带重播） */
+    const strokes = Array.from(helloHost.querySelectorAll('.hk'));
+    strokes.forEach(el => { el.style.animation = 'none'; });
     void helloHost.offsetWidth;
-    els.forEach(el => { el.style.animation = ''; });
+    strokes.forEach(el => { el.style.animation = ''; });
+    aiHelloInk();
   });
   if (chatHost) chatHost.addEventListener('click', e => {
     const cp = e.target.closest('.md-copy');
@@ -24053,12 +24077,81 @@ function aiNavGo(i) {
   const cr = chat.getBoundingClientRect(), r = msg.getBoundingClientRect();
   chat.scrollTo({ top: Math.max(0, chat.scrollTop + r.top - cr.top - 6), behavior: 'smooth' });
 }
+/* ── 水墨晕染式逐字出现 ──
+   inkReveal(el, text[, {start: 毫秒}])：把文本拆成单字 span，每个字独立做
+   模糊 → 清晰的过渡，相邻字错开 30ms（见 .ink-char）。重复调用即重播。 */
+function inkReveal(el, text, opts) {
+  if (!el) return null;
+  const o = opts || {};
+  const s = String(text == null ? el.textContent || '' : text);
+  if (o.start) el.style.setProperty('--ink-start', Math.max(0, +o.start || 0) + 'ms');
+  else el.style.removeProperty('--ink-start');
+  el.textContent = '';
+  Array.from(s).forEach((ch, i) => {
+    const sp = document.createElement('span');
+    sp.className = 'ink-char';
+    sp.style.setProperty('--i', i);
+    sp.textContent = ch;          /* 空格靠 white-space:pre 保留，不会被折叠掉 */
+    el.appendChild(sp);
+  });
+  /* 动完就把 will-change 摘掉：几十个合成层一直挂着会白占显存 */
+  if (!el.__inkBound) {
+    el.__inkBound = true;
+    el.addEventListener('animationend', e => {
+      if (e.target && e.target.classList && e.target.classList.contains('ink-char')) e.target.style.willChange = 'auto';
+    });
+  }
+  return el;
+}
+/* 等宽数字降级：现代浏览器一个 CSS 类就够；不认 font-variant-numeric 的旧内核
+   退回到「只把数字包进等宽 span」，避免整行换字体。
+   setNumberText(el, text) 是给动态文本（比例徽标 / 百分比）用的统一入口。
+   （用函数声明 + 惰性缓存，保证脚本初始化早期调用 updateBadge 时也能用。） */
+function numTabularOK() {
+  if (numTabularOK.v != null) return numTabularOK.v;
+  try { numTabularOK.v = !!(window.CSS && CSS.supports && CSS.supports('font-variant-numeric', 'tabular-nums')); }
+  catch (e) { numTabularOK.v = false; }
+  return numTabularOK.v;
+}
+function wrapNumbers(el, text) {
+  if (!el) return el;
+  const s = String(text == null ? '' : text);
+  el.textContent = '';
+  const re = /\d+(?:\.\d+)?/g;
+  let last = 0, m;
+  while ((m = re.exec(s))) {
+    if (m.index > last) el.appendChild(document.createTextNode(s.slice(last, m.index)));
+    const sp = document.createElement('span');
+    sp.className = 'num-fallback';
+    sp.textContent = m[0];
+    el.appendChild(sp);
+    last = m.index + m[0].length;
+  }
+  if (last < s.length) el.appendChild(document.createTextNode(s.slice(last)));
+  return el;
+}
+function setNumberText(el, text) {
+  if (!el) return el;
+  if (numTabularOK()) el.textContent = String(text == null ? '' : text);
+  else wrapNumbers(el, text);
+  return el;
+}
+const AI_HELLO_TEXT = '说一句，我把它画出来';
+/* 空态提示的逐字入场：等手写笔画写到一半（1.5s）再开始，节奏和 hello 一致 */
+function aiHelloInk() {
+  const host = $('#aiHello');
+  if (!host || host.classList.contains('hidden')) return;
+  inkReveal(host.querySelector('.ai-hello-txt'), AI_HELLO_TEXT, { start: 1500 });
+}
 /* 空态：没有任何消息时显示手写 hello；一旦有消息就收起，清空对话后又回来。
    DOM 由 MutationObserver 盯着，不管从哪条路径清空（重做、清空全部、脚本）都能同步。 */
 function aiHelloSync() {
   const host = $('#aiHello'), chat = $('#aiChat');
   if (!host || !chat) return;
+  const wasHidden = host.classList.contains('hidden');
   host.classList.toggle('hidden', !!chat.querySelector('.msg'));
+  /* 从「有消息」回到「空」时，提示语要重新逐字出现，而不是静态摆在那里 */
+  if (wasHidden && !host.classList.contains('hidden')) aiHelloInk();
 }
 function aiWelcome() {
   aiHelloSync();
@@ -24453,7 +24546,7 @@ function aiCtxSync() {
   const pct = Math.min(100, used / AI_CTX_MAX * 100);
   const fill = $('#aiCtxFill'), txt = $('#aiCtxTxt'), box = $('#aiCtx');
   if (fill) fill.style.width = Math.max(pct, used ? 2 : 0).toFixed(1) + '%';
-  if (txt) txt.textContent = pct < 1 && used ? '<1%' : Math.round(pct) + '%';
+  if (txt) setNumberText(txt, pct < 1 && used ? '<1%' : Math.round(pct) + '%');
   if (box) {
     box.classList.toggle('warn', pct >= 70 && pct < 90);
     box.classList.toggle('full', pct >= 90);
@@ -24473,9 +24566,12 @@ function aiHistoryVisible() {
 function aiSyncFoldUI() {
   const dock = $('#aiPanel'); if (!dock) return;
   const vis = aiHistoryVisible();
+  const wasOpen = dock.classList.contains('sheet-open');
   state.aiSheet = vis;
   dock.classList.toggle('sheet-open', vis);
   dock.classList.toggle('hist-on', vis);
+  /* 面板从收起变展开：手写 hello 与提示语都重新演一遍（提示语逐字晕开） */
+  if (vis && !wasOpen) aiHelloInk();
   const hf = $('#aiHistFold');
   if (hf) {
     hf.setAttribute('aria-expanded', vis ? 'true' : 'false');
