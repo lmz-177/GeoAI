@@ -18735,8 +18735,29 @@ async function runUITest() {
       if (go.indexOf('zzNoSuchThing') < 0) throw new Error('失败原因没有回传给 AI（步骤标题：' + go + '）');
     } finally { window.callAI = orig; toggleAI(false); }
   });
-
-  /* 8b. 更多快捷键 */
+  await A('AI:失败步骤被后续步骤补上时不算「部分完成」', async () => {
+    const orig = window.callAI; let n = 0;
+    window.callAI = async () => {
+      n++;
+      /* 第 1 步故意写错一条，第 2 步换对象写对，之后只回文字（不给 done 标记） */
+      if (n === 1) return { reasoning: '', content: '```geogebra\nqqP=(1,1)\nqqBad=qqP+qqNope\n```' };
+      if (n === 2) return { reasoning: '', content: '```geogebra\nqqQ=(4,2)\nqqL=Line(qqP,qqQ)\n```' };
+      return { reasoning: '', content: '这两点已经连好了。' };
+    };
+    try {
+      toggleAI(true); await sleep(0);
+      $('#aiInput').value = '画两点连线';
+      await aiSend();
+      for (let i = 0; i < 150 && state.aiBusy; i++) await sleep(10);
+      await sleep(40);
+      if (!state.objects.some(o => o.label === 'qqL')) throw new Error('补做的命令没有生效');
+      const isl = $('#aiIsland');
+      if (isl.classList.contains('is-partial')) {
+        throw new Error('第 2 步已把第 1 步补上，不该再标「部分完成」：' + $('#aiiLabel').textContent);
+      }
+      if (!isl.classList.contains('is-done')) throw new Error('补完后应是完成态，实际 kind=' + isl.dataset.kind);
+    } finally { window.callAI = orig; toggleAI(false); }
+  });
   await A('快捷键:Delete 删除选中', async () => {
     const o = obj(); state.selection = [o.id]; const n = state.objects.length;
     window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Delete', bubbles: true })); await sleep(0);
@@ -24701,7 +24722,8 @@ async function aiSend() {
       if (firstCmds.length) {
         actionNo = 1;
         stepOk += streamResults.filter(r => r.ok).length;
-        stepBadN += streamResults.filter(r => !r.ok).length;
+        /* 首轮失败数只作初值；后面任何一步整体成功都会被清零（见下） */
+        stepBadN = streamResults.filter(r => !r.ok).length;
         stepLog.push('第 1 步：' + firstCmds.join('; '));
         planMsgs.push({ role: 'assistant', content: curContent });
         planMsgs.push({ role: 'user', content: obsText(streamResults, curContent) });
@@ -24770,7 +24792,10 @@ async function aiSend() {
         const rs = cmds.length ? execLines(cmds, stepEl) : [];
         const bad = rs.filter(r => !r.ok);
         stepOk += rs.filter(r => r.ok).length;
-        stepBadN += bad.length;
+        /* 失败数是「当前仍未解决」的口径，不是历史累计：第 2 步写错、第 3 步换构造
+           写对之后，前面那条失败已经被补上了，不该还挂着让终态显示成「部分完成」。
+           只要某一轮的命令全部成功，就把计数清零；一直失败的则保留最后一轮的数。 */
+        if (rs.length) stepBadN = bad.length;
         if (cmds.length) stepLog.push('第 ' + actionNo + ' 步：' + cmds.join('; '));
         planMsgs.push({ role: 'assistant', content: raw });
         planMsgs.push({ role: 'user', content: obsText(rs, raw) });
@@ -24798,7 +24823,7 @@ async function aiSend() {
       doneSub = reactDone
         ? '已分 ' + stepTotal + ' 步作图 · 完成 ' + stepOk + ' 条命令'
         : (stepBadN ? stepOk + ' 条命令成功 · ' + stepBadN + ' 条未成功'
-          : '作图中断 · 已完成 ' + stepOk + ' 条命令');
+          : '已完成 ' + stepOk + ' 条命令');
       if (stepBadN && !reactDone) toast('有 ' + stepBadN + ' 条命令未执行成功', 'err', 3200);
     } else if (results.length) {
       let bad = results.filter(r => !r.ok);
