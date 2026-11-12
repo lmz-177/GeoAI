@@ -7,6 +7,8 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="format-detection" content="telephone=no">
 <title>GeoAI · 动态数学画板</title>
+<!-- 站点小图标：内联 SVG，省掉一次 favicon.ico 的 404 请求 -->
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23007aff'/%3E%3Cpath d='M8 22c4-11 12-11 16 0' fill='none' stroke='%23fff' stroke-width='2.6' stroke-linecap='round'/%3E%3Ccircle cx='16' cy='12.4' r='2.6' fill='%23fff'/%3E%3C/svg%3E">
 <style>
 /* ===================================================================
    主题变量
@@ -22962,6 +22964,11 @@ function aiiEffPlace() {
   m.style.left = '50%';
   m.style.transform = 'translateX(calc(-50% + ' + Math.round(dx) + 'px))';
 }
+/* 窗口尺寸变化（拖侧栏、横竖屏切换）会让胶囊宽度变、位置变，菜单也要重新贴一次，
+   否则会停在旧锚点上「飘」出去 */
+window.addEventListener('resize', () => {
+  if (document.querySelector('#aiiEff.on')) aiiEffPlace();
+});
 
 /* ── AI 灵动岛 ──
    发出一条指令后，整块对话区（对话 + 输入条）收进这一颗胶囊，过程和结果都在
