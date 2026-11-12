@@ -1409,6 +1409,10 @@ body.dark .eff-warn{color:#c39bff}
 .ai-island.is-error .aii-eyes{display:none}
 .ai-island.is-error .aii-xeyes{display:block}
 .ai-island.is-error .aii-bot{animation:botShake .5s ease-in-out 2}
+/* 部分完成：步骤里有的成功、有的失败。不是彻底失败，所以不叉眼——
+   眯眼 + 歪头（和「修正」同一套肢体语言），配色从红退到警告橙。 */
+.ai-island.is-partial .aii-look{animation:botSquint 1.6s ease-in-out infinite}
+.ai-island.is-partial .aii-bot{animation:botTilt 2.2s ease-in-out infinite}
 .ai-island.is-done .aii-eyes{display:none}
 .ai-island.is-done .aii-happy{display:block}
 .ai-island.is-done .aii-spark{opacity:1;animation:botSpark .9s var(--ease) 1}
@@ -1463,6 +1467,7 @@ body:has(.aii-eff.on) .ai-dock{z-index:230}
 .ai-island.is-error{--orb:#ff453a;--orb2:#ff9500}
 .ai-island.is-done{--orb:#34c759;--orb2:#30d158}
 .ai-island.is-stopped{--orb:#8e8e93;--orb2:#b6b6bb}
+.ai-island.is-partial{--orb:#ff9f0a;--orb2:#ffd60a}
 /* 停止钮：玻璃圆底 + 居中实心方块，外圈细弧线只在生成中转动 */
 .aii-stop{
   position:relative;flex:0 0 20px;width:20px;height:20px;border-radius:50%;display:grid;place-items:center;
@@ -18324,6 +18329,14 @@ async function runUITest() {
     if (!$('#aiiThink canvas')) throw new Error('思考位置的 loader 画布没建出来');
     if (!bot.getBoundingClientRect().width) throw new Error('角色没有显示出来');
     if (!$('#aiiStatus') || !$('#aiiStop')) throw new Error('缺少细状态条 / 停止键');
+    /* 「部分完成」是独立终态：命令有成败混合时不该表现成彻底失败（叉眼红球） */
+    aiIsland('partial', '部分完成', '3 成 1 败'); await sleep(0);
+    if ($('#aiIsland').classList.contains('busy')) throw new Error('部分完成是终态，不该还在忙');
+    if (!$('#aiIsland').classList.contains('is-partial')) throw new Error('部分完成缺少专属配色类');
+    if (getComputedStyle($('#aiIsland')).getPropertyValue('--orb').trim() !== '#ff9f0a') throw new Error('部分完成的球色不是警告橙');
+    if ($('#aiIsland').classList.contains('is-error')) throw new Error('部分完成不该沿用失败态的叉眼');
+    /* 回到空闲：后续用例（状态条显示思考深度、眼珠跟随）都建立在 idle 上 */
+    aiMini(true); await sleep(20);
     /* 空闲收起：状态条显示思考深度，而不是笼统的「AI 待命」 */
     const depthTxt = '思考深度 · ' + aiEffort().label;
     if ($('#aiiLabel').textContent !== depthTxt) throw new Error('空闲收起后状态条没显示思考深度：' + $('#aiiLabel').textContent);
@@ -22972,9 +22985,9 @@ window.addEventListener('resize', () => {
 
 /* ── AI 灵动岛 ──
    发出一条指令后，整块对话区（对话 + 输入条）收进这一颗胶囊，过程和结果都在
-   胶囊里报状态：检索 → 思考 → 输出 →（命令失败时）修正 → 完成 / 失败 / 已停止。
+   胶囊里报状态：检索 → 思考 → 输出 →（命令失败时）修正 → 完成 / 部分完成 / 失败 / 已停止。
    orb 颜色按阶段切换，忙碌时底部一条细进度条流动；点胶囊回到完整对话。 */
-const AI_ISLAND_KINDS = ['search', 'think', 'write', 'correct', 'error', 'done', 'stopped'];
+const AI_ISLAND_KINDS = ['search', 'think', 'write', 'correct', 'error', 'partial', 'done', 'stopped'];
 function aiIslandPreview(t) {
   const s = String(t)
     .replace(/```[\s\S]*?```/g, ' ')
@@ -22989,7 +23002,8 @@ function aiIslandPreview(t) {
 function aiIsland(kind, label, sub, opts) {
   const isl = $('#aiIsland'); if (!isl) return;
   const o = opts || {};
-  const busy = o.busy !== undefined ? !!o.busy : kind !== 'done' && kind !== 'error' && kind !== 'stopped';
+  /* 「部分完成」「需要用户确认」也是终态：不走进度条计时，也不再算作正在生成 */
+  const busy = o.busy !== undefined ? !!o.busy : !['done', 'error', 'partial', 'stopped'].includes(kind);
   const same = isl.dataset.kind === kind;
   isl.dataset.kind = kind;
   isl.classList.toggle('busy', busy);
@@ -24828,7 +24842,7 @@ async function aiSend() {
       aiIsland('done', '等待确认', 'AI 想先问清楚再继续' + webNote, { busy: false });
       aiAskPop(extractBlockList(curContent, 'ask')[0] || '', prevFold);
     } else if (badTotal) {
-      aiIslandSettle('error', '作图未完全完成', doneSub + webNote + ' · 点按查看', 2200);
+      aiIslandSettle('partial', '部分完成', doneSub + webNote + ' · 点按查看', 2200);
     } else {
       aiIslandSettle('done', '完成', doneSub + webNote, 1400);
     }
