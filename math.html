@@ -68,6 +68,9 @@
   --t-quick:.14s var(--ease);   /* 小面板弹出、色板展开 */
   --t:.22s var(--ease);         /* 通用交互过渡 */
   --t-slow:.3s var(--ease);     /* 模态、整块区域进场 */
+  /* 只含时长的版本，专给 transition-delay 用：--t / --t-slow 里已经带了缓动函数，
+     直接塞进 delay 位（visibility 0s linear var(--t-slow)）会让整条 transition 失效 */
+  --dur-quick:.14s; --dur:.22s; --dur-slow:.3s;
   /* 交互控件统一过渡：明确列出属性，不再用 all（all 会把 width/height 也算进去，
      布局一变就跟着抖，而且改一个属性得连带重排全部）。 */
   --t-ui:background-color .18s ease,color .18s ease,border-color .18s ease,
@@ -226,11 +229,11 @@ body.dark .app::before{
   -webkit-backdrop-filter:var(--glass-blur);backdrop-filter:var(--glass-blur);
   /* visibility 跟着滑出一起延迟切换：抽屉藏在屏外时里面的按钮不该还能被 Tab 聚焦 */
   transform:translateX(-102%);visibility:hidden;
-  transition:transform var(--t-slow),visibility 0s linear var(--t-slow);
+  transition:transform var(--t-slow),visibility 0s linear var(--dur-slow);
   user-select:none;
 }
 /* 抽屉打开时把触发按钮淡出：否则半透明遮罩下的按钮会隔着抽屉边缘透出来，看着像两个入口 */
-.fmenu-btn.behind{opacity:0;pointer-events:none}
+.fmenu-btn.behind{opacity:0;pointer-events:none;visibility:hidden}
 /* 抽屉容器自己接焦点（tabindex=-1）只为把焦点带进抽屉，不需要焦点环 */
 .fmenu:focus,.fmenu:focus-visible{outline:none}
 .fmenu.on{transform:none;visibility:visible;transition:transform var(--t-slow),visibility 0s}
@@ -729,7 +732,7 @@ body.tool-folded .tool-head{padding-bottom:0}
 /* 拖动中关掉宽度过渡：过渡会把鼠标位移「追」成慢半拍的动画，拖起来发飘 */
 .sidebar.resizing{transition:none}
 /* ---------- 绘图区 ---------- */
-.splitter{width:6px;flex:0 0 6px;cursor:col-resize;background:transparent;position:relative;z-index:20}
+.splitter{width:6px;flex:0 0 6px;cursor:col-resize;background:transparent;position:relative;z-index:20;touch-action:none}
 /* 拖动分栏时的透明遮罩：整页接管指针，侧栏与画布里的悬停态、文字选择都不会在拖动中闪 */
 .drag-shield{position:fixed;inset:0;z-index:9999;background:transparent;cursor:col-resize}
 .splitter::after{content:'';position:absolute;left:2.5px;top:0;bottom:0;width:1px;background:var(--border);transition:background var(--t)}
@@ -805,12 +808,17 @@ body.tool-folded .tool-head{padding-bottom:0}
   overflow:hidden;transform:translateY(10px);margin-bottom:-8px;
   background:var(--glass-2);border:.5px solid transparent;border-radius:20px;
   -webkit-backdrop-filter:var(--glass-blur);backdrop-filter:var(--glass-blur);
+  /* 收起时 visibility 一起隐藏：否则收起的面板里那堆按钮仍然会被 Tab 逐个聚焦。
+     关闭延迟到高度动画结束（否则会先消失再塌陷），展开时立即可见 */
+  visibility:hidden;
   transition:max-height var(--t-slow),opacity var(--t),transform var(--t-slow),
-    margin var(--t-slow),border-color var(--t),box-shadow var(--t);
+    margin var(--t-slow),border-color var(--t),box-shadow var(--t),visibility 0s linear var(--dur-slow);
 }
 .ai-dock.sheet-open .ai-sheet{
-  max-height:min(84vh,820px);opacity:1;transform:none;pointer-events:auto;margin-bottom:0;
+  max-height:min(84vh,820px);opacity:1;transform:none;pointer-events:auto;margin-bottom:0;visibility:visible;
   border-color:var(--glass-brd);box-shadow:var(--shadow-lg),var(--hi-strong);
+  transition:max-height var(--t-slow),opacity var(--t),transform var(--t-slow),
+    margin var(--t-slow),border-color var(--t),box-shadow var(--t),visibility 0s;
 }
 /* ── 历史记录：浮在消息区右上角的数量小药丸 ──
    不再是整条横栏（横栏 + 「历史记录」标题占掉 40px 高度）：
@@ -888,16 +896,16 @@ body.tool-folded .tool-head{padding-bottom:0}
   position:absolute;right:16px;top:6px;bottom:6px;width:14px;z-index:5;
   display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;
   overflow-y:auto;overflow-x:hidden;scrollbar-width:none;
-  opacity:0;pointer-events:none;transition:opacity var(--t);
+  opacity:0;pointer-events:none;visibility:hidden;transition:opacity var(--t),visibility 0s linear var(--dur);
   mask-image:linear-gradient(to bottom,transparent 0,#000 12%,#000 88%,transparent 100%);
   -webkit-mask-image:linear-gradient(to bottom,transparent 0,#000 12%,#000 88%,transparent 100%);
 }
 .ai-msg-nav::-webkit-scrollbar{display:none}
-.ai-msg-nav.on{opacity:1;pointer-events:auto}
+.ai-msg-nav.on{opacity:1;pointer-events:auto;visibility:visible;transition:opacity var(--t),visibility 0s}
 .ai-msg-nav button{
   flex:0 0 auto;width:7px;height:7px;border-radius:99px;padding:0;
   background:var(--border-2);opacity:.7;
-  transition:height var(--t),background-color var(--t),opacity var(--t),transform var(--t-ui);
+  transition:height var(--t),background-color var(--t),opacity var(--t),transform var(--dur-quick) var(--ease-out);
 }
 .ai-msg-nav button:hover{background:var(--accent);opacity:1;transform:scale(1.35)}
 .ai-msg-nav button.on{height:18px;background:var(--accent);opacity:1}
@@ -911,9 +919,12 @@ body.tool-folded .tool-head{padding-bottom:0}
   box-shadow:var(--shadow),var(--hi);
   -webkit-backdrop-filter:var(--glass-blur);backdrop-filter:var(--glass-blur);
   opacity:0;pointer-events:none;transform:translate(-50%,6px);
-  transition:opacity var(--t),transform var(--t-ui),color var(--t),background-color var(--t);
+  /* visibility 跟着一起切：只用 opacity:0 的话，看不见的按钮仍然会被 Tab 聚焦 */
+  visibility:hidden;
+  transition:opacity var(--t),transform var(--dur-quick) var(--ease-out),color var(--t),background-color var(--t),visibility 0s linear var(--dur);
 }
-.ai-jump.on{opacity:1;pointer-events:auto;transform:translate(-50%,0)}
+.ai-jump.on{opacity:1;pointer-events:auto;transform:translate(-50%,0);visibility:visible;
+  transition:opacity var(--t),transform var(--dur-quick) var(--ease-out),color var(--t),background-color var(--t),visibility 0s}
 .ai-jump:hover{color:var(--accent);background:var(--accent-dim)}
 .ai-jump:active{transform:translate(-50%,0) scale(.96)}
 .ai-jump svg{width:13px;height:13px}
@@ -2102,6 +2113,14 @@ body.dark .modal::after{
 <meta name="theme-color" id="metaThemeColor" content="#f2f2f7">
 </head>
 <body>
+<script>
+/* 首屏之前就套上深色：等 DOMContentLoaded 再切会先闪一下白底（尤其是夜里刷新页面时） */
+try {
+  var __t = localStorage.getItem('ggai_theme');
+  if (__t === 'dark' || (!__t && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches))
+    document.body.classList.add('dark');
+} catch (e) { }
+</script>
 <div class="app">
 
   <!-- ══════════ 顶部：右侧独立的视图切换 ══════════ -->
@@ -2710,6 +2729,21 @@ function toast(msg, kind, ms) {
   return t;
 }
 const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+/* 输入法安全的回车：选字时按回车是「确认候选词」，不能当成执行 / 发送。
+   isComposing / keyCode 229 覆盖正在选字；compositionend 后再冷却 500ms，
+   兜住「先结束合成、后补发 keydown」的输入法。冷却期的回车直接吞掉（不插换行）。 */
+function guardImeEnter(el, onEnter) {
+  if (!el) return;
+  let until = 0;
+  el.addEventListener('compositionstart', () => { until = Infinity; });
+  el.addEventListener('compositionend', () => { until = performance.now() + 500; });
+  el.addEventListener('keydown', e => {
+    if (e.key !== 'Enter') return;
+    if (e.isComposing || e.keyCode === 229) return;
+    if (performance.now() < until) { e.preventDefault(); return; }
+    onEnter(e);
+  });
+}
 
 /* ─────────────────────────── 1. 图标库 ─────────────────────────── */
 const S = (p, extra) => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"' + (extra || '') + '>' + p + '</svg>';
@@ -3081,6 +3115,27 @@ const SET = {
   axesRatio: '1:1', showMinor: false, angleUnit: 'deg', autoLabel: true,
   showGridNumbers: true, boldGrid: false, darkCanvas: false, canvasBg: null,
 };
+/* 设置持久化：小数位、角度单位、网格 / 坐标轴开关这些是「下次打开还想保持」的偏好。
+   主题不在这里 —— 它有自己的 ggai_theme（要在首屏前应用，避免闪一下白底）。 */
+const SET_STORE = 'ggai_settings_v1';
+const SET_KEYS = ['round', 'grid', 'axes', 'labels', 'snap', 'snapToObjects',
+  'pointSize', 'lineWidth', 'fontSize', 'showMinor', 'boldGrid', 'showGridNumbers', 'angleUnit'];
+function saveSET() {
+  if (TEST_MODE) return;                 /* 自测模式不写本地存储，保证用例之间确定性 */
+  try {
+    const o = {};
+    SET_KEYS.forEach(k => { o[k] = SET[k]; });
+    localStorage.setItem(SET_STORE, JSON.stringify(o));
+  } catch (e) { /* 隐私模式 / 配额满：偏好没存上不影响使用 */ }
+}
+function loadSET() {
+  if (TEST_MODE) return;
+  try {
+    const o = JSON.parse(localStorage.getItem(SET_STORE) || 'null');
+    if (!o || typeof o !== 'object') return;
+    SET_KEYS.forEach(k => { if (k in o && typeof o[k] === typeof SET[k]) SET[k] = o[k]; });
+  } catch (e) { }
+}
 const state = {
   objects: [],           // GeoObject[]
   view: { cx: 0, cy: 0, scale: 46 },   // 世界坐标中心 + 每单位像素
@@ -11347,8 +11402,8 @@ C('SetZoom', 'SetZoom(比例) 或 SetZoom(对象, 比例)', '设定缩放比例�
   if (center) { state.view.cx = center.x; state.view.cy = center.y; }
   draw(); scheduleViewResample(); return [];
 }, ['缩放比例']);
-C('ShowGrid', 'ShowGrid(true)', '显示 / 隐藏网格', (a) => { SET.grid = !!(a[0].val ?? true); draw(); syncMenuChecks(); return []; });
-C('ShowAxes', 'ShowAxes(true)', '显示 / 隐藏坐标轴', (a) => { SET.axes = !!(a[0].val ?? true); draw(); syncMenuChecks(); return []; });
+C('ShowGrid', 'ShowGrid(true)', '显示 / 隐藏网格', (a) => { SET.grid = !!(a[0].val ?? true); draw(); syncMenuChecks(); saveSET(); return []; });
+C('ShowAxes', 'ShowAxes(true)', '显示 / 隐藏坐标轴', (a) => { SET.axes = !!(a[0].val ?? true); draw(); syncMenuChecks(); saveSET(); return []; });
 C('CenterView', 'CenterView(x, y) 或 CenterView(对象)', '把视图中心移到坐标 / 对象上', (a) => {
   if (a.length >= 2) { state.view.cx = AN(a[0]); state.view.cy = AN(a[1]); }
   else {
@@ -14535,9 +14590,9 @@ function handleCtx(a) {
     case 'zoomFit': zoomFit(); break;
     case 'zoomIn': zoomAt(canvas.clientWidth / 2, canvas.clientHeight / 2, 1.25); break;
     case 'zoomOut': zoomAt(canvas.clientWidth / 2, canvas.clientHeight / 2, .8); break;
-    case 'grid': SET.grid = !SET.grid; draw(); syncMenuChecks(); break;
-    case 'axes': SET.axes = !SET.axes; draw(); syncMenuChecks(); break;
-    case 'snap': SET.snap = !SET.snap; syncMenuChecks(); break;
+    case 'grid': SET.grid = !SET.grid; draw(); syncMenuChecks(); saveSET(); break;
+    case 'axes': SET.axes = !SET.axes; draw(); syncMenuChecks(); saveSET(); break;
+    case 'snap': SET.snap = !SET.snap; syncMenuChecks(); saveSET(); break;
     case 'paste': $('#inputField').focus(); break;
   }
 }
@@ -14931,9 +14986,18 @@ function sheetChanged() {
 }
 function sheetClear() {
   if (!sheetHasCells()) { toast('表格已经是空的'); return; }
-  state.sheet.cells = {};
-  sheetChanged();
-  toast('表格已清空', 'ok');
+  /* 整张表一次性抹掉，先确认再动手；确认后仍可 Ctrl+Z 撤回 */
+  confirmDialog({
+    title: '清空表格',
+    body: '表格里所有单元格的内容都会清空（画布上的对象不受影响）。清空后可以按 Ctrl+Z 撤销。',
+    okText: '清空', danger: true,
+  }).then(ok => {
+    if (!ok) return;
+    pushUndo();
+    state.sheet.cells = {};
+    sheetChanged();
+    toast('表格已清空', 'ok');
+  });
 }
 /* 把选中列里的数值画成画布上的点（≥2 个时连成折线） */
 function sheetPlotColumn() {
@@ -14973,14 +15037,16 @@ function sheetBind() {
     sheetSelect(td.dataset.cell, true);
   });
   const inp = $('#sheetInput');
+  /* 回车下移一格；选字中的回车只用来确认候选词，不会把半截内容写进单元格 */
+  guardImeEnter(inp, e => {
+    e.preventDefault();
+    sheetCommit();
+    const ref = sheetRef(state.sheet.sel);
+    if (ref && ref.r + 1 < SHEET_ROWS) sheetSelect(sheetName(ref.r + 1, ref.c), true);
+    else { inp.blur(); sheetRender(); }
+  });
   inp.addEventListener('keydown', e => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      sheetCommit();
-      const ref = sheetRef(state.sheet.sel);
-      if (ref && ref.r + 1 < SHEET_ROWS) sheetSelect(sheetName(ref.r + 1, ref.c), true);
-      else { inp.blur(); sheetRender(); }
-    } else if (e.key === 'Escape') { e.preventDefault(); inp.value = state.sheet.cells[state.sheet.sel] || ''; inp.blur(); }
+    if (e.key === 'Escape') { e.preventDefault(); inp.value = state.sheet.cells[state.sheet.sel] || ''; inp.blur(); }
   });
   inp.addEventListener('blur', () => { if (sheetCommit()) sheetSyncBar(); });
   $('#sheetPlot').addEventListener('click', sheetPlotColumn);
@@ -14998,6 +15064,7 @@ function openSettings() {
   $('#setReset').style.display = '';
   const b = $('#settingsBody');
   b.innerHTML = settingsHtml();
+  b.scrollTop = 0;                 /* 每次打开都从顶部开始，不接着上次的滚动位置 */
   bindSettings();
   openBackdrop('settingsBackdrop');
 }
@@ -15015,7 +15082,7 @@ function settingsHtml() {
     sw('snap', '吸附到网格') + sw('snapToObjects', '吸附到已有对象') +
     '</div>' +
     '<div class="set-group"><h3>对象样式</h3>' +
-    rg('pointSize', '默认点大小', 2, 12, .5, '像素') + rg('lineWidth', '默认线宽', 1, 12, .2, '像素') + rg('fontSize', '标签字号', 8, 22, 1, '像素') + sw('labels', '显示对象标签') +
+    rg('pointSize', '默认点大小', 2, 12, .5, '像素 · 未单独设置的跟随') + rg('lineWidth', '默认线宽', 1, 12, .2, '像素 · 未单独设置的跟随') + rg('fontSize', '标签字号', 8, 22, 1, '像素') + sw('labels', '显示对象标签') +
     '</div>';
 }
 function bindSettings() {
@@ -15026,6 +15093,7 @@ function bindSettings() {
     el.addEventListener('click', () => {
       const k = el.dataset.sw; SET[k] = !SET[k];
       el.classList.toggle('on', SET[k]); el.setAttribute('aria-checked', String(!!SET[k]));
+      saveSET();
       if (k === 'snapToObjects') { } else draw();
       recomputeAll(); syncMenuChecks();
     });
@@ -15035,16 +15103,22 @@ function bindSettings() {
     el.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); el.click(); } });
   });
   b.querySelectorAll('[data-rg]').forEach(el => el.addEventListener('input', () => {
-    const k = el.dataset.rg; SET[k] = parseFloat(el.value);
+    const k = el.dataset.rg, prev = SET[k];
+    SET[k] = parseFloat(el.value);
     const out = b.querySelector('[data-out="' + k + '"]'); if (out) out.textContent = SET[k];
-    if (k === 'pointSize') state.objects.forEach(o => { if (o.type === 'point') o.pointSize = SET[k]; });
-    if (k === 'lineWidth') state.objects.forEach(o => { if (o.lineWidth === undefined || true) { } });
+    /* 「默认点大小 / 默认线宽」是给新对象的默认值，但画布上「还没单独改过」的对象
+       应当跟着变 —— 否则拖滑块一点反馈都没有。已经单独设置过的对象保持原样，
+       不因为动一下全局默认就被抹掉自己的样式。 */
+    if (k === 'pointSize') state.objects.forEach(o => { if (o.type === 'point' && (o.pointSize === undefined || o.pointSize === prev)) o.pointSize = SET[k]; });
+    else if (k === 'lineWidth') state.objects.forEach(o => { if (isLineish(o) && (o.lineWidth === undefined || o.lineWidth === prev)) o.lineWidth = SET[k]; });
+    saveSET();
     draw();
   }));
   b.querySelectorAll('[data-sel]').forEach(el => el.addEventListener('change', () => {
     const k = el.dataset.sel;
     SET[k] = k === 'round' ? parseInt(el.value) : el.value;
     if (k === 'theme') applyTheme();
+    saveSET();
     recomputeAll();
   }));
 }
@@ -15065,6 +15139,9 @@ function openObjectSettings(o) {
   $('#setReset').style.display = '';
   const b = $('#settingsBody');
   b.innerHTML = objSettingsHtml(o);
+  b.scrollTop = 0;
+  /* 设置 / 帮助共用同一个弹窗：对象设置回到常规宽度，别沿用帮助页的 720 */
+  const modal = $('#settingsBackdrop .modal'); if (modal) modal.style.maxWidth = '600px';
   bindObjSettings(o);
   openBackdrop('settingsBackdrop');
 }
@@ -15459,10 +15536,10 @@ function doMenuAction(a) {
     case 'deleteSel': if (state.selection.length) { pushUndo(); state.selection.slice().forEach(id => removeObjectById(id, true)); recomputeAll(); refreshAlgebra(); toast('已删除选中对象'); } else toast('没有选中对象', 'err'); break;
     case 'rename': renameSelected(); break;
     case 'clear': doClearAll(); break;
-    case 'toggleGrid': SET.grid = !SET.grid; draw(); syncMenuChecks(); break;
-    case 'toggleAxes': SET.axes = !SET.axes; draw(); syncMenuChecks(); break;
-    case 'toggleLabels': SET.labels = !SET.labels; draw(); syncMenuChecks(); break;
-    case 'toggleSnap': SET.snap = !SET.snap; syncMenuChecks(); break;
+    case 'toggleGrid': SET.grid = !SET.grid; draw(); syncMenuChecks(); saveSET(); break;
+    case 'toggleAxes': SET.axes = !SET.axes; draw(); syncMenuChecks(); saveSET(); break;
+    case 'toggleLabels': SET.labels = !SET.labels; draw(); syncMenuChecks(); saveSET(); break;
+    case 'toggleSnap': SET.snap = !SET.snap; syncMenuChecks(); saveSET(); break;
     case 'toggleToolbar': toggleToolbarFold(); break;
     case 'zoomIn': zoomAt(canvas.clientWidth / 2, canvas.clientHeight / 2, 1.25); break;
     case 'zoomOut': zoomAt(canvas.clientWidth / 2, canvas.clientHeight / 2, .8); break;
@@ -18070,10 +18147,16 @@ function bindSplitters() {
   let shield = null;             /* 拖动期间盖住整页的透明遮罩 */
   const mk = (el, target, side) => {
     let start = 0, w0 = 0, active = false, armed = false;
+    /* 宽度写在根节点的 --sb-w 上，不再写元素内联样式：
+       AI 输入条 / 菜单按钮在窄屏按这个变量让位，拖完它们也会同步跟上 */
     const apply = w => {
-      target.style.width = w + 'px';
-      target.style.flexBasis = w + 'px';
+      document.documentElement.style.setProperty('--sb-w', w + 'px');
       resizeCanvas();
+    };
+    /* 记住当前宽度：下次打开网页还是用户拖出来的比例 */
+    const saveW = () => {
+      if (TEST_MODE) return;
+      try { localStorage.setItem('ggai_sbw', String(Math.round(parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--sb-w')) || DEFAULT_SB_W))); } catch (e) { }
     };
     /* 真正开始拖（位移 ≥3px）才挂遮罩：不然单击 / 双击的第二下会被遮罩接走，
        双击回默认比例就永远触发不了 */
@@ -18095,6 +18178,7 @@ function bindSplitters() {
       document.body.style.cursor = '';
       window.removeEventListener('keydown', onKey, true);
       if (shield) { shield.remove(); shield = null; }
+      saveW();
       resizeCanvas();
     };
     /* Esc：放弃这次拖动，宽度回到按下去那一刻（「原来的比例」） */
@@ -18105,14 +18189,16 @@ function bindSplitters() {
       apply(w0);
       clean();
     };
-    el.addEventListener('mousedown', e => {
+    el.addEventListener('pointerdown', e => {
       if (e.button !== 0 || target.classList.contains('hidden')) return;
-      active = true; armed = true; start = e.clientX; w0 = target.getBoundingClientRect().width;
+      /* 以 CSS 宽度（不含边框）为准：Esc 回到「按下那一刻」不会每撤一次胖 1px */
+      active = true; armed = true; start = e.clientX;
+      w0 = parseFloat(getComputedStyle(target).width) || target.getBoundingClientRect().width;
       el.classList.add('drag');
       document.body.style.cursor = 'col-resize';
       e.preventDefault();
     });
-    window.addEventListener('mousemove', e => {
+    window.addEventListener('pointermove', e => {
       if (!active) return;
       if (armed && Math.abs(e.clientX - start) >= 3) arm();
       if (!armed) {
@@ -18120,11 +18206,14 @@ function bindSplitters() {
         apply(clamp(w0 + d, 190, Math.min(720, innerWidth * .6)));
       }
     });
-    window.addEventListener('mouseup', () => { if (active) clean(); });
+    /* pointercancel：触摸被系统手势打断时也要收掉遮罩，别把界面锁在拖拽态 */
+    window.addEventListener('pointerup', () => { if (active) clean(); });
+    window.addEventListener('pointercancel', () => { if (active) clean(); });
     /* 双击分隔条：回到默认比例（保留宽度过渡，自己会滑回去） */
     el.addEventListener('dblclick', () => {
       if (target.classList.contains('hidden')) return;
       apply(DEFAULT_SB_W);
+      saveW();
       setTimeout(resizeCanvas, 320);   /* 过渡结束后再量一次画布 */
     });
   };
@@ -18178,7 +18267,7 @@ function bindShortcuts() {
     if (k === 's') { e.preventDefault(); saveFile(); return; }
     if (k === 'o') { e.preventDefault(); openFileDialog(); return; }
     if (k === 'n') { e.preventDefault(); doMenuAction('new'); return; }
-    if (k === 'm') { e.preventDefault(); SET.grid = !SET.grid; draw(); syncMenuChecks(); return; }
+    if (k === 'm') { e.preventDefault(); SET.grid = !SET.grid; draw(); syncMenuChecks(); saveSET(); return; }
     if (k === 'a') { if (typing) return; e.preventDefault(); doMenuAction('selectAll'); return; }
     if (k === 'g') { if (typing) return; e.preventDefault(); doMenuAction(e.shiftKey ? 'ungroup' : 'group'); return; }
     if (k === 'k') { e.preventDefault(); toggleAI(); return; }
@@ -18273,6 +18362,19 @@ function compatResize() {
 function autoLabelNext() { }
 function init() {
   canvas = $('#canvas'); ctx = canvas.getContext('2d'); geoC = true;
+  /* 先把上次的设置读回来，再画第一帧：网格 / 小数位 / 角度单位一打开就是用户上次的样子 */
+  loadSET();
+  /* 侧栏宽度与思考强度也记上次的：拖窄 / 调高之后重开网页不用再来一遍 */
+  if (!TEST_MODE) {
+    try {
+      const w = parseFloat(localStorage.getItem('ggai_sbw') || '');
+      if (isFinite(w) && w >= 190) document.documentElement.style.setProperty('--sb-w', clamp(w, 190, Math.min(720, innerWidth * .6)) + 'px');
+    } catch (e) { }
+    try {
+      const ef = localStorage.getItem('ggai_effort');
+      if (ef && EFFORTS.some(x => x.id === ef)) state.aiEffort = ef;
+    } catch (e) { }
+  }
   SET.theme = inferTheme();
   document.body.classList.toggle('dark', SET.theme === 'dark');
   clearThemeCache();
@@ -18334,7 +18436,7 @@ function init() {
     /* 同一个模态两种用途：全局设置 / 单个对象设置 */
     if (objSetTarget && getObj(objSetTarget.id)) { resetObjectStyle(objSetTarget); return; }
     Object.assign(SET, { round: 2, grid: true, axes: true, labels: true, snap: false, snapToObjects: true, pointSize: 4, lineWidth: 3.2, fontSize: 12, showMinor: false, boldGrid: false, showGridNumbers: true, angleUnit: 'deg' });
-    bindSettingsRefresh(); recomputeAll(); toast('已恢复默认设置');
+    bindSettingsRefresh(); recomputeAll(); syncMenuChecks(); saveSET(); toast('已恢复默认设置');
   };
   function bindSettingsRefresh() { $('#settingsBody').innerHTML = settingsHtml(); bindSettings(); }
   $('#gvIn').onclick = () => zoomAt(canvas.clientWidth / 2, canvas.clientHeight / 2, 1.25);
@@ -18353,8 +18455,11 @@ function init() {
   };
   $('#btnEnter').onclick = runInput;
   $('#inputField').addEventListener('input', e => autoGrow(e.target));
-  $('#inputField').addEventListener('keydown', e => {
-    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); runInput(); }
+  /* 回车执行；中文输入法选字时的回车交给输入法，不会把半截表达式执行掉 */
+  guardImeEnter($('#inputField'), e => {
+    if (e.shiftKey) return;
+    e.preventDefault();
+    runInput();
   });
   $('#panelTabs').addEventListener('click', e => { const b = e.target.closest('button'); if (b) switchPanel(b.dataset.tab); });
   $('#cmdSearch').addEventListener('input', e => renderCmdList(e.target.value));
@@ -18370,7 +18475,7 @@ function init() {
   const sbClose = $('#sidebarClose');
   if (sbClose) { sbClose.innerHTML = ICON.close; sbClose.onclick = () => setPersp('graphics'); }
   $('#promptOk').onclick = () => resolvePrompt(true);
-  $('#promptInput').addEventListener('keydown', e => { if (e.key === 'Enter') resolvePrompt(true); });
+  guardImeEnter($('#promptInput'), () => resolvePrompt(true));
   $('#confirmOk').onclick = () => resolveConfirm(true);
   $('#confirmCancel').onclick = () => resolveConfirm(false);
   $('#fileInput').addEventListener('change', e => { const f = e.target.files[0]; if (f) openFile(f); e.target.value = ''; });
@@ -19904,6 +20009,8 @@ async function runUITest() {
     state.sheet.cells['C1'] = '=C2'; state.sheet.cells['C2'] = '=C1'; sheetRender(); await sleep(0);
     if (!$('#sheetWrap').querySelector('[data-cell="C1"]').classList.contains('err')) throw new Error('循环引用未标记');
     $('#sheetClear').click(); await sleep(0);
+    if (!$('#confirmBackdrop').classList.contains('on')) throw new Error('清空表格没有先确认');
+    $('#confirmOk').click(); await sleep(0);
     if (Object.keys(state.sheet.cells).length) throw new Error('清空表格无效');
     switchPanel('algebra');
   });
@@ -24366,6 +24473,8 @@ function aiEffortPick(i) {
   const ef = EFFORTS[i]; if (!ef) return;
   const prev = state.aiEffort;
   state.aiEffort = ef.id;
+  /* 记住档位：下次打开还是这一档（Off / Low / Medium / High） */
+  if (prev !== ef.id && !TEST_MODE) { try { localStorage.setItem('ggai_effort', ef.id); } catch (e) { } }
   const fill = effFillColor(i), ink = effInkColor(i);
   const title = '思考强度：' + ef.label + ' · ' + ef.desc;
   const big = $('#effortRangeBig');
@@ -24748,18 +24857,10 @@ function bindAI() {
     if (!fitRaf) fitRaf = requestAnimationFrame(() => { fitRaf = 0; fitInput(); });
   });
   inpRO.observe(inp);
-  /* 输入法：选字过程中的回车是「确认候选词」，不能当发送。
-     isComposing / keyCode 229 覆盖正在选字；compositionend 之后再留 500ms 冷却，
-     兜住「先结束合成、后补发 keydown」的输入法（否则上屏瞬间就被发出去）。 */
-  let aiImeGuardUntil = 0;
-  inp.addEventListener('compositionstart', () => { aiImeGuardUntil = Infinity; });
-  inp.addEventListener('compositionend', () => { aiImeGuardUntil = performance.now() + 500; });
-  inp.addEventListener('keydown', e => {
-    if (e.key !== 'Enter' || e.shiftKey) return;
-    if (e.isComposing || e.keyCode === 229) return;       /* 正在选字：回车交给输入法 */
+  /* 输入法：选字中的回车不发送；选字结束 500ms 内的回车也不发（实现见 guardImeEnter） */
+  guardImeEnter(inp, e => {
+    if (e.shiftKey) return;          /* Shift+Enter 仍是换行 */
     e.preventDefault();
-    /* 刚结束选字：这脚回车多半是「确认候选词」的余波，不发也不让它插一个换行 */
-    if (performance.now() < aiImeGuardUntil) return;
     if (!state.aiBusy) aiSend();
   });
   /* 「跳至最新」：滚动位置变化时决定露不露出，点了平滑回到底部 */
