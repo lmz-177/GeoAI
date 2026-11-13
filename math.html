@@ -1814,10 +1814,16 @@ body:has(.aii-eff.on) .ai-dock{z-index:230}
 /* 更新与版本弹窗（点左上角 GeoAI 打开）：版本号做成页首的大数字；版本历史
    每条先给一句摘要，点标题才展开逐条改动，默认只展开当前版本。 */
 .upd-hero{
-  position:relative;overflow:hidden;
-  padding:16px 16px 14px;border-radius:var(--r-lg);margin-bottom:16px;
+  position:relative;overflow:hidden;cursor:pointer;
+  padding:12px 16px;border-radius:var(--r-lg);margin-bottom:16px;
   background:linear-gradient(135deg,var(--accent-dim),rgba(0,98,204,.02));border:.5px solid var(--border);
 }
+/* 默认只露出版本号；悬停、聚焦或点开后，日期 / 类型 / 摘要再展开 */
+.upd-more{
+  max-height:0;opacity:0;overflow:hidden;
+  transition:max-height .28s var(--ease),opacity .2s ease;
+}
+.upd-hero:hover .upd-more,.upd-hero:focus-visible .upd-more,.upd-hero.open .upd-more{max-height:180px;opacity:1}
 /* 版本卡片的鼠标光效（参考 Aceternity 的 Evervault Card，这里用纯 CSS 变量实现）：
    一圈跟着指针走的径向遮罩，遮罩里是一层绿→蓝渐变叠随机字符，移开指针就淡出。
    直接把 React 组件搬进来不现实（这个页面是单文件、没有 React/Tailwind），
@@ -3410,8 +3416,16 @@ const state = {
    版本号在左上角 GeoAI 打开的「更新与版本」弹窗里展示。改完版本号后，在
    APP_CHANGELOG 最上面补一条（版本、日期、类型、一句摘要、几条说明），
    新版本会自动出现在版本历史里。 */
-const APP_VERSION = '1.5.1';
+const APP_VERSION = '1.6.0';
 const APP_CHANGELOG = [
+  {
+    v: '1.6.0', date: '2026-11-13', tag: '界面重构',
+    lead: '顶部的当前版本卡片收成了一行版本号，鼠标移上去或点一下才展开日期、类型和本次更新摘要。',
+    notes: [
+      '当前版本默认只显示版本号，不再占三行',
+      '悬停、键盘聚焦或点击版本号展开详情，再点一下收起',
+    ],
+  },
   {
     v: '1.5.1', date: '2026-11-13', tag: '界面调整',
     lead: '更新日历按钮上的条数挪进了展开后的月历：翻到哪个月，月份右边就显示那个月的更新条数。',
@@ -19378,13 +19392,14 @@ function showChangelog() {
       (e.notes || []).map(t => '<li>' + esc(t) + '</li>').join('') + '</ul></div></div>';
   }).join('');
   host.innerHTML =
-    '<div class="upd-hero">' +
+    '<div class="upd-hero" tabindex="0" role="button" aria-expanded="false" aria-label="当前版本 v' + esc(cur.v) + '，展开查看本次更新">' +
     '<div class="uh-fx" aria-hidden="true"><div class="uh-grad"></div>' +
     '<div class="uh-code"><span class="uh-chars">' + updRandomChars(1200) + '</span></div></div>' +
     '<div class="upd-num">v' + esc(cur.v) + '</div>' +
+    '<div class="upd-more">' +
     '<div class="upd-meta">' + esc(cur.date) + (cur.tag ? ' · ' + esc(cur.tag) : '') + '</div>' +
     '<p class="upd-lead">' + esc(cur.lead || '') + '</p>' +
-    '</div>' +
+    '</div></div>' +
     '<button type="button" class="uc-toggle" id="ucToggle" aria-expanded="false" aria-controls="updCal">' +
     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5" width="17" height="15.5" rx="2.5"></rect><path d="M8 3.5v3M16 3.5v3M3.5 10h17"></path></svg>' +
     '<span>更新日历</span>' +
@@ -19734,6 +19749,13 @@ function init() {
   $('#panelTabs').addEventListener('click', e => { const b = e.target.closest('button'); if (b) switchPanel(b.dataset.tab); });
   /* 更新弹窗里的版本条目：点标题展开 / 收起该版本的逐条说明 */
   $('#changelogBody').addEventListener('click', e => {
+    /* 顶部版本卡：点一下展开 / 收起详情（悬停由 CSS 负责） */
+    const heroEl = e.target.closest('.upd-hero');
+    if (heroEl) {
+      const open = heroEl.classList.toggle('open');
+      heroEl.setAttribute('aria-expanded', open ? 'true' : 'false');
+      return;
+    }
     /* 小按钮：展开 / 收起整月日历 */
     const tg = e.target.closest('.uc-toggle');
     if (tg) {
@@ -19768,6 +19790,14 @@ function init() {
     const it = h.closest('.upd-item'); if (!it) return;
     const open = it.classList.toggle('open');
     h.setAttribute('aria-expanded', open ? 'true' : 'false');
+  });
+  /* 版本卡的键盘展开：Enter / 空格 与点击同效 */
+  $('#changelogBody').addEventListener('keydown', e => {
+    if (e.key !== 'Enter' && e.key !== ' ') return;
+    const heroEl = e.target.closest('.upd-hero'); if (!heroEl) return;
+    e.preventDefault();
+    const open = heroEl.classList.toggle('open');
+    heroEl.setAttribute('aria-expanded', open ? 'true' : 'false');
   });
   /* 版本卡片的鼠标光效：把指针位置写进 CSS 变量，遮罩跟着走；字符按 80ms 一换，
      不跟着每一次 mousemove 重排整片文字 */
@@ -20536,6 +20566,14 @@ async function runUITest() {
     if (!hero || !hero.querySelector('.uh-grad') || !hero.querySelector('.uh-code')) throw new Error('版本卡片缺少鼠标光效层');
     const chars = hero.querySelector('.uh-chars');
     if (!chars || chars.textContent.length < 500) throw new Error('光效字符没有生成');
+    /* 版本卡默认只露版本号，点击展开 / 收起详情 */
+    const more = hero.querySelector('.upd-more');
+    if (!more || !more.querySelector('.upd-meta') || !more.querySelector('.upd-lead')) throw new Error('版本详情没有收进折叠区');
+    if (hero.classList.contains('open')) throw new Error('版本卡默认应收起');
+    hero.click(); await sleep(0);
+    if (!hero.classList.contains('open') || hero.getAttribute('aria-expanded') !== 'true') throw new Error('点版本号没有展开详情');
+    hero.click(); await sleep(0);
+    if (hero.classList.contains('open')) throw new Error('再点版本号没有收起');
     const hr = hero.getBoundingClientRect();
     hero.dispatchEvent(new MouseEvent('mousemove', { bubbles: true, clientX: hr.left + 40, clientY: hr.top + 20 }));
     if (!hero.style.getPropertyValue('--mx')) throw new Error('鼠标移动没有更新光效位置');
