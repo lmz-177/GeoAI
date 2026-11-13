@@ -5094,6 +5094,18 @@ function computeObject(o) {
         } else if (o.kind === 'slope') {
           const L = P[0] && lineOf(P[0]);
           if (L) o.value = Math.abs(L.b) < 1e-12 ? Infinity : -L.a / L.b;
+          /* 函数（尤其是 FitLine 的线性拟合）：取 x = 0 处的切线斜率 */
+          else if (P[0] && P[0].type === 'function' && P[0].fn) {
+            const f = P[0].fn, h = 1e-5;
+            const m = (f(h) - f(-h)) / (2 * h);
+            o.value = isNum(m) ? m : null;
+          }
+        } else if (o.kind === 'intercept') {
+          /* 直线 / 线性函数的纵截距；x = 0 处的函数值 */
+          const src = P[0];
+          const L0 = src && lineOf(src);
+          if (L0 && Math.abs(L0.b) > 1e-12) o.value = -L0.c / L0.b;
+          else if (src && src.type === 'function' && src.fn && isNum(src.fn(0))) o.value = src.fn(0);
         } else if (o.kind === 'radius') {
           const c = P[0];
           if (c && isNum(c.data.r)) o.value = c.data.r;
@@ -9179,12 +9191,27 @@ C('Circumference', 'Circumference(圆 / 圆锥曲线 / 弧)', '圆的周长 / �
   if (!isNum(v)) throw new Error('无法计算该对象的周长');
   return [mkObj('number', { kind: 'perimeter', parents: [o.id], src: '', label: ctx.label, value: v })];
 }, ['圆周长', '弧长']);
-C('Slope', 'Slope(直线)', '斜率', (a, ctx) => {
-  const L = lineOf(ensureObj(a[0]));
-  if (!L) throw new Error('需要直线、线段或射线');
+C('Slope', 'Slope(直线 / 函数)', '斜率；传函数时给 x = 0 处的切线斜率（线性拟合直接可用）', (a, ctx) => {
+  const o = ensureObj(a[0]);
+  if (o.type === 'function' && o.fn) {
+    const h = 1e-5, m = (o.fn(h) - o.fn(-h)) / (2 * h);
+    if (!isFinite(m)) throw new Error('这个函数在 x = 0 处没有有限斜率');
+    return [mkObj('number', { kind: 'slope', parents: [o.id], src: '', label: ctx.label, value: m })];
+  }
+  const L = lineOf(o);
+  if (!L) throw new Error('需要直线、线段、射线或函数');
   const s = Math.abs(L.b) < 1e-12 ? Infinity : -L.a / L.b;
-  return [mkObj('number', { kind: 'slope', parents: [a[0].obj.id], src: '', label: ctx.label, value: s })];
+  return [mkObj('number', { kind: 'slope', parents: [o.id], src: '', label: ctx.label, value: s })];
 }, ['斜率']);
+C('Intercept', 'Intercept(直线 / 函数)', '纵截距（x = 0 处的值），线性拟合的 b 直接取它', (a, ctx) => {
+  const o = ensureObj(a[0]);
+  const L = lineOf(o);
+  let v = NaN;
+  if (L) v = Math.abs(L.b) < 1e-12 ? NaN : -L.c / L.b;
+  else if (o.type === 'function' && o.fn) v = o.fn(0);
+  if (!isNum(v)) throw new Error('需要直线或函数');
+  return [mkObj('number', { kind: 'intercept', parents: [o.id], src: '', label: ctx.label, value: v })];
+}, ['纵截距', 'yIntercept']);
 C('Area', 'Area(多边形 或 圆)', '面积', (a, ctx) => {
   const o = ensureObj(a[0]);
   let v = NaN;
@@ -19953,6 +19980,11 @@ async function runUITest() {
     /* Delete 里夹着不存在的名字也不报错 */
     mk('Delete(vv, NOPE_X)');
     if (getObjByLabel('vv')) throw new Error('Delete 没有删掉列出的对象');
+    /* 线性拟合的斜率 / 纵截距：Slope(fit) 与 Intercept(fit) 要能直接用 */
+    mk('ft0 = FitLine({(1,2),(2,3),(3,5),(4,6)})');
+    mk('kk0 = Slope(ft0)'); mk('bb0 = Intercept(ft0)');
+    if (!getObjByLabel('kk0') || Math.abs(getObjByLabel('kk0').value - 1.4) > .02) throw new Error('Slope(拟合函数) 不对');
+    if (!getObjByLabel('bb0') || Math.abs(getObjByLabel('bb0').value - 0.5) > .02) throw new Error('Intercept(拟合函数) 不对');
     /* CenterView(点)：以前报「此处需要一个对象」 */
     mk('CenterView((0,0))');
     if (Math.abs(state.view.cx) > 1e-6 || Math.abs(state.view.cy) > 1e-6) throw new Error('CenterView(点) 没有把视野移到该点');
@@ -24906,9 +24938,9 @@ PerpendicularLine(P,l) ParallelLine(P,l) PerpendicularBisector(A,B) AngleBisecto
 圆与圆锥曲线：Circle(O,r) Circle(O,P) Circle(A,B,C) Semicircle(A,B) Arc(O,P,Q) Sector(O,P,Q) Incircle(A,B,C)
 Ellipse(F1,F2,a) 或 Ellipse(F1,F2,椭圆上的点) · Hyperbola(F1,F2,a) 或 Hyperbola(F1,F2,双曲线上的点) · Parabola(F,line) · Conic(A,B,C,D,E)
 Curve(x表达式,y表达式,t,起点,终点) 参数曲线：Curve(cos(t),sin(t),t,0,2*pi) 是单位圆，Curve(2*cos(3t),2*sin(2t),t,0,2*pi) 是李萨如曲线
-多边形与连点：Polygon(A,B,C) RegularPolygon(A,B,n) Polyline(A,B,C)（折线） CurveThrough(A,B,C,…) 或 CurveThrough({A,B,C})（智能连线：共线给直线，恰好落在一~三次多项式上给解析式，都不满足就给过所有点的光滑曲线；点数多于 4 个又想拟合用 FitPoly(点集,次数)）
+多边形与连点：Polygon(A,B,C) RegularPolygon(A,B,n) Polyline(A,B,C)（折线） Vertex(多边形,k)（第 k 个顶点，k 可写成 Mod(k,n)+1 这种表达式） CurveThrough(A,B,C,…) 或 CurveThrough({A,B,C})（智能连线：共线给直线，恰好落在一~三次多项式上给解析式，都不满足就给过所有点的光滑曲线；点数多于 4 个又想拟合用 FitPoly(点集,次数)）
 变换：Reflect(obj,line)（别名 ReflectLine） Reflect(obj,point) Rotate(obj,角度,中心) Translate(obj,向量) Dilate(obj,k,中心) Mirror(对象,直线或点) Shear(对象,直线,k) Stretch(对象,直线,k)
-度量：Distance(A,B) Length(s) Area(c) Slope(l) Angle(A,B,C) Angle(l1,l2) Radius(c) Center(c) Perimeter(obj) Circumference(obj) Side(多边形,n) InteriorAngles(多边形) Direction(直线或向量) OrthogonalVector(v) AffineRatio(A,B,C) CrossRatio(A,B,C,D) CircumcircleArc(A,B,C)
+度量：Distance(A,B) Length(s) Area(c) Slope(l 或 f) Intercept(l 或 f)（纵截距，线性拟合的 b 用它） Angle(A,B,C) Angle(l1,l2) Radius(c) Center(c) Perimeter(obj) Circumference(obj) Side(多边形,n) InteriorAngles(多边形) Direction(直线或向量) OrthogonalVector(v) AffineRatio(A,B,C) CrossRatio(A,B,C,D) CircumcircleArc(A,B,C)
 函数与微积分：Derivative(f) Integral(f,a,b) Antiderivative(f) IntegralFn(表达式) Solve(方程) NSolve(方程) Root(f,a,b) Roots(f) Extremum(f,a,b) TurningPoint(f)（多项式函数的全部拐点）
    Root(f,n) / Extremum(f,n)：当前视野里从左到右第 n 个零点 / 极值点（与 GeoGebra 一致，求单个关键点时直接用这个，不要自己猜区间）
    NDerivative(f,a) IntegralBetween(f,g,a,b) LowerSum / UpperSum / LeftSum / TrapezoidalSum(f,a,b,n) Iteration(f,x0,n) IterationList(f,x0,n) TaylorPolynomial(f,a,n) Limit(f,a) LimitAbove(f,a) LimitBelow(f,a)
