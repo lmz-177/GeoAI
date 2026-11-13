@@ -55,7 +55,8 @@
   --fs-sm:14px;      /* 菜单项、对话框按钮、列表主标签 */
   --fs-md:16px;      /* 面板 / 对话框标题（比正文高一档） */
   --fs-ios-input:16px; /* 仅 iOS 输入框（焦点防缩放），桌面端不使用 */
-  --fs-code:24px;      /* 在线分享的 8 位标识码（唯一的展示级大字） */
+  --fs-code:24px;      /* 在线分享的 8 位标识码 */
+  --fs-display:32px;   /* 版本卡上的版本号：整页唯一的超大数字 */
   --font:-apple-system,BlinkMacSystemFont,'SF Pro Text','SF Pro Display','PingFang SC','HarmonyOS Sans SC','Microsoft YaHei',system-ui,sans-serif;
   --mono:'SF Mono',ui-monospace,'Cascadia Code','JetBrains Mono',Consolas,monospace;
   /* 动效：统一缓动曲线 + 三档时长。曲线按「用途」选，不按手感随手挑：
@@ -1814,9 +1815,9 @@ body:has(.aii-eff.on) .ai-dock{z-index:230}
 /* 更新与版本弹窗（点左上角 GeoAI 打开）：版本号做成页首的大数字；版本历史
    每条先给一句摘要，点标题才展开逐条改动，默认只展开当前版本。 */
 .upd-hero{
-  position:relative;overflow:hidden;cursor:pointer;
-  padding:12px 16px;border-radius:var(--r-lg);margin-bottom:16px;
-  background:linear-gradient(135deg,var(--accent-dim),rgba(0,98,204,.02));border:.5px solid var(--border);
+  position:relative;overflow:hidden;cursor:pointer;text-align:center;
+  padding:14px 16px;border-radius:var(--r-lg);margin-bottom:16px;
+  background:linear-gradient(135deg,var(--accent-dim),rgba(175,82,222,.12));
 }
 /* 默认只露出版本号；悬停、聚焦或点开后，日期 / 类型 / 摘要再展开 */
 .upd-more{
@@ -1844,7 +1845,14 @@ body:has(.aii-eff.on) .ai-dock{z-index:230}
   color:#fff;word-break:break-all;white-space:pre-wrap;opacity:.85;
 }
 .upd-hero>*:not(.uh-fx){position:relative;z-index:1}
-.upd-num{font-size:var(--fs-code);font-weight:800;letter-spacing:-.02em;color:var(--accent);font-variant-numeric:tabular-nums;line-height:1.15}
+/* 版本号：放大居中，用主色→紫色的渐变字，卡片本身不再描边 */
+.upd-num{
+  font-size:var(--fs-display);font-weight:800;letter-spacing:-.03em;line-height:1.1;
+  background:linear-gradient(120deg,var(--accent),var(--purple));
+  -webkit-background-clip:text;background-clip:text;
+  color:transparent;-webkit-text-fill-color:transparent;
+  font-variant-numeric:tabular-nums;
+}
 .upd-meta{font-size:var(--fs-2xs);color:var(--text-3);margin-top:3px}
 .upd-lead{font-size:var(--fs-sm);line-height:1.8;color:var(--text-2);margin:6px 0 0}
 .upd-sec{font-size:var(--fs-xs);font-weight:700;color:var(--text-2);letter-spacing:.3px;margin:0 0 6px}
