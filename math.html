@@ -781,7 +781,8 @@ body.tool-folded .tool-head{padding-bottom:0}
 .splitter:hover::after,.splitter.drag::after{background:var(--accent);width:2px;left:2px}
 .graphics{flex:1;position:relative;min-width:0;background:var(--canvas);overflow:hidden}
 /* 画布恢复提示卡：检测到上次的自动保存时从画布顶部落下，
-   恢复 / 丢弃二选一后消失；不自动帮用户做决定 */
+   恢复 / 丢弃二选一后消失；不自动帮用户做决定。
+   top 的初始值只是兜底，实际由 layoutCanvasRestore() 按绘图提示条的高度动态落位。 */
 .cvs-restore{
   position:absolute;top:14px;left:50%;transform:translateX(-50%);z-index:60;
   display:flex;align-items:center;gap:10px;padding:8px 10px 8px 13px;border-radius:16px;
@@ -3458,8 +3459,15 @@ const state = {
    版本号在左上角 GeoAI 打开的「更新与版本」弹窗里展示。改完版本号后，在
    APP_CHANGELOG 最上面补一条（版本、日期、类型、一句摘要、几条说明），
    新版本会自动出现在版本历史里。 */
-const APP_VERSION = '1.2.1';
+const APP_VERSION = '1.2.2';
 const APP_CHANGELOG = [
+  {
+    v: '1.2.2', date: '2026-11-13', tag: '修复',
+    lead: '「恢复上次的画布」提示卡下移一行，不再和顶部的绘图提示条叠在一起。',
+    notes: [
+      '恢复卡改到绘图提示条下方，两者同时出现时都能看清',
+    ],
+  },
   {
     v: '1.2.1', date: '2026-11-13', tag: '小更新',
     lead: '打开「更新与版本」先演一段装载：九宫格方块沿对角线依次亮起，版本号随后浮现，下面的版本历史再整体出现。',
@@ -8684,6 +8692,7 @@ function canvasRestorePrompt(force) {
     '<button class="cr-ok" type="button">恢复</button>' +
     '<button class="cr-no" type="button">丢弃</button>';
   host.appendChild(card);
+  layoutCanvasRestore();   /* 按当前提示条高度落位，不和它重叠 */
   card.querySelector('.cr-ok').onclick = () => {
     card.remove();
     try { loadSnapshot(rec.snap); toast('已恢复上次的画布', 'ok'); }
@@ -14142,10 +14151,10 @@ function applyToolPick(pick) {
 }
 function updateToolHint() {
   const old = $('.tool-hint'); if (old) old.remove();
-  const tool = TOOLS[state.tool]; if (!tool || tool.kind) return;
+  const tool = TOOLS[state.tool]; if (!tool || tool.kind) { layoutCanvasRestore(); return; }
   const st = state.toolState;
   const remain = toolSteps(tool, st ? st.picks : []);
-  if (!remain.length) return;
+  if (!remain.length) { layoutCanvasRestore(); return; }
   const spec = remain[0];
   const div = document.createElement('div');
   /* 数值 / 文本参数就在提示条里直接输入：不弹二级对话框 */
@@ -14189,13 +14198,26 @@ function updateToolHint() {
     $('#graphicsWrap').appendChild(div);
     /* 自测环境不抢焦点（工具回归用的是 askNumber / askText 的替身） */
     if (!TEST_MODE) setTimeout(() => { try { inp.focus(); inp.select(); } catch (e) { } }, 20);
+    layoutCanvasRestore();
     return;
   }
   const txt = remain.length ? remain[0].hint : (tool.repeat ? '按 Enter 完成' : '');
-  if (!txt) return;
+  if (!txt) { layoutCanvasRestore(); return; }
   div.className = 'tool-hint';
   div.innerHTML = '<span class="dot"></span>' + esc(tool.name) + '：' + esc(txt) + (tool.repeat ? ' · <kbd>Enter</kbd> 完成 · <kbd>Esc</kbd> 取消' : ' · <kbd>Esc</kbd> 取消');
   $('#graphicsWrap').appendChild(div);
+  layoutCanvasRestore();
+}
+/* 恢复卡与绘图提示条动态错开：提示条多高，卡就落在它下方 10px；
+   没有提示条（或在输入态以外）时回到画布顶部。两者谁先出现都不会叠住。 */
+function layoutCanvasRestore() {
+  const card = $('#cvsRestore'), wrap = $('#graphicsWrap');
+  if (!card || !wrap) return;
+  const hint = $('.tool-hint');
+  if (!hint) { card.style.top = '14px'; return; }
+  /* 两者都在 graphicsWrap 里，直接用布局坐标（offsetTop / offsetHeight），
+     不受提示条进场动画和过渡的影响 */
+  card.style.top = Math.max(14, hint.offsetTop + hint.offsetHeight + 10) + 'px';
 }
 /* ── 拖动 / 动画中的轻量刷新：只重算依赖链，不重建代数列表 ── */
 function liveRefresh(o) {
@@ -21297,6 +21319,15 @@ async function runUITest() {
     if (!card) throw new Error('有存档且画布为空时没有出现恢复卡');
     if (!card.textContent.includes('1 个对象')) throw new Error('恢复卡没有显示对象数');
     if (card.querySelector('.cr-ok').getBoundingClientRect().width < 20) throw new Error('恢复卡缺少恢复按钮');
+    /* 和顶部的绘图提示条不能叠在一起（恢复卡在提示条下方一行） */
+    setTool('segment'); await sleep(0);
+    const hintEl = $('#graphicsWrap .tool-hint');
+    if (!hintEl) throw new Error('选工具后没有绘图提示');
+    const cr = card.getBoundingClientRect(), hr = hintEl.getBoundingClientRect();
+    if (cr.left < hr.right && cr.right > hr.left && cr.top < hr.bottom && cr.bottom > hr.top) {
+      throw new Error('恢复卡与绘图提示重叠：卡 ' + Math.round(cr.top) + '-' + Math.round(cr.bottom) + ' / 提示 ' + Math.round(hr.top) + '-' + Math.round(hr.bottom));
+    }
+    setTool('move');
     state.objects = [{ id: 'q', type: 'point', x: 0, y: 0, layer: 0 }];
     $('#cvsRestore').remove(); canvasRestorePrompt(true);
     if ($('#cvsRestore')) throw new Error('画布已有内容时不该弹恢复卡');
