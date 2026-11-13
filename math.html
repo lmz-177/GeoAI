@@ -838,6 +838,8 @@ body.tool-folded .tool-head{padding-bottom:0}
   -webkit-backdrop-filter:blur(20px) saturate(180%);backdrop-filter:blur(20px) saturate(180%);
 }
 .tool-hint .dot{width:7px;height:7px;border-radius:50%;background:var(--accent)}
+/* 步骤进度 / 已选数量：多步构造时知道走到第几步 */
+.tool-hint .th-step{font-size:var(--fs-3xs);font-weight:700;color:var(--accent);background:var(--accent-dim);border-radius:99px;padding:1px 7px;font-variant-numeric:tabular-nums}
 .tool-hint kbd{background:var(--panel-2);border:.5px solid var(--border);border-radius:6px;padding:1px 6px;font-family:var(--mono);font-size:var(--fs-2xs)}
 /* 工具参数直接在提示条里输入：不再弹二级对话框，选完对象就能接着填数值 / 表达式 */
 .tool-hint.ask{pointer-events:auto;padding:6px 6px 6px 14px;gap:8px}
@@ -3459,8 +3461,17 @@ const state = {
    版本号在左上角 GeoAI 打开的「更新与版本」弹窗里展示。改完版本号后，在
    APP_CHANGELOG 最上面补一条（版本、日期、类型、一句摘要、几条说明），
    新版本会自动出现在版本历史里。 */
-const APP_VERSION = '1.2.2';
+const APP_VERSION = '1.3.0';
 const APP_CHANGELOG = [
+  {
+    v: '1.3.0', date: '2026-11-13', tag: '体验优化',
+    lead: '把 107 个绘图工具逐个过了一遍：多步工具显示「第 N/M 步」，连续取点显示已选数量；需要数值的工具可以直接点滑动条或线段取值。',
+    notes: [
+      '提示条新增步骤进度（如 2/5）与连续取点计数，长链路构造不再不知道走到哪一步',
+      '半径 / 角度 / 长度 / 比例等数值步骤，可直接点击滑动条、线段或向量取值，也可以继续手动输入',
+      '误点非数值对象时给出明确提示，不再只是默默把焦点放回输入框',
+    ],
+  },
   {
     v: '1.2.2', date: '2026-11-13', tag: '修复',
     lead: '「恢复上次的画布」提示卡下移一行，不再和顶部的绘图提示条叠在一起。',
@@ -14124,6 +14135,12 @@ async function toolClick(world, px, py) {
     if (!spec.types && !['line', 'segment', 'ray', 'vector'].includes(hit.type) && lineOf(hit) === null && spec.hint && spec.hint.includes('直线')) { toast('请点击直线或线段', 'err'); return; }
     pick = { obj: hit, value: hit.value, hint: world };
   } else if (spec.t === 'num' || spec.t === 'text') {
+    /* 需要数值时，直接点滑动条 / 线段 / 向量也能取值：不用为了填半径先去抄一个长度 */
+    if (spec.t === 'num' && hit) {
+      const nv = depValue(hit);
+      if (isNum(nv)) { applyToolPick({ num: nv }); return; }
+      toast('这里需要一个数值：点滑动条 / 线段，或在提示条里直接输入', 'err');
+    }
     /* 参数直接在提示条里填（见 updateToolHint），画布点击只把焦点放回输入框。
        自测环境仍走 askNumber / askText，工具回归能自动填参数。 */
     if (!TEST_MODE) {
@@ -14156,11 +14173,17 @@ function updateToolHint() {
   const remain = toolSteps(tool, st ? st.picks : []);
   if (!remain.length) { layoutCanvasRestore(); return; }
   const spec = remain[0];
+  /* 多步工具显示「第 n/m 步」；连续取点的工具显示已选数量 */
+  const total = toolSteps(tool, []).length;
+  const picked = st ? st.picks.length : 0;
+  let badge = '';
+  if (tool.repeat) { if (picked) badge = '<span class="th-step">已选 ' + picked + '</span>'; }
+  else if (total > 1) badge = '<span class="th-step">' + (picked + 1) + '/' + total + '</span>';
   const div = document.createElement('div');
   /* 数值 / 文本参数就在提示条里直接输入：不弹二级对话框 */
   if (spec.t === 'num' || spec.t === 'text') {
     div.className = 'tool-hint ask';
-    div.innerHTML = '<span class="dot"></span><span class="th-label">' + esc(spec.hint || '输入') + '</span>';
+    div.innerHTML = '<span class="dot"></span>' + badge + '<span class="th-label">' + esc(spec.hint || '输入') + '</span>';
     const inp = document.createElement('input');
     inp.className = 'th-input';
     inp.type = 'text';
@@ -14204,7 +14227,7 @@ function updateToolHint() {
   const txt = remain.length ? remain[0].hint : (tool.repeat ? '按 Enter 完成' : '');
   if (!txt) { layoutCanvasRestore(); return; }
   div.className = 'tool-hint';
-  div.innerHTML = '<span class="dot"></span>' + esc(tool.name) + '：' + esc(txt) + (tool.repeat ? ' · <kbd>Enter</kbd> 完成 · <kbd>Esc</kbd> 取消' : ' · <kbd>Esc</kbd> 取消');
+  div.innerHTML = '<span class="dot"></span>' + badge + esc(tool.name) + '：' + esc(txt) + (tool.repeat ? ' · <kbd>Enter</kbd> 完成 · <kbd>Esc</kbd> 取消' : ' · <kbd>Esc</kbd> 取消');
   $('#graphicsWrap').appendChild(div);
   layoutCanvasRestore();
 }
@@ -21342,6 +21365,29 @@ async function runUITest() {
     if ($('#cvsRestore')) throw new Error('点丢弃后卡片没有消失');
     if (localStorage.getItem('geoai_canvas_autosave')) throw new Error('点丢弃后存档应被清掉');
     state.objects = []; recomputeAll();
+  });
+  /* 工具体验：多步进度、连续取点计数、数值步骤直接点对象取值 */
+  await A('工具:步骤进度与数值点选', async () => {
+    executeLine('DeleteAll()');
+    executeLine('s1=Slider(1,5,0.1)');
+    const sl = getObjByLabel('s1');
+    setTool('conic5'); await sleep(0);
+    const chip = $('.tool-hint .th-step');
+    if (!chip || chip.textContent !== '1/5') throw new Error('多步工具没有显示第 1/5 步');
+    setTool('polygon'); await sleep(0);
+    if ($('.tool-hint .th-step')) throw new Error('还没选点时不该显示已选数量');
+    executeLine('A=(0,0)');
+    applyToolPick({ obj: getObjByLabel('A'), value: { x: 0, y: 0 }, hint: { x: 0, y: 0 } });
+    const chip2 = $('.tool-hint .th-step');
+    if (!chip2 || chip2.textContent !== '已选 1') throw new Error('连续取点没有显示已选数量');
+    setTool('segmentFix'); await sleep(0);
+    toolClick({ x: 0, y: 0 }, 40, 40); await sleep(0);          /* 起点 */
+    const g = sliderGeom(sl);
+    toolClick({ x: 0, y: 0 }, g.kx, g.ky); await sleep(0);      /* 数值步骤：点滑动条 */
+    const seg = state.objects.filter(o => o.type === 'segment').pop();
+    if (!seg) throw new Error('点滑动条后没有建出线段');
+    if (Math.abs(depValue(seg) - sl.value) > 1e-6) throw new Error('点滑动条没有把数值带进工具：' + depValue(seg) + ' vs ' + sl.value);
+    setTool('move');
   });
   await A('AI:作图时工具区提示 / 完成后自动展开历史', async () => {
     const tip = $('#aiDrawTip');
