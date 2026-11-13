@@ -1819,12 +1819,37 @@ body:has(.aii-eff.on) .ai-dock{z-index:230}
   padding:14px 16px;border-radius:var(--r-lg);margin-bottom:16px;
   background:linear-gradient(135deg,var(--accent-dim),rgba(175,82,222,.12));
 }
-/* 默认只露出版本号；悬停、聚焦或点开后，日期 / 类型 / 摘要再展开 */
+/* 版本卡展开前的「伪装加载」：3×3 方块沿对角线依次亮起，约半秒后收起，
+   再把日期 / 类型 / 摘要放出来。纯 CSS 动画，不引入 React / framer-motion。 */
+.upd-load{
+  display:grid;grid-template-columns:repeat(3,10px);grid-auto-rows:10px;gap:3px;
+  justify-content:center;height:0;margin:0 auto;opacity:0;overflow:hidden;
+  transition:height .18s ease,margin .18s ease,opacity .15s ease;
+}
+.upd-load i{border-radius:2px;background:var(--text);opacity:.08;animation:upd-snake 1.2s ease-in-out infinite}
+.upd-load i:nth-child(1){animation-delay:0s}
+.upd-load i:nth-child(2){animation-delay:.15s}
+.upd-load i:nth-child(3){animation-delay:.3s}
+.upd-load i:nth-child(4){animation-delay:.15s}
+.upd-load i:nth-child(5){animation-delay:.3s}
+.upd-load i:nth-child(6){animation-delay:.45s}
+.upd-load i:nth-child(7){animation-delay:.3s}
+.upd-load i:nth-child(8){animation-delay:.45s}
+.upd-load i:nth-child(9){animation-delay:.6s}
+@keyframes upd-snake{0%,100%{opacity:.08}50%{opacity:1}}
+@keyframes upd-load-hide{to{height:0;margin:0 auto;opacity:0}}
+.upd-hero:hover .upd-load,.upd-hero:focus-visible .upd-load,.upd-hero.open .upd-load{
+  height:36px;margin:10px auto 2px;opacity:1;
+  animation:upd-load-hide .2s .66s forwards;
+}
+/* 详情等「加载」演完再展开；鼠标一移开就立即收起，不拖泥带水 */
 .upd-more{
   max-height:0;opacity:0;overflow:hidden;
   transition:max-height .28s var(--ease),opacity .2s ease;
 }
-.upd-hero:hover .upd-more,.upd-hero:focus-visible .upd-more,.upd-hero.open .upd-more{max-height:180px;opacity:1}
+.upd-hero:hover .upd-more,.upd-hero:focus-visible .upd-more,.upd-hero.open .upd-more{
+  max-height:180px;opacity:1;transition-delay:.66s;
+}
 /* 版本卡片的鼠标光效（参考 Aceternity 的 Evervault Card，这里用纯 CSS 变量实现）：
    一圈跟着指针走的径向遮罩，遮罩里是一层绿→蓝渐变叠随机字符，移开指针就淡出。
    直接把 React 组件搬进来不现实（这个页面是单文件、没有 React/Tailwind），
@@ -1845,13 +1870,10 @@ body:has(.aii-eff.on) .ai-dock{z-index:230}
   color:#fff;word-break:break-all;white-space:pre-wrap;opacity:.85;
 }
 .upd-hero>*:not(.uh-fx){position:relative;z-index:1}
-/* 版本号：放大居中，用主色→紫色的渐变字，卡片本身不再描边 */
+/* 版本号：放大居中，黑字压在浅色渐变底上 */
 .upd-num{
   font-size:var(--fs-display);font-weight:800;letter-spacing:-.03em;line-height:1.1;
-  background:linear-gradient(120deg,var(--accent),var(--purple));
-  -webkit-background-clip:text;background-clip:text;
-  color:transparent;-webkit-text-fill-color:transparent;
-  font-variant-numeric:tabular-nums;
+  color:var(--text);font-variant-numeric:tabular-nums;
 }
 .upd-meta{font-size:var(--fs-2xs);color:var(--text-3);margin-top:3px}
 .upd-lead{font-size:var(--fs-sm);line-height:1.8;color:var(--text-2);margin:6px 0 0}
@@ -3424,8 +3446,16 @@ const state = {
    版本号在左上角 GeoAI 打开的「更新与版本」弹窗里展示。改完版本号后，在
    APP_CHANGELOG 最上面补一条（版本、日期、类型、一句摘要、几条说明），
    新版本会自动出现在版本历史里。 */
-const APP_VERSION = '1.6.0';
+const APP_VERSION = '1.6.1';
 const APP_CHANGELOG = [
+  {
+    v: '1.6.1', date: '2026-11-13', tag: '小更新',
+    lead: '版本卡展开前先演一段「加载中」：九宫格方块沿对角线依次亮起，半秒后再翻出本次更新详情；版本号改成黑字。',
+    notes: [
+      '版本卡展开加了 3×3 方块加载动画，加载结束才显示日期与摘要',
+      '版本号由渐变字改为正文黑字，和浅色渐变底对比更清楚',
+    ],
+  },
   {
     v: '1.6.0', date: '2026-11-13', tag: '界面重构',
     lead: '顶部的当前版本卡片收成了一行版本号，鼠标移上去或点一下才展开日期、类型和本次更新摘要。',
@@ -19404,6 +19434,7 @@ function showChangelog() {
     '<div class="uh-fx" aria-hidden="true"><div class="uh-grad"></div>' +
     '<div class="uh-code"><span class="uh-chars">' + updRandomChars(1200) + '</span></div></div>' +
     '<div class="upd-num">v' + esc(cur.v) + '</div>' +
+    '<div class="upd-load" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>' +
     '<div class="upd-more">' +
     '<div class="upd-meta">' + esc(cur.date) + (cur.tag ? ' · ' + esc(cur.tag) : '') + '</div>' +
     '<p class="upd-lead">' + esc(cur.lead || '') + '</p>' +
@@ -20577,6 +20608,8 @@ async function runUITest() {
     /* 版本卡默认只露版本号，点击展开 / 收起详情 */
     const more = hero.querySelector('.upd-more');
     if (!more || !more.querySelector('.upd-meta') || !more.querySelector('.upd-lead')) throw new Error('版本详情没有收进折叠区');
+    if ($$('#changelogBody .upd-load i').length !== 9) throw new Error('版本卡缺少 3×3 加载动画');
+    if (getComputedStyle(hero.querySelector('.upd-num')).color === 'rgba(0, 0, 0, 0)') throw new Error('版本号不该是透明渐变字');
     if (hero.classList.contains('open')) throw new Error('版本卡默认应收起');
     hero.click(); await sleep(0);
     if (!hero.classList.contains('open') || hero.getAttribute('aria-expanded') !== 'true') throw new Error('点版本号没有展开详情');
