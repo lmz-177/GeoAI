@@ -1842,34 +1842,50 @@ body:has(.aii-eff.on) .ai-dock{z-index:230}
 .upd-meta{font-size:var(--fs-2xs);color:var(--text-3);margin-top:3px}
 .upd-lead{font-size:var(--fs-sm);line-height:1.8;color:var(--text-2);margin:6px 0 0}
 .upd-sec{font-size:var(--fs-xs);font-weight:700;color:var(--text-2);letter-spacing:.3px;margin:0 0 6px}
-/* 更新日历（日期参考 Glass Calendar 的日期块）：只列出真正发布过更新的日子，
-   每块写明当天的更新条数，点一下直接跳到那天的条目。
-   不再铺一整月、也不需要横向滚动——有多少个发布日就摆多少块，多了自动换行。 */
+/* 更新日历：默认收成一枚小按钮，点开才展开整月网格（参考 Glass Calendar 的日期块）。
+   整月日期都显示，有更新的日子用主题色高亮并带一个小圆点；
+   点日期直接跳到那天的版本条目。 */
+.uc-toggle{
+  display:flex;align-items:center;gap:8px;width:100%;margin-bottom:12px;padding:10px 12px;
+  border-radius:12px;background:var(--panel-2);border:.5px solid var(--border);
+  font-size:var(--fs-sm);font-weight:600;color:var(--text);
+  transition:background-color .18s ease;
+}
+.uc-toggle:hover{background:var(--hover)}
+.uc-toggle>svg{width:16px;height:16px;color:var(--accent);flex:0 0 auto}
+.uc-t-cnt{margin-left:auto;font-size:var(--fs-3xs);font-weight:500;color:var(--text-3);font-variant-numeric:tabular-nums}
+.uc-chev{color:var(--text-3);font-size:var(--fs-sm);line-height:1;transition:transform var(--t)}
+.uc-toggle.on .uc-chev{transform:rotate(90deg)}
 .upd-cal{
-  margin-bottom:18px;padding:14px;border-radius:var(--r-lg);
+  margin-bottom:18px;padding:12px 12px 10px;border-radius:var(--r-lg);
   background:var(--panel-2);border:.5px solid var(--border);box-shadow:var(--hi);
   -webkit-backdrop-filter:blur(18px) saturate(180%);backdrop-filter:blur(18px) saturate(180%);
 }
-.uc-head{display:flex;align-items:flex-end;justify-content:space-between;gap:10px;margin-bottom:12px}
-.uc-month{font-size:var(--fs-md);font-weight:800;letter-spacing:-.3px;color:var(--text);font-variant-numeric:tabular-nums}
-.uc-sub{font-size:var(--fs-2xs);color:var(--text-3);margin-top:2px;font-variant-numeric:tabular-nums}
-.uc-total{font-size:var(--fs-3xs);color:var(--text-3);white-space:nowrap}
-.uc-dates{display:flex;flex-wrap:wrap;gap:8px}
+.uc-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px}
+.uc-month{font-size:var(--fs-sm);font-weight:800;color:var(--text);font-variant-numeric:tabular-nums}
+.uc-total{font-size:var(--fs-3xs);color:var(--text-3);margin-left:auto;white-space:nowrap}
+.uc-nav{display:flex;gap:2px}
+.uc-nav button{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:var(--text-2);transition:background-color .18s ease,color .18s ease}
+.uc-nav button:hover{background:var(--hover);color:var(--text)}
+.uc-nav svg{width:16px;height:16px}
+.uc-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+.uc-wd{font-size:var(--fs-3xs);color:var(--text-3);font-weight:600;text-align:center;padding:2px 0 4px}
+.uc-cell{height:36px}
 .uc-day{
-  width:66px;padding:9px 4px 8px;border-radius:14px;
-  display:flex;flex-direction:column;align-items:center;gap:1px;
-  background:var(--panel-3);border:.5px solid transparent;
-  transition:background-color .2s ease,transform .2s ease,box-shadow .2s ease;
+  position:relative;height:36px;border-radius:10px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:var(--fs-xs);font-weight:600;color:var(--text-2);font-variant-numeric:tabular-nums;
+  transition:background-color .18s ease,color .18s ease,box-shadow .18s ease;
 }
 .uc-day:hover{background:var(--hover)}
-.uc-day:active{transform:scale(.96)}
-/* 选中的发布日用主题蓝实心，和界面其它选中态同一个语言；
-   不用粉橙渐变那种抢眼的配色 */
-.uc-day.sel{background:var(--accent);box-shadow:0 4px 12px var(--accent-soft)}
-.uc-dnum{font-size:var(--fs-md);font-weight:800;color:var(--text);font-variant-numeric:tabular-nums;line-height:1.2}
-.uc-dow{font-size:var(--fs-3xs);color:var(--text-3);font-weight:600}
-.uc-cnt{font-size:var(--fs-3xs);font-weight:700;color:var(--accent);margin-top:2px}
-.uc-day.sel .uc-dnum,.uc-day.sel .uc-dow,.uc-day.sel .uc-cnt{color:#fff}
+.uc-day.has-upd{color:var(--accent);background:var(--accent-dim);font-weight:700}
+.uc-day.has-upd::after{
+  content:'';position:absolute;bottom:5px;left:50%;width:4px;height:4px;margin-left:-2px;
+  border-radius:50%;background:var(--accent);
+}
+/* 选中的日期用主题蓝实心，和界面其它选中态同一个语言 */
+.uc-day.sel{color:#fff;background:var(--accent);box-shadow:0 4px 12px var(--accent-soft)}
+.uc-day.sel::after{background:#fff}
 body.dark .uc-day.sel{background:#0a6ed1}
 .upd-item{border-top:.5px solid var(--border)}
 .upd-item:first-child{border-top:none}
@@ -3388,8 +3404,17 @@ const state = {
    版本号在左上角 GeoAI 打开的「更新与版本」弹窗里展示。改完版本号后，在
    APP_CHANGELOG 最上面补一条（版本、日期、类型、一句摘要、几条说明），
    新版本会自动出现在版本历史里。 */
-const APP_VERSION = '1.3.1';
+const APP_VERSION = '1.4.0';
 const APP_CHANGELOG = [
+  {
+    v: '1.4.0', date: '2026-11-13', tag: '界面重构',
+    lead: '更新日历收成一枚小按钮，点开才展开整月日期；有更新的日子高亮，点日期直接跳到当天条目。',
+    notes: [
+      '日历默认收起，不再占掉版本列表的空间，点「更新日历」按钮展开',
+      '展开后是整月网格，所有日期都在，有更新的日期用主题色高亮并带圆点',
+      '可左右翻月，点日期展开当天全部版本并滚动定位',
+    ],
+  },
   {
     v: '1.3.1', date: '2026-11-13', tag: '界面调整',
     lead: '更新日历里选中日期的底色换成主题蓝，和界面其它选中态保持一致。',
@@ -19268,37 +19293,36 @@ function updRandomChars(n) {
   return s;
 }
 /* ── 更新日历 ──
-   只把真正发布过更新的日期列出来（一个发布日一块），每块写明当天有几条更新；
-   点一块就展开那天的条目并滚过去。updCalSel 是当前选中的日期（YYYY-MM-DD）。 */
+   默认收成一枚小按钮，展开后是整月网格：所有日期都显示，有更新的日子高亮；
+   点日期就展开那天的条目并滚过去。updCalSel 是选中的日期（YYYY-MM-DD）。 */
+let updCalOpen = false;    // 展开状态（每次打开弹窗都从收起开始）
+let updCalMonth = null;    // 当前显示的月份（该月 1 日）
 let updCalSel = '';
 const updPad2 = n => (n < 10 ? '0' + n : '' + n);
 const updDateStr = d => d.getFullYear() + '-' + updPad2(d.getMonth() + 1) + '-' + updPad2(d.getDate());
 function updCalHTML() {
-  const byDate = new Map();
-  APP_CHANGELOG.forEach(e => {
-    if (!e.date) return;
-    if (!byDate.has(e.date)) byDate.set(e.date, []);
-    byDate.get(e.date).push(e);
-  });
-  const dates = Array.from(byDate.keys()).sort().reverse();
-  const sel = byDate.has(updCalSel) ? updCalSel : (dates[0] || '');
-  const selList = byDate.get(sel) || [];
-  const sd = sel ? new Date(sel + 'T00:00:00') : new Date();
-  const chips = dates.map(ds => {
-    const d = new Date(ds + 'T00:00:00');
-    const n = byDate.get(ds).length;
-    return '<button type="button" class="uc-day' + (ds === sel ? ' sel' : '') + '" data-date="' + ds + '"' +
-      ' aria-label="' + ds + '，' + n + ' 条更新">' +
-      '<span class="uc-dnum">' + d.getDate() + '</span>' +
-      '<span class="uc-dow">周' + '日一二三四五六'.charAt(d.getDay()) + '</span>' +
-      '<span class="uc-cnt">' + n + ' 条更新</span>' +
-      '</button>';
-  }).join('');
-  return '<div class="uc-head"><div>' +
-    '<div class="uc-month">' + sd.getFullYear() + ' 年 ' + (sd.getMonth() + 1) + ' 月</div>' +
-    '<div class="uc-sub">' + (sel ? sel + ' · ' + selList.length + ' 条更新' : '暂无更新') + '</div></div>' +
-    '<div class="uc-total">共 ' + APP_CHANGELOG.length + ' 条更新</div></div>' +
-    '<div class="uc-dates">' + chips + '</div>';
+  const base = updCalMonth || new Date();
+  const y = base.getFullYear(), m = base.getMonth();
+  const lead = new Date(y, m, 1).getDay();
+  const total = new Date(y, m + 1, 0).getDate();
+  const marks = new Set(APP_CHANGELOG.map(e => e.date));
+  let cells = ['日', '一', '二', '三', '四', '五', '六'].map(w => '<span class="uc-wd">' + w + '</span>').join('');
+  for (let i = 0; i < lead; i++) cells += '<span class="uc-cell"></span>';
+  for (let d = 1; d <= total; d++) {
+    const ds = y + '-' + updPad2(m + 1) + '-' + updPad2(d);
+    const has = marks.has(ds);
+    cells += '<button type="button" class="uc-day' + (has ? ' has-upd' : '') + (ds === updCalSel ? ' sel' : '') +
+      '" data-date="' + ds + '" aria-label="' + y + ' 年 ' + (m + 1) + ' 月 ' + d + ' 日' + (has ? '，有更新' : '') + '">' +
+      d + '</button>';
+  }
+  const chev = s => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="' + s + '"/></svg>';
+  return '<div class="uc-head"><div class="uc-month">' + y + ' 年 ' + (m + 1) + ' 月</div>' +
+    '<div class="uc-total">共 ' + APP_CHANGELOG.length + ' 条更新</div>' +
+    '<div class="uc-nav">' +
+    '<button type="button" class="uc-prev" aria-label="上个月">' + chev('M15 5 8 12l7 7') + '</button>' +
+    '<button type="button" class="uc-next" aria-label="下个月">' + chev('M9 5l7 7-7 7') + '</button>' +
+    '</div></div>' +
+    '<div class="uc-grid">' + cells + '</div>';
 }
 /* 点左上角 GeoAI 打开的「更新与版本」弹窗。数据来自 APP_CHANGELOG：改版本号时
    只要在数组最上面加一条，这里会自动长出新的版本号、摘要与历史记录。
@@ -19306,8 +19330,10 @@ function updCalHTML() {
 function showChangelog() {
   const host = $('#changelogBody'); if (!host) return;
   const cur = APP_CHANGELOG[0] || { v: APP_VERSION, date: '', tag: '', lead: '', notes: [] };
-  /* 日历默认选中当前版本那天 */
+  /* 日历每次打开都收起，默认选中当前版本那天、显示它所在的月份 */
+  updCalOpen = false;
   updCalSel = /^\d{4}-\d{2}-\d{2}$/.test(cur.date || '') ? cur.date : updDateStr(new Date());
+  updCalMonth = new Date(updCalSel + 'T00:00:00');
   const items = APP_CHANGELOG.map((e, i) => {
     const open = i === 0;
     return '<div class="upd-item' + (open ? ' open' : '') + (i === 0 ? ' cur' : '') + '" data-date="' + esc(e.date || '') + '">' +
@@ -19329,8 +19355,11 @@ function showChangelog() {
     '<div class="upd-meta">' + esc(cur.date) + (cur.tag ? ' · ' + esc(cur.tag) : '') + '</div>' +
     '<p class="upd-lead">' + esc(cur.lead || '') + '</p>' +
     '</div>' +
-    '<div class="upd-sec">更新日历</div>' +
-    '<div class="upd-cal" id="updCal">' + updCalHTML() + '</div>' +
+    '<button type="button" class="uc-toggle" id="ucToggle" aria-expanded="false" aria-controls="updCal">' +
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5" width="17" height="15.5" rx="2.5"></rect><path d="M8 3.5v3M16 3.5v3M3.5 10h17"></path></svg>' +
+    '<span>更新日历</span><span class="uc-t-cnt">' + APP_CHANGELOG.length + ' 条更新</span>' +
+    '<span class="uc-chev" aria-hidden="true">›</span></button>' +
+    '<div class="upd-cal hidden" id="updCal">' + updCalHTML() + '</div>' +
     '<div class="upd-sec">版本历史</div>' + items +
     '<div class="upd-sec" style="margin-top:18px">致谢</div><p class="upd-thanks">' +
     'GeoAI 的界面与交互参考了 GeoGebra 经典版的工具箱与操作方式，感谢 GeoGebra 团队和开源社区多年沉淀下来的数学工具范式；' +
@@ -19675,7 +19704,24 @@ function init() {
   $('#panelTabs').addEventListener('click', e => { const b = e.target.closest('button'); if (b) switchPanel(b.dataset.tab); });
   /* 更新弹窗里的版本条目：点标题展开 / 收起该版本的逐条说明 */
   $('#changelogBody').addEventListener('click', e => {
-    /* 点发布日：选中它，展开当天的全部条目并滚到眼前 */
+    /* 小按钮：展开 / 收起整月日历 */
+    const tg = e.target.closest('.uc-toggle');
+    if (tg) {
+      updCalOpen = !updCalOpen;
+      tg.classList.toggle('on', updCalOpen);
+      tg.setAttribute('aria-expanded', updCalOpen ? 'true' : 'false');
+      const cal = $('#updCal'); if (cal) cal.classList.toggle('hidden', !updCalOpen);
+      return;
+    }
+    /* 翻月：只重画日历这一块 */
+    const nav = e.target.closest('.uc-prev, .uc-next');
+    if (nav) {
+      const m = updCalMonth || new Date();
+      updCalMonth = new Date(m.getFullYear(), m.getMonth() + (nav.classList.contains('uc-next') ? 1 : -1), 1);
+      const cal = $('#updCal'); if (cal) cal.innerHTML = updCalHTML();
+      return;
+    }
+    /* 点日期：选中它；当天有更新就展开条目并滚到眼前 */
     const day = e.target.closest('.uc-day');
     if (day) {
       updCalSel = day.dataset.date;
@@ -20463,24 +20509,32 @@ async function runUITest() {
     const hr = hero.getBoundingClientRect();
     hero.dispatchEvent(new MouseEvent('mousemove', { bubbles: true, clientX: hr.left + 40, clientY: hr.top + 20 }));
     if (!hero.style.getPropertyValue('--mx')) throw new Error('鼠标移动没有更新光效位置');
-    /* 更新日历：只列有更新的日期、每块写当天条数、点日期跳转到当天全部条目 */
-    if (!$('#changelogBody .upd-cal')) throw new Error('更新弹窗缺少更新日历');
-    if ($('#changelogBody .uc-nav')) throw new Error('日历不该再有翻月控件');
-    const days = $$('#changelogBody .uc-day');
+    /* 更新日历：默认收成小按钮，点开显示整月；有更新的日期高亮，点日期跳转 */
+    const tg = $('#changelogBody .uc-toggle');
+    if (!tg) throw new Error('缺少更新日历按钮');
+    if (!$('#updCal').classList.contains('hidden')) throw new Error('日历默认应收起');
+    tg.click(); await sleep(0);
+    if ($('#updCal').classList.contains('hidden')) throw new Error('点按钮没有展开日历');
+    if (tg.getAttribute('aria-expanded') !== 'true') throw new Error('展开后 aria-expanded 不对');
+    if ($$('#updCal .uc-wd').length !== 7) throw new Error('日历缺少星期表头');
+    const days = $$('#updCal .uc-day');
+    if (days.length !== 30) throw new Error('2026 年 11 月应显示 30 个日期：' + days.length);
     const dateSet = new Set(APP_CHANGELOG.map(e => e.date));
-    if (days.length !== dateSet.size) throw new Error('日历只应列出有更新的日期：' + days.length + ' vs ' + dateSet.size);
-    for (const d of days) {
-      const n = APP_CHANGELOG.filter(e => e.date === d.dataset.date).length;
-      if (d.querySelector('.uc-cnt').textContent.indexOf(n + ' 条') !== 0) throw new Error('日期块的更新条数不对：' + d.dataset.date);
-    }
-    if (!/\d+ 条更新/.test(($('#changelogBody .uc-sub') || {}).textContent || '')) throw new Error('没有显示当前日期的更新次数');
-    if (!$('#changelogBody .uc-day.sel')) throw new Error('日历没有选中当前版本那天');
-    const day1 = days[days.length - 1];
+    if (days.filter(d => d.classList.contains('has-upd')).length !== dateSet.size) throw new Error('有更新的日期没有全部高亮');
+    if (!$('#updCal .uc-day.sel')) throw new Error('日历没有选中当前版本那天');
+    const m0 = $('#updCal .uc-month').textContent;
+    $('#updCal .uc-next').click(); await sleep(0);
+    if ($('#updCal .uc-month').textContent === m0) throw new Error('日历不能翻月');
+    if ($$('#updCal .uc-day').length !== 31) throw new Error('翻月后日期数量不对');
+    $('#updCal .uc-prev').click(); await sleep(0);
+    const day1 = $$('#updCal .uc-day.has-upd').pop();
     const day1Date = day1.dataset.date;
     day1.click(); await sleep(0);
-    if (($('#changelogBody .uc-day.sel') || {}).dataset?.date !== day1Date) throw new Error('点日期后没有选中');
+    if (($('#updCal .uc-day.sel') || {}).dataset?.date !== day1Date) throw new Error('点日期后没有选中');
     const itDay = $$('#changelogBody .upd-item[data-date="' + day1Date + '"]');
     if (!itDay.length || itDay.some(x => !x.classList.contains('open'))) throw new Error('点日期没有展开当天版本');
+    tg.click(); await sleep(0);
+    if (!$('#updCal').classList.contains('hidden')) throw new Error('再点按钮没有收起日历');
     const gh = $('#changelogBackdrop .gh-btn');
     if (!gh || gh.href.indexOf('github.com/lmz-177/GeoAI') < 0 || gh.target !== '_blank') throw new Error('更新弹窗缺少 GitHub 入口');
     if ($('#changelogBody').textContent.indexOf('版本号规则') >= 0) throw new Error('不该再出现版本号规则');
