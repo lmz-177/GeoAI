@@ -106,8 +106,8 @@ body.dark{
 body.dark .btn-primary,body.dark .ps-share:hover,body.dark .enter-btn,body.dark .kb-key.accent,
 body.dark .kb-key:active,body.dark .cvs-restore .cr-ok,body.dark .ai-hist-cnt,
 body.dark .api-key-change:hover,body.dark .api-primary,body.dark .seg.blue button.on,
-body.dark .ai-send,body.dark .btn.primary,body.dark .bubble .md-task.done{background:#0a6ed1}
-body.dark .btn-primary:hover,body.dark .api-primary:hover,body.dark .ai-send:hover{background:#095cb0}
+body.dark .ai-send,body.dark .btn.primary,body.dark .bubble .md-task.done,body.dark .tool-hint.ask .th-ok{background:#0a6ed1}
+body.dark .btn-primary:hover,body.dark .api-primary:hover,body.dark .ai-send:hover,body.dark .tool-hint.ask .th-ok:hover{background:#095cb0}
 
 html,body{height:100%;margin:0}
 body{
@@ -833,6 +833,21 @@ body.tool-folded .tool-head{padding-bottom:0}
 }
 .tool-hint .dot{width:7px;height:7px;border-radius:50%;background:var(--accent)}
 .tool-hint kbd{background:var(--panel-2);border:.5px solid var(--border);border-radius:6px;padding:1px 6px;font-family:var(--mono);font-size:var(--fs-2xs)}
+/* 工具参数直接在提示条里输入：不再弹二级对话框，选完对象就能接着填数值 / 表达式 */
+.tool-hint.ask{pointer-events:auto;padding:6px 6px 6px 14px;gap:8px}
+.tool-hint.ask .th-label{color:var(--text);flex:0 0 auto;white-space:nowrap}
+.tool-hint.ask .th-input{
+  width:164px;max-width:46vw;background:var(--panel);border:.5px solid var(--border-2);
+  border-radius:8px;padding:5px 9px;font-size:var(--fs-sm);color:var(--text);
+  transition:border-color .18s ease,box-shadow .18s ease;
+}
+.tool-hint.ask .th-input:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-dim);outline:none}
+.tool-hint.ask .th-input.bad{border-color:var(--danger);box-shadow:0 0 0 3px rgba(255,59,48,.18)}
+.tool-hint.ask .th-ok{
+  background:var(--accent);color:#fff;border-radius:8px;padding:5px 12px;font-size:var(--fs-xs);
+  transition:background-color .18s ease;
+}
+.tool-hint.ask .th-ok:hover{background:var(--accent-h)}
 
 /* ---------- AI 助手：悬浮在画布下方，可折叠 ---------- */
 .ai-dock{
@@ -1792,6 +1807,24 @@ body:has(.aii-eff.on) .ai-dock{z-index:230}
    靠字色 + 字号拉开层级，不再画线。 */
 .set-group{margin-bottom:22px}
 .set-group>h3{font-size:var(--fs-xs);font-weight:700;color:var(--text-2);letter-spacing:.3px;margin:0 0 8px;padding:0}
+/* 更新与版本：版本号做成页首的大数字，更新条目按组排 */
+.ver-hero{
+  display:flex;flex-direction:column;gap:6px;padding:18px 18px 16px;border-radius:var(--r-lg);margin-bottom:18px;
+  background:linear-gradient(135deg,var(--accent-dim),rgba(0,98,204,.02));border:.5px solid var(--border);
+}
+.ver-num{font-size:var(--fs-code);font-weight:800;letter-spacing:-.02em;color:var(--accent);font-variant-numeric:tabular-nums;line-height:1.15}
+.ver-meta{font-size:var(--fs-2xs);color:var(--text-3)}
+.ver-lead{font-size:var(--fs-sm);line-height:1.8;color:var(--text-2);margin:4px 0 0}
+.ver-list{margin:0;padding-left:18px;font-size:var(--fs-sm);line-height:1.85;color:var(--text-2)}
+.ver-list li{margin:2px 0}
+.ver-list li::marker{color:var(--accent)}
+.ver-hist{padding:10px 0;border-top:.5px solid var(--border)}
+.ver-hist:first-of-type{border-top:none;padding-top:0}
+.ver-hist b{font-size:var(--fs-sm);color:var(--text);font-variant-numeric:tabular-nums;margin-right:8px}
+.ver-hist span{font-size:var(--fs-2xs);color:var(--text-3)}
+.ver-hist p{margin:3px 0 0;font-size:var(--fs-xs);line-height:1.8;color:var(--text-2)}
+.ver-thanks{font-size:var(--fs-sm);line-height:1.9;color:var(--text-2);margin:0}
+body.dark .ver-hero{background:linear-gradient(135deg,rgba(10,132,255,.18),rgba(10,132,255,.03))}
 .set-row{display:flex;align-items:center;gap:12px;padding:11px 0;font-size:var(--fs-sm)}
 .set-row>label{flex:1;color:var(--text)}
 .set-row .sublabel{display:block;font-size:var(--fs-2xs);color:var(--text-3);margin-top:3px;line-height:1.45}
@@ -2232,6 +2265,8 @@ try {
           <button class="dd-item" data-act="exportCmd">导出命令脚本</button>
           <button class="dd-item" data-act="copyCmd">复制全部命令</button>
           <div class="dd-sep"></div>
+          <button class="dd-item" data-act="changelog">更新与版本 <span class="k" id="menuVersion">v1.1.1</span></button>
+          <div class="dd-sep"></div>
           <button class="dd-item" data-act="shareOnline">在线分享…</button>
           <button class="dd-item" data-act="openShare">打开在线分享…</button>
           <div class="dd-sep"></div>
@@ -2611,6 +2646,20 @@ try {
       <button class="btn" id="setReset">恢复默认</button>
       <span class="spacer"></span>
       <button class="btn primary" data-close="settingsBackdrop">完成</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ 更新与版本：独立的大板块（不挤在设置弹窗里） ══════════ -->
+<div class="backdrop" id="changelogBackdrop">
+  <div class="modal" style="max-width:720px">
+    <div class="modal-head">
+      <h2>更新与版本</h2>
+      <button class="icon-btn" data-close="changelogBackdrop" aria-label="关闭"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6 6 18"></path></svg></button>
+    </div>
+    <div class="modal-body" id="changelogBody"></div>
+    <div class="modal-foot">
+      <button class="btn primary" data-close="changelogBackdrop">完成</button>
     </div>
   </div>
 </div>
@@ -3257,6 +3306,50 @@ const state = {
   aiWeb: false,          // 联网检索开关（开启后每条消息先查实时网页）
   sheet: { cells: {}, sel: 'A1' },   // 表格视图：单元格原始内容（A1 形式标识符 → 文本/公式）
 };
+/* ── 版本与更新日志 ──
+   版本号规则（每次改动都要遵守）：
+   · 小修改（bug 修复、文案、样式微调）→ 第三位 +1，例如 1.1.0 → 1.1.1
+   · 大修改（新功能、交互改版、较大重构）→ 第二位 +1，第三位归零，例如 1.1.x → 1.2.0
+   改完版本号后，在 APP_CHANGELOG 最上面补一条（版本、日期、类型、几条人话说明），
+   文件菜单「更新与版本」里就能看到。 */
+const APP_VERSION = '1.1.1';
+const APP_CHANGELOG = [
+  {
+    v: '1.1.1', date: '2026-11-13', tag: '界面调整',
+    lead: '「更新与版本」从设置弹窗里独立出来，改成单独的大板块：版本号、更新说明和版本历史都更宽敞；按你的要求精简了页面结构，补上致谢。',
+    notes: [
+      '「更新与版本」改为独立弹窗（720px 大板块），不再与设置 / 帮助 / 关于共用同一个弹窗',
+      '精简页面结构：只保留版本、更新说明、版本历史与致谢',
+      '新增致谢板块：GeoGebra 与开源社区的交互范式、DeepSeek 的模型接口、每一位使用与反馈的人、开源字体与工具链',
+    ],
+  },
+  {
+    v: '1.1.0', date: '2026-11-13', tag: '功能更新',
+    lead: '这一版主要改「工具怎么用」：以前点开工具后还要弹一个输入框才能填半径、角度、函数表达式，现在参数直接出现在画布顶部的提示条里，选完对象顺手输入、回车就好。同时把 AI 绘图链路上发现的一批问题补掉，并加了这页版本说明。',
+    notes: [
+      '工具参数不再弹二级对话框：数值 / 表达式 / 文本直接在画布提示条内输入，回车生效、Esc 取消（涉及定长线段、正多边形、圆半径、定角、旋转、位似、定积分上下限、文本、画函数、复选框、按钮、解方程、因式分解、展开、化简、便签、思维导图、方程，共 18 个工具）',
+      '「距离 / 长度」选中线段或向量直接出结果，不再强迫点第二下；两点距离、点到直线距离仍按提示继续选',
+      '工具执行后的提示更准确：显隐、删除、复制样式这类动作不再一律说「已创建」',
+      '新增本页「更新与版本」：版本号、更新日期、当前更新说明与版本历史，入口在文件菜单的保存 / 导出区域',
+      '关于页同步为 107 个作图工具',
+    ],
+  },
+  {
+    v: '1.0.0', date: '2026-11-01', tag: '正式版',
+    lead: '第一个可用的完整版本：代数 / 绘图 / CAS / 命令参考 / 表格五个面板，107 个作图工具、200 多条命令与中文别名，内置 AI 助手，支持 .ggb 导入导出、在线分享与本机自动恢复。',
+    notes: [
+      'AI 分步绘图：每个代码块一张「第 N 步」卡，标题取模型这一步的思路；失败会回传观察结果并自动换构造',
+      'Sequence 的循环体可以直接写命令（Circle / Rotate…），整组登记成列表，Element / SetColor 能批量作用于每个对象',
+      '新增 Zip(表达式, 变量, 列表)，底层列表增删项时整组重建',
+      '表达式里可以夹命令（Distance(A,B)/2、Circle(O, Dist/2)），结果保持联动',
+      '支持 GeoGebra 方括号写法（Sequence[…]、Circle[(0,0),2]）与 If 分段函数',
+      'Vertex(多边形,k)、Slope / Intercept(拟合函数)、Length / Count / First / Last 支持列表与对象列表',
+      '文本 / 列表可整行重写；Delete 支持多参数；Text(对象) 显示取值并跟着对象更新',
+      'AI 流式响应 60 秒没有数据会自动停下并给可重试的提示；发给 AI 的截图改为 640 长边 JPEG，约 15–26ms',
+      '撤销 / 重做会保存列表引用与对象别名，恢复后样式、列表内容都不丢',
+    ],
+  },
+];
 /* ── DeepSeek API 配置 ──
    只允许调用 DeepSeek 官方接口：地址与模型写死，界面上没有修改入口。
    用户只需在 AI 输入框左侧的钥匙里填入自己的 Key；不内置任何默认 Key。
@@ -13297,7 +13390,19 @@ T({ id: 'reflectPoint', icon: 'reflectPoint', name: '中心对称', steps: [step
 T({ id: 'rotate', icon: 'rotate', name: '旋转', steps: [stepObj('选择对象'), stepNum('旋转角度（度）', '90'), stepPt('选择旋转中心')], run: p => execStr('Rotate(' + lb(p[0].obj) + ', ' + p[1].num + ', ' + pickRef(p[2]) + ')') });
 T({ id: 'translate', icon: 'translate', name: '平移', steps: [stepObj('选择对象'), stepObj('选择平移向量', ['vector', 'segment'])], run: p => execStr('Translate(' + lb(p[0].obj) + ', ' + lb(p[1].obj) + ')') });
 T({ id: 'dilate', icon: 'dilate', name: '位似', steps: [stepObj('选择对象'), stepNum('比例', '2'), stepPt('选择位似中心')], run: p => execStr('Dilate(' + lb(p[0].obj) + ', ' + p[1].num + ', ' + pickRef(p[2]) + ')') });
-T({ id: 'distance', icon: 'measure', name: '距离 / 长度', steps: [stepObj('选择点或对象'), stepObj('选择第二个对象（可为空）')], run: p => { const a0 = p[0].obj; const a1 = p[1] && p[1].obj; const ok1 = a1 && (a1.type === 'point' || ['line', 'segment', 'ray', 'vector'].includes(a1.type)); return execStr('Distance(' + lb(a0) + (ok1 ? ', ' + lb(a1) : '') + ')'); } });
+T({
+  id: 'distance', icon: 'measure', name: '距离 / 长度',
+  hint: '选线段 / 向量直接给长度；选点再选另一个点或直线，给两点距离 / 点到直线的距离',
+  /* 只选一段线段 / 向量就已经有结果，不该强迫再点第二下 */
+  steps: p => (p.length === 1 && p[0].obj && (p[0].obj.type === 'segment' || p[0].obj.type === 'vector'))
+    ? []
+    : [stepObj('选择点或线段 / 向量'), stepObj('选择第二个对象（点或直线）')],
+  run: p => {
+    const a0 = p[0].obj; const a1 = p[1] && p[1].obj;
+    const ok1 = a1 && (a1.type === 'point' || ['line', 'segment', 'ray', 'vector'].includes(a1.type));
+    return execStr('Distance(' + lb(a0) + (ok1 ? ', ' + lb(a1) : '') + ')');
+  }
+});
 T({ id: 'area', icon: 'area', name: '面积', steps: [stepObj('选择多边形或圆')], run: p => execStr('Area(' + lb(p[0].obj) + ')') });
 T({ id: 'slope', icon: 'slope', name: '斜率', steps: [stepObj('选择直线')], run: p => execStr('Slope(' + lb(p[0].obj) + ')') });
 T({ id: 'text', icon: 'text', name: '文本', steps: [stepPt('单击放置位置'), stepText('输入文本内容', 'Hello')], run: p => execStr('Text("' + String(p[1].text).replace(/"/g, '') + '", ' + num(p[0].value) + ')') });
@@ -13726,9 +13831,10 @@ function finishTool() {
   if (short > 0) { toast('还需要选择 ' + short + ' 个对象', 'err'); return; }
   try {
     if (!st.undoPushed) pushUndo();
-    tool.run(st.picks);
+    /* 只有真的建出对象才提示「已创建」：显隐 / 删除 / 复制样式这类动作不该这么说 */
+    const made = tool.run(st.picks);
     recomputeAll(); refreshAlgebra();
-    toast('已创建', 'ok');
+    if (Array.isArray(made) && made.length) toast('已创建', 'ok');
   } catch (e) { toast(e.message, 'err', 3200); }
   resetTool();
 }
@@ -13791,15 +13897,25 @@ async function toolClick(world, px, py) {
     if (spec.types && !spec.types.includes(hit.type)) { toast('这里需要：' + spec.types.map(t => TYPENAME[t]).join(' / '), 'err'); return; }
     if (!spec.types && !['line', 'segment', 'ray', 'vector'].includes(hit.type) && lineOf(hit) === null && spec.hint && spec.hint.includes('直线')) { toast('请点击直线或线段', 'err'); return; }
     pick = { obj: hit, value: hit.value, hint: world };
-  } else if (spec.t === 'num') {
-    const v = await askNumber(spec.hint, spec.def);
+  } else if (spec.t === 'num' || spec.t === 'text') {
+    /* 参数直接在提示条里填（见 updateToolHint），画布点击只把焦点放回输入框。
+       自测环境仍走 askNumber / askText，工具回归能自动填参数。 */
+    if (!TEST_MODE) {
+      updateToolHint();
+      const el = $('.tool-hint.ask .th-input');
+      if (el) { try { el.focus(); el.select(); } catch (e) { } }
+      return;
+    }
+    const v = spec.t === 'num' ? await askNumber(spec.hint, spec.def) : await askText(spec.hint, spec.def);
     if (v === null) return;
-    pick = { num: v };
-  } else if (spec.t === 'text') {
-    const v = await askText(spec.hint, spec.def);
-    if (v === null) return;
-    pick = { text: v };
+    pick = spec.t === 'num' ? { num: v } : { text: v };
   }
+  applyToolPick(pick);
+}
+/* 把一次选择（点 / 对象 / 数值 / 文本）并进工具状态，并推进到下一步 */
+function applyToolPick(pick) {
+  const tool = TOOLS[state.tool]; if (!tool || tool.kind || !pick) return;
+  const st = state.toolState || (state.toolState = { picks: [], mouse: null });
   if (!st.undoPushed) { pushUndo(); st.undoPushed = true; }
   st.picks.push(pick);
   const after = toolSteps(tool, st.picks);
@@ -13812,9 +13928,54 @@ function updateToolHint() {
   const tool = TOOLS[state.tool]; if (!tool || tool.kind) return;
   const st = state.toolState;
   const remain = toolSteps(tool, st ? st.picks : []);
+  if (!remain.length) return;
+  const spec = remain[0];
+  const div = document.createElement('div');
+  /* 数值 / 文本参数就在提示条里直接输入：不弹二级对话框 */
+  if (spec.t === 'num' || spec.t === 'text') {
+    div.className = 'tool-hint ask';
+    div.innerHTML = '<span class="dot"></span><span class="th-label">' + esc(spec.hint || '输入') + '</span>';
+    const inp = document.createElement('input');
+    inp.className = 'th-input';
+    inp.type = 'text';
+    inp.value = spec.def == null ? '' : String(spec.def);
+    inp.spellcheck = false;
+    inp.autocomplete = 'off';
+    inp.setAttribute('aria-label', spec.hint || '输入');
+    const ok = document.createElement('button');
+    ok.type = 'button'; ok.className = 'th-ok'; ok.textContent = '确定';
+    div.appendChild(inp); div.appendChild(ok);
+    const commit = () => {
+      const raw = inp.value.trim();
+      if (spec.t === 'num') {
+        let v = NaN;
+        try { v = compile(parseExpr(raw))(scopeOf()); } catch (e) { }
+        if (!isNum(v)) {
+          inp.classList.add('bad');
+          toast('请输入一个数值，例如 3、2*pi、pi/4', 'err', 2000);
+          try { inp.focus(); inp.select(); } catch (e) { }
+          return;
+        }
+        applyToolPick({ num: v });
+      } else {
+        applyToolPick({ text: raw });
+      }
+    };
+    inp.addEventListener('input', () => inp.classList.remove('bad'));
+    inp.addEventListener('keydown', e => {
+      e.stopPropagation();
+      if (e.isComposing || e.keyCode === 229) return;   /* 中文输入法选词时的回车不算提交 */
+      if (e.key === 'Enter') { e.preventDefault(); commit(); }
+      else if (e.key === 'Escape') { e.preventDefault(); setTool('move'); }
+    });
+    ok.addEventListener('click', e => { e.preventDefault(); commit(); });
+    $('#graphicsWrap').appendChild(div);
+    /* 自测环境不抢焦点（工具回归用的是 askNumber / askText 的替身） */
+    if (!TEST_MODE) setTimeout(() => { try { inp.focus(); inp.select(); } catch (e) { } }, 20);
+    return;
+  }
   const txt = remain.length ? remain[0].hint : (tool.repeat ? '按 Enter 完成' : '');
   if (!txt) return;
-  const div = document.createElement('div');
   div.className = 'tool-hint';
   div.innerHTML = '<span class="dot"></span>' + esc(tool.name) + '：' + esc(txt) + (tool.repeat ? ' · <kbd>Enter</kbd> 完成 · <kbd>Esc</kbd> 取消' : ' · <kbd>Esc</kbd> 取消');
   $('#graphicsWrap').appendChild(div);
@@ -16385,6 +16546,7 @@ function doMenuAction(a) {
     case 'shareOnline': openShareDialog('create'); break;
     case 'openShare': openShareDialog('open'); break;
     case 'examples': loadExample(); break;
+    case 'changelog': showChangelog(); break;
     case 'undo': undo(); break;
     case 'redo': redo(); break;
     case 'selectAll': state.selection = state.objects.filter(o => !o.aux).map(o => o.id); refreshAlgebra(); draw(); break;
@@ -18973,17 +19135,43 @@ function showAbout() {
   $('#settingsTitle').textContent = '关于';
   $('#setReset').style.display = 'none';
   $('#settingsBody').innerHTML =
-    '<div class="set-group"><h3>GeoAI</h3>' +
+    '<div class="set-group"><h3>GeoAI <span style="font-weight:400;color:var(--text-3)">v' + esc(APP_VERSION) + '</span></h3>' +
     '<div style="font-size:var(--fs-xs);line-height:1.9;color:var(--text-2)">' +
     '一个单文件网页版动态数学工具，界面与操作对标 GeoGebra 经典版：<br>' +
     '· 代数区 / 绘图区 / CAS / 命令参考 / 表格五个面板<br>' +
-    '· 75 个作图工具（与 GeoGebra 平面工具箱对齐）、200+ 命令行命令（含中文别名）、完整依赖关系与拖动联动<br>' +
+    '· 107 个作图工具（与 GeoGebra 平面工具箱对齐）、200+ 命令行命令（含中文别名）、完整依赖关系与拖动联动<br>' +
     '· 表达式引擎支持函数、圆锥曲线、隐式方程、变换、轨迹、统计与概率分布<br>' +
     '· 表格视图：单元格公式、区间聚合，与画布双向联动<br>' +
     '· AI 助手：自然语言直接作图与解题，支持看图识别，思考强度可调<br>' +
     '· 不依赖任何外部文件与接口，全部离线运行（仅 AI 与在线分享需要联网）' +
     '</div></div>';
   openBackdrop('settingsBackdrop');
+}
+/* 文件菜单 → 更新与版本。数据来自 APP_CHANGELOG：改版本号时只要在数组最上面加一条，
+   这页会自动长出新的版本号、摘要与历史记录。 */
+function showChangelog() {
+  const cur = APP_CHANGELOG[0] || { v: APP_VERSION, date: '', tag: '', lead: '', notes: [] };
+  const hist = APP_CHANGELOG.slice(1).map(e =>
+    '<div class="ver-hist"><b>v' + esc(e.v) + '</b><span>' + esc(e.date) + (e.tag ? ' · ' + esc(e.tag) : '') + '</span>' +
+    '<p>' + esc(e.lead || '') + '</p></div>').join('');
+  const body = $('#changelogBody');
+  body.innerHTML =
+    '<div class="ver-hero">' +
+    '<div class="ver-num">v' + esc(cur.v) + '</div>' +
+    '<div class="ver-meta">' + esc(cur.date) + (cur.tag ? ' · ' + esc(cur.tag) : '') + '</div>' +
+    '<p class="ver-lead">' + esc(cur.lead || '') + '</p>' +
+    '</div>' +
+    '<div class="set-group"><h3>本次更新</h3><ul class="ver-list">' +
+    (cur.notes || []).map(t => '<li>' + esc(t) + '</li>').join('') + '</ul></div>' +
+    (hist ? '<div class="set-group"><h3>版本历史</h3>' + hist + '</div>' : '') +
+    '<div class="set-group"><h3>致谢</h3><p class="ver-thanks">' +
+    'GeoAI 的界面与交互参考了 GeoGebra 经典版的工具箱与操作方式，感谢 GeoGebra 团队和开源社区多年沉淀下来的数学工具范式；' +
+    '感谢 DeepSeek 提供稳定的模型接口，让「说一句话就把图画出来」成为可能；' +
+    '感谢每一位用这块画板讲题、备课、出卷和做题的人——你们反馈的每一条「这条命令报错」「这个按钮不顺手」，都直接变成了这里的一条更新；' +
+    '也感谢所有开源字体与工具链的作者。' +
+    '</p></div>';
+  body.scrollTop = 0;
+  openBackdrop('changelogBackdrop');
 }
 function aiHelp() {
   toggleAI(true);
@@ -19353,6 +19541,8 @@ function init() {
   $('#compatBasic').onclick = () => enterBasicMode();
   window.addEventListener('resize', () => { clearTimeout(compatTimer); compatTimer = setTimeout(compatResize, 150); });
   compatCheck();
+  /* 菜单里的版本号跟着 APP_VERSION 走，不在 HTML 里写死 */
+  { const mv = $('#menuVersion'); if (mv) mv.textContent = 'v' + APP_VERSION; }
   /* 在线分享：?share=geoai-xxxxxxxx（或完整链接里的 share 参数）在启动时读回来 */
   const shareParam = new URLSearchParams(location.search).get('share');
   if (shareParam) loadShare(shareParam).catch(e => toast('在线分享载入失败：' + ((e && e.message) || e), 'err', 3200));
@@ -19406,7 +19596,7 @@ async function runUITest() {
     /* 确认框 / 输入框是 Promise：只把 DOM 关掉会留下悬挂的回调，得走各自的 resolve 正常收尾 */
     if ($('#confirmBackdrop').classList.contains('on')) resolveConfirm(false);
     if ($('#promptBackdrop').classList.contains('on')) resolvePrompt(false);
-    ['settingsBackdrop', 'layerBackdrop', 'probBackdrop', 'confirmBackdrop', 'promptBackdrop', 'shareBackdrop'].forEach(closeBackdrop);
+    ['settingsBackdrop', 'changelogBackdrop', 'layerBackdrop', 'probBackdrop', 'confirmBackdrop', 'promptBackdrop', 'shareBackdrop'].forEach(closeBackdrop);
     setFmenu(false);          /* 抽屉是浮层，用例之间也要收掉，免得挡住后续点击 */
     $('#ctxMenu').classList.remove('on');
   };
@@ -19493,7 +19683,7 @@ async function runUITest() {
       return Math.abs(Math.atan2(bb, a) * 180 / Math.PI);
     };
     if (angle(bars[0]) > 2) throw new Error('收起态关闭键不该已经是叉号');
-    setFmenu(true); await sleep(620);          /* 过渡 340ms，等它走完再量（headless 首帧会晚到） */
+    setFmenu(true); void bars[0].getBoundingClientRect(); await sleep(620);          /* 过渡 340ms，等它走完再量（headless 首帧会晚到） */
     if (b.getAttribute('aria-expanded') !== 'true') throw new Error('展开后 aria-expanded 未同步');
     /* 触发键必须整枚让开：留在画布上会变成一枚孤零零的叉号 */
     if (!b.classList.contains('behind')) throw new Error('展开后触发键没有让开');
@@ -19501,7 +19691,7 @@ async function runUITest() {
     if (Math.abs(angle(bars[0]) - 45) > 3) throw new Error('关闭键上横线没有转成 45°：' + getComputedStyle(bars[0]).transform);
     if (Math.abs(angle(bars[2]) - 45) > 3) throw new Error('关闭键下横线没有转成 45°：' + getComputedStyle(bars[2]).transform);
     if (+getComputedStyle(bars[1]).opacity > 0.05) throw new Error('关闭键中间横线没有淡出');
-    setFmenu(false); await sleep(620);
+    setFmenu(false); void bars[0].getBoundingClientRect(); await sleep(620);
     if (b.classList.contains('behind')) throw new Error('收起后触发键没有回来');
     if (angle(bars[0]) > 2) throw new Error('收起后关闭键没有变回三条横线');
   });
@@ -20040,6 +20230,30 @@ async function runUITest() {
     mk('ZoomFit()');
     const errs = state.objects.filter(o => o.error && !o.aux);
     if (errs.length) throw new Error('构造里有错误：' + errs.map(x => x.label + ':' + x.error).join(' | '));
+  });
+  /* 更新与版本面板 + 工具参数内联输入（不再弹二级对话框） */
+  await A('更新与版本与工具内联输入', async () => {
+    executeLine('DeleteAll()');
+    showChangelog();
+    if (!$('#changelogBackdrop').classList.contains('on')) throw new Error('更新面板没打开');
+    const ver = ($('#changelogBody .ver-num') || {}).textContent;
+    if (ver !== 'v' + APP_VERSION) throw new Error('版本号不对：' + ver);
+    if (!$('#changelogBody .ver-list li')) throw new Error('没有更新条目');
+    for (const h of Array.from($('#changelogBody').querySelectorAll('h3'))) {
+      if (h.textContent.indexOf('版本号规则') >= 0) throw new Error('不该再出现版本号规则板块');
+    }
+    if (!$('#changelogBody .ver-thanks')) throw new Error('缺少致谢板块');
+    if ($('#settingsBackdrop').classList.contains('on')) throw new Error('更新面板不该挤在设置弹窗里');
+    closeBackdrop('changelogBackdrop');
+    setTool('functionPlot');
+    const inp = $('.tool-hint.ask .th-input');
+    if (!inp) throw new Error('工具参数没有在提示条里内联输入');
+    if ($('#promptBackdrop').classList.contains('on')) throw new Error('仍然弹出了二级输入框');
+    inp.value = 'x^2 + 1';
+    inp.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+    await sleep(30);
+    if (!state.objects.some(o => o.type === 'function' && /x\^2/.test(o.src || ''))) throw new Error('内联输入没有建出函数');
+    setTool('move');
   });
   await A('视图缩放按钮', async () => { $('#gvIn').click(); $('#gvOut').click(); $('#gvHome').click(); await sleep(0); });
   await A('视图:比例与适合窗口', async () => {
