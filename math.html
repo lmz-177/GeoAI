@@ -1814,13 +1814,60 @@ body:has(.aii-eff.on) .ai-dock{z-index:230}
 /* 更新与版本弹窗（点左上角 GeoAI 打开）：版本号做成页首的大数字；版本历史
    每条先给一句摘要，点标题才展开逐条改动，默认只展开当前版本。 */
 .upd-hero{
+  position:relative;overflow:hidden;
   padding:16px 16px 14px;border-radius:var(--r-lg);margin-bottom:16px;
   background:linear-gradient(135deg,var(--accent-dim),rgba(0,98,204,.02));border:.5px solid var(--border);
 }
+/* 版本卡片的鼠标光效（参考 Aceternity 的 Evervault Card，这里用纯 CSS 变量实现）：
+   一圈跟着指针走的径向遮罩，遮罩里是一层绿→蓝渐变叠随机字符，移开指针就淡出。
+   直接把 React 组件搬进来不现实（这个页面是单文件、没有 React/Tailwind），
+   但视觉效果和交互节奏按那张卡片的做法来。 */
+.uh-fx{position:absolute;inset:0;z-index:0;pointer-events:none;border-radius:inherit}
+.uh-fx>div{
+  position:absolute;inset:0;opacity:0;transition:opacity .35s ease;
+  -webkit-mask-image:radial-gradient(250px at var(--mx,50%) var(--my,50%),#fff,transparent);
+  mask-image:radial-gradient(250px at var(--mx,50%) var(--my,50%),#fff,transparent);
+}
+/* 卡片上压着版本号和摘要，光效只做一层薄薄的透光（0.6），
+   全不透明时蓝字落在绿蓝渐变上会发糊 */
+.upd-hero:hover .uh-fx>div{opacity:.6}
+.uh-grad{background:linear-gradient(90deg,#22c55e,#1d4ed8)}
+.uh-code{mix-blend-mode:overlay}
+.uh-chars{
+  display:block;font-family:var(--mono);font-size:var(--fs-3xs);line-height:1.15;font-weight:700;
+  color:#fff;word-break:break-all;white-space:pre-wrap;opacity:.85;
+}
+.upd-hero>*:not(.uh-fx){position:relative;z-index:1}
 .upd-num{font-size:var(--fs-code);font-weight:800;letter-spacing:-.02em;color:var(--accent);font-variant-numeric:tabular-nums;line-height:1.15}
 .upd-meta{font-size:var(--fs-2xs);color:var(--text-3);margin-top:3px}
 .upd-lead{font-size:var(--fs-sm);line-height:1.8;color:var(--text-2);margin:6px 0 0}
 .upd-sec{font-size:var(--fs-xs);font-weight:700;color:var(--text-2);letter-spacing:.3px;margin:0 0 6px}
+/* 更新日历（日期参考 Glass Calendar 的日期块）：只列出真正发布过更新的日子，
+   每块写明当天的更新条数，点一下直接跳到那天的条目。
+   不再铺一整月、也不需要横向滚动——有多少个发布日就摆多少块，多了自动换行。 */
+.upd-cal{
+  margin-bottom:18px;padding:14px;border-radius:var(--r-lg);
+  background:var(--panel-2);border:.5px solid var(--border);box-shadow:var(--hi);
+  -webkit-backdrop-filter:blur(18px) saturate(180%);backdrop-filter:blur(18px) saturate(180%);
+}
+.uc-head{display:flex;align-items:flex-end;justify-content:space-between;gap:10px;margin-bottom:12px}
+.uc-month{font-size:var(--fs-md);font-weight:800;letter-spacing:-.3px;color:var(--text);font-variant-numeric:tabular-nums}
+.uc-sub{font-size:var(--fs-2xs);color:var(--text-3);margin-top:2px;font-variant-numeric:tabular-nums}
+.uc-total{font-size:var(--fs-3xs);color:var(--text-3);white-space:nowrap}
+.uc-dates{display:flex;flex-wrap:wrap;gap:8px}
+.uc-day{
+  width:66px;padding:9px 4px 8px;border-radius:14px;
+  display:flex;flex-direction:column;align-items:center;gap:1px;
+  background:var(--panel-3);border:.5px solid transparent;
+  transition:background-color .2s ease,transform .2s ease,box-shadow .2s ease;
+}
+.uc-day:hover{background:var(--hover)}
+.uc-day:active{transform:scale(.96)}
+.uc-day.sel{background:linear-gradient(135deg,#ec4899,#f97316);box-shadow:0 4px 12px rgba(236,72,153,.35)}
+.uc-dnum{font-size:var(--fs-md);font-weight:800;color:var(--text);font-variant-numeric:tabular-nums;line-height:1.2}
+.uc-dow{font-size:var(--fs-3xs);color:var(--text-3);font-weight:600}
+.uc-cnt{font-size:var(--fs-3xs);font-weight:700;color:var(--accent);margin-top:2px}
+.uc-day.sel .uc-dnum,.uc-day.sel .uc-dow,.uc-day.sel .uc-cnt{color:#fff}
 .upd-item{border-top:.5px solid var(--border)}
 .upd-item:first-child{border-top:none}
 .upd-head{display:flex;flex-wrap:wrap;align-items:center;gap:7px;row-gap:3px;width:100%;padding:11px 2px;text-align:left;border-radius:7px;transition:background-color .18s ease}
@@ -3338,8 +3385,24 @@ const state = {
    版本号在左上角 GeoAI 打开的「更新与版本」弹窗里展示。改完版本号后，在
    APP_CHANGELOG 最上面补一条（版本、日期、类型、一句摘要、几条说明），
    新版本会自动出现在版本历史里。 */
-const APP_VERSION = '1.2.1';
+const APP_VERSION = '1.3.0';
 const APP_CHANGELOG = [
+  {
+    v: '1.3.0', date: '2026-11-13', tag: '新功能',
+    lead: '「更新与版本」里加了更新日历：只列真正发布过更新的日期，每块写明当天有几条更新，点一下直接跳到那天的改动。',
+    notes: [
+      '新增更新日历：只显示有版本发布的日期，不用在一整月里翻找',
+      '每个日期块标出当天的更新条数，顶部同时显示选中的日期与当月',
+      '点日期块直接展开当天的全部版本条目，并滚动到对应位置',
+    ],
+  },
+  {
+    v: '1.2.2', date: '2026-11-13', tag: '小更新',
+    lead: '顶部版本卡片的鼠标效果换成跟随指针的光斑：指针划过时透出绿蓝渐变和随机字符，移开就淡出。',
+    notes: [
+      '版本卡片加入跟随鼠标的径向光效，遮罩内叠一层绿→蓝渐变与随机字符',
+    ],
+  },
   {
     v: '1.2.1', date: '2026-11-13', tag: '小更新',
     lead: '更新弹窗底部加了 GitHub 入口，想直接看仓库里的最新改动，点一下就跳过去。',
@@ -19187,15 +19250,57 @@ function showAbout() {
     '</div></div>';
   openBackdrop('settingsBackdrop');
 }
+/* 版本卡片光效的随机字符（大小写字母 + 数字，跟参考卡片一致） */
+const UPD_CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+function updRandomChars(n) {
+  let s = '';
+  for (let i = 0; i < n; i++) s += UPD_CHARS.charAt(Math.floor(Math.random() * UPD_CHARS.length));
+  return s;
+}
+/* ── 更新日历 ──
+   只把真正发布过更新的日期列出来（一个发布日一块），每块写明当天有几条更新；
+   点一块就展开那天的条目并滚过去。updCalSel 是当前选中的日期（YYYY-MM-DD）。 */
+let updCalSel = '';
+const updPad2 = n => (n < 10 ? '0' + n : '' + n);
+const updDateStr = d => d.getFullYear() + '-' + updPad2(d.getMonth() + 1) + '-' + updPad2(d.getDate());
+function updCalHTML() {
+  const byDate = new Map();
+  APP_CHANGELOG.forEach(e => {
+    if (!e.date) return;
+    if (!byDate.has(e.date)) byDate.set(e.date, []);
+    byDate.get(e.date).push(e);
+  });
+  const dates = Array.from(byDate.keys()).sort().reverse();
+  const sel = byDate.has(updCalSel) ? updCalSel : (dates[0] || '');
+  const selList = byDate.get(sel) || [];
+  const sd = sel ? new Date(sel + 'T00:00:00') : new Date();
+  const chips = dates.map(ds => {
+    const d = new Date(ds + 'T00:00:00');
+    const n = byDate.get(ds).length;
+    return '<button type="button" class="uc-day' + (ds === sel ? ' sel' : '') + '" data-date="' + ds + '"' +
+      ' aria-label="' + ds + '，' + n + ' 条更新">' +
+      '<span class="uc-dnum">' + d.getDate() + '</span>' +
+      '<span class="uc-dow">周' + '日一二三四五六'.charAt(d.getDay()) + '</span>' +
+      '<span class="uc-cnt">' + n + ' 条更新</span>' +
+      '</button>';
+  }).join('');
+  return '<div class="uc-head"><div>' +
+    '<div class="uc-month">' + sd.getFullYear() + ' 年 ' + (sd.getMonth() + 1) + ' 月</div>' +
+    '<div class="uc-sub">' + (sel ? sel + ' · ' + selList.length + ' 条更新' : '暂无更新') + '</div></div>' +
+    '<div class="uc-total">共 ' + APP_CHANGELOG.length + ' 条更新</div></div>' +
+    '<div class="uc-dates">' + chips + '</div>';
+}
 /* 点左上角 GeoAI 打开的「更新与版本」弹窗。数据来自 APP_CHANGELOG：改版本号时
    只要在数组最上面加一条，这里会自动长出新的版本号、摘要与历史记录。
    每条先给摘要，标题点开看逐条改动。 */
 function showChangelog() {
   const host = $('#changelogBody'); if (!host) return;
   const cur = APP_CHANGELOG[0] || { v: APP_VERSION, date: '', tag: '', lead: '', notes: [] };
+  /* 日历默认选中当前版本那天 */
+  updCalSel = /^\d{4}-\d{2}-\d{2}$/.test(cur.date || '') ? cur.date : updDateStr(new Date());
   const items = APP_CHANGELOG.map((e, i) => {
     const open = i === 0;
-    return '<div class="upd-item' + (open ? ' open' : '') + (i === 0 ? ' cur' : '') + '">' +
+    return '<div class="upd-item' + (open ? ' open' : '') + (i === 0 ? ' cur' : '') + '" data-date="' + esc(e.date || '') + '">' +
       '<button class="upd-head" type="button" aria-expanded="' + (open ? 'true' : 'false') + '">' +
       '<span class="upd-v">v' + esc(e.v) + '</span>' +
       '<span class="upd-date">' + esc(e.date) + '</span>' +
@@ -19208,10 +19313,14 @@ function showChangelog() {
   }).join('');
   host.innerHTML =
     '<div class="upd-hero">' +
+    '<div class="uh-fx" aria-hidden="true"><div class="uh-grad"></div>' +
+    '<div class="uh-code"><span class="uh-chars">' + updRandomChars(1200) + '</span></div></div>' +
     '<div class="upd-num">v' + esc(cur.v) + '</div>' +
     '<div class="upd-meta">' + esc(cur.date) + (cur.tag ? ' · ' + esc(cur.tag) : '') + '</div>' +
     '<p class="upd-lead">' + esc(cur.lead || '') + '</p>' +
     '</div>' +
+    '<div class="upd-sec">更新日历</div>' +
+    '<div class="upd-cal" id="updCal">' + updCalHTML() + '</div>' +
     '<div class="upd-sec">版本历史</div>' + items +
     '<div class="upd-sec" style="margin-top:18px">致谢</div><p class="upd-thanks">' +
     'GeoAI 的界面与交互参考了 GeoGebra 经典版的工具箱与操作方式，感谢 GeoGebra 团队和开源社区多年沉淀下来的数学工具范式；' +
@@ -19556,10 +19665,35 @@ function init() {
   $('#panelTabs').addEventListener('click', e => { const b = e.target.closest('button'); if (b) switchPanel(b.dataset.tab); });
   /* 更新弹窗里的版本条目：点标题展开 / 收起该版本的逐条说明 */
   $('#changelogBody').addEventListener('click', e => {
+    /* 点发布日：选中它，展开当天的全部条目并滚到眼前 */
+    const day = e.target.closest('.uc-day');
+    if (day) {
+      updCalSel = day.dataset.date;
+      const cal = $('#updCal'); if (cal) cal.innerHTML = updCalHTML();
+      const list = $$('#changelogBody .upd-item[data-date="' + updCalSel + '"]');
+      list.forEach(it => {
+        it.classList.add('open');
+        const hh = it.querySelector('.upd-head'); if (hh) hh.setAttribute('aria-expanded', 'true');
+      });
+      if (list[0]) { try { list[0].scrollIntoView({ block: 'nearest', behavior: 'smooth' }); } catch (err) { } }
+      return;
+    }
     const h = e.target.closest('.upd-head'); if (!h) return;
     const it = h.closest('.upd-item'); if (!it) return;
     const open = it.classList.toggle('open');
     h.setAttribute('aria-expanded', open ? 'true' : 'false');
+  });
+  /* 版本卡片的鼠标光效：把指针位置写进 CSS 变量，遮罩跟着走；字符按 80ms 一换，
+     不跟着每一次 mousemove 重排整片文字 */
+  $('#changelogBody').addEventListener('mousemove', e => {
+    const hero = e.target.closest && e.target.closest('.upd-hero'); if (!hero) return;
+    const r = hero.getBoundingClientRect();
+    hero.style.setProperty('--mx', (e.clientX - r.left) + 'px');
+    hero.style.setProperty('--my', (e.clientY - r.top) + 'px');
+    const now = performance.now();
+    if (now - (hero._fxT || 0) < 80) return;
+    hero._fxT = now;
+    const sp = hero.querySelector('.uh-chars'); if (sp) sp.textContent = updRandomChars(1200);
   });
   $('#cmdSearch').addEventListener('input', e => renderCmdList(e.target.value));
   $('#cmdList').addEventListener('click', e => { const it = e.target.closest('.cmd-item'); if (!it) return; switchPanel('algebra'); const f = $('#inputField'); f.value = it.dataset.ins; f.focus(); autoGrow(f); });
@@ -20311,6 +20445,32 @@ async function runUITest() {
     old.querySelector('.upd-head').click(); await sleep(0);
     if (old.classList.contains('open')) throw new Error('再点一次没有收起');
     if (!$('#changelogBody .upd-thanks')) throw new Error('缺少致谢板块');
+    /* 版本卡片的鼠标光效：两层遮罩 + 随机字符，mousemove 要更新遮罩圆心 */
+    const hero = $('#changelogBody .upd-hero');
+    if (!hero || !hero.querySelector('.uh-grad') || !hero.querySelector('.uh-code')) throw new Error('版本卡片缺少鼠标光效层');
+    const chars = hero.querySelector('.uh-chars');
+    if (!chars || chars.textContent.length < 500) throw new Error('光效字符没有生成');
+    const hr = hero.getBoundingClientRect();
+    hero.dispatchEvent(new MouseEvent('mousemove', { bubbles: true, clientX: hr.left + 40, clientY: hr.top + 20 }));
+    if (!hero.style.getPropertyValue('--mx')) throw new Error('鼠标移动没有更新光效位置');
+    /* 更新日历：只列有更新的日期、每块写当天条数、点日期跳转到当天全部条目 */
+    if (!$('#changelogBody .upd-cal')) throw new Error('更新弹窗缺少更新日历');
+    if ($('#changelogBody .uc-nav')) throw new Error('日历不该再有翻月控件');
+    const days = $$('#changelogBody .uc-day');
+    const dateSet = new Set(APP_CHANGELOG.map(e => e.date));
+    if (days.length !== dateSet.size) throw new Error('日历只应列出有更新的日期：' + days.length + ' vs ' + dateSet.size);
+    for (const d of days) {
+      const n = APP_CHANGELOG.filter(e => e.date === d.dataset.date).length;
+      if (d.querySelector('.uc-cnt').textContent.indexOf(n + ' 条') !== 0) throw new Error('日期块的更新条数不对：' + d.dataset.date);
+    }
+    if (!/\d+ 条更新/.test(($('#changelogBody .uc-sub') || {}).textContent || '')) throw new Error('没有显示当前日期的更新次数');
+    if (!$('#changelogBody .uc-day.sel')) throw new Error('日历没有选中当前版本那天');
+    const day1 = days[days.length - 1];
+    const day1Date = day1.dataset.date;
+    day1.click(); await sleep(0);
+    if (($('#changelogBody .uc-day.sel') || {}).dataset?.date !== day1Date) throw new Error('点日期后没有选中');
+    const itDay = $$('#changelogBody .upd-item[data-date="' + day1Date + '"]');
+    if (!itDay.length || itDay.some(x => !x.classList.contains('open'))) throw new Error('点日期没有展开当天版本');
     const gh = $('#changelogBackdrop .gh-btn');
     if (!gh || gh.href.indexOf('github.com/lmz-177/GeoAI') < 0 || gh.target !== '_blank') throw new Error('更新弹窗缺少 GitHub 入口');
     if ($('#changelogBody').textContent.indexOf('版本号规则') >= 0) throw new Error('不该再出现版本号规则');
