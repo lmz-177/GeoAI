@@ -1821,35 +1821,39 @@ body:has(.aii-eff.on) .ai-dock{z-index:230}
 }
 /* 版本卡展开前的「伪装加载」：3×3 方块沿对角线依次亮起，约半秒后收起，
    再把日期 / 类型 / 摘要放出来。纯 CSS 动画，不引入 React / framer-motion。 */
-.upd-load{
-  display:grid;grid-template-columns:repeat(3,10px);grid-auto-rows:10px;gap:3px;
-  justify-content:center;height:0;margin:0 auto;opacity:0;overflow:hidden;
-  transition:height .18s ease,margin .18s ease,opacity .15s ease;
+/* 弹窗内部的装载层：窗口先弹出，内容区盖一层同色面板，
+   方块在弹窗正中转；装载完面板淡出，版本号与版本历史分批出现。
+   整页不变灰，只有弹窗自己的背景色。 */
+.upd-boot{
+  position:absolute;inset:0;z-index:5;display:flex;align-items:center;justify-content:center;
+  background:var(--modal-bg);border-radius:inherit;pointer-events:none;
+  opacity:0;visibility:hidden;transition:opacity .2s ease,visibility 0s linear .2s;
 }
-.upd-load i{border-radius:2px;background:var(--text);opacity:.08;animation:upd-snake 1.2s ease-in-out infinite}
-.upd-load i:nth-child(1){animation-delay:0s}
-.upd-load i:nth-child(2){animation-delay:.15s}
-.upd-load i:nth-child(3){animation-delay:.3s}
-.upd-load i:nth-child(4){animation-delay:.15s}
-.upd-load i:nth-child(5){animation-delay:.3s}
-.upd-load i:nth-child(6){animation-delay:.45s}
-.upd-load i:nth-child(7){animation-delay:.3s}
-.upd-load i:nth-child(8){animation-delay:.45s}
-.upd-load i:nth-child(9){animation-delay:.6s}
+#changelogBackdrop.booting .upd-boot{opacity:1;visibility:visible;transition:opacity .15s ease}
+.upd-snake{display:grid;grid-template-columns:repeat(3,12px);grid-auto-rows:12px;gap:4px}
+.upd-snake i{border-radius:3px;background:var(--text);opacity:.08;animation:upd-snake 1.2s ease-in-out infinite}
+.upd-snake i:nth-child(1){animation-delay:0s}
+.upd-snake i:nth-child(2){animation-delay:.15s}
+.upd-snake i:nth-child(3){animation-delay:.3s}
+.upd-snake i:nth-child(4){animation-delay:.15s}
+.upd-snake i:nth-child(5){animation-delay:.3s}
+.upd-snake i:nth-child(6){animation-delay:.45s}
+.upd-snake i:nth-child(7){animation-delay:.3s}
+.upd-snake i:nth-child(8){animation-delay:.45s}
+.upd-snake i:nth-child(9){animation-delay:.6s}
 @keyframes upd-snake{0%,100%{opacity:.08}50%{opacity:1}}
-@keyframes upd-load-hide{to{height:0;margin:0 auto;opacity:0}}
-.upd-hero:hover .upd-load,.upd-hero:focus-visible .upd-load,.upd-hero.open .upd-load{
-  height:36px;margin:10px auto 2px;opacity:1;
-  animation:upd-load-hide .2s .66s forwards;
-}
-/* 详情等「加载」演完再展开；鼠标一移开就立即收起，不拖泥带水 */
+/* 详情：悬停 / 点击直接展开 */
 .upd-more{
   max-height:0;opacity:0;overflow:hidden;
   transition:max-height .28s var(--ease),opacity .2s ease;
 }
 .upd-hero:hover .upd-more,.upd-hero:focus-visible .upd-more,.upd-hero.open .upd-more{
-  max-height:180px;opacity:1;transition-delay:.66s;
+  max-height:180px;opacity:1;
 }
+/* 装载结束：版本号先出现，日历与版本历史紧接着浮现 */
+#changelogBackdrop:not(.booting) .upd-num{animation:upd-num-in .5s var(--ease-out) .1s both,upd-grad 4s linear infinite}
+#changelogBackdrop:not(.booting) .upd-late{animation:upd-late-in .4s var(--ease-out) .45s both}
+@keyframes upd-late-in{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
 /* 版本卡片的鼠标光效（参考 Aceternity 的 Evervault Card，这里用纯 CSS 变量实现）：
    一圈跟着指针走的径向遮罩，遮罩里是一层绿→蓝渐变叠随机字符，移开指针就淡出。
    直接把 React 组件搬进来不现实（这个页面是单文件、没有 React/Tailwind），
@@ -1870,11 +1874,18 @@ body:has(.aii-eff.on) .ai-dock{z-index:230}
   color:#fff;word-break:break-all;white-space:pre-wrap;opacity:.85;
 }
 .upd-hero>*:not(.uh-fx){position:relative;z-index:1}
-/* 版本号：放大居中，黑字压在浅色渐变底上 */
+/* 版本号：放大居中，动态渐变字（渐变缓慢流动），加载结束后淡入 */
 .upd-num{
   font-size:var(--fs-display);font-weight:800;letter-spacing:-.03em;line-height:1.1;
-  color:var(--text);font-variant-numeric:tabular-nums;
+  background:linear-gradient(100deg,var(--accent),var(--purple),var(--accent));
+  background-size:200% 100%;
+  -webkit-background-clip:text;background-clip:text;
+  color:transparent;-webkit-text-fill-color:transparent;
+  font-variant-numeric:tabular-nums;
+  animation:upd-grad 4s linear infinite;
 }
+@keyframes upd-grad{to{background-position:200% 50%}}
+@keyframes upd-num-in{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
 .upd-meta{font-size:var(--fs-2xs);color:var(--text-3);margin-top:3px}
 .upd-lead{font-size:var(--fs-sm);line-height:1.8;color:var(--text-2);margin:6px 0 0}
 .upd-sec{font-size:var(--fs-xs);font-weight:700;color:var(--text-2);letter-spacing:.3px;margin:0 0 6px}
@@ -2784,6 +2795,7 @@ try {
 <!-- ══════════ 更新与版本：点左上角 GeoAI 打开的一级弹窗 ══════════ -->
 <div class="backdrop" id="changelogBackdrop">
   <div class="modal" style="max-width:720px">
+    <div class="upd-boot" id="updBoot" aria-hidden="true"><div class="upd-snake"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div></div>
     <div class="modal-head">
       <h2>更新与版本</h2>
       <button class="icon-btn" data-close="changelogBackdrop" aria-label="关闭"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6 6 18"></path></svg></button>
@@ -3446,18 +3458,17 @@ const state = {
    版本号在左上角 GeoAI 打开的「更新与版本」弹窗里展示。改完版本号后，在
    APP_CHANGELOG 最上面补一条（版本、日期、类型、一句摘要、几条说明），
    新版本会自动出现在版本历史里。 */
-const APP_VERSION = '1.6.1';
+const APP_VERSION = '1.2.1';
 const APP_CHANGELOG = [
   {
-    v: '1.6.1', date: '2026-11-13', tag: '小更新',
-    lead: '版本卡展开前先演一段「加载中」：九宫格方块沿对角线依次亮起，半秒后再翻出本次更新详情；版本号改成黑字。',
+    v: '1.2.1', date: '2026-11-13', tag: '小更新',
+    lead: '打开「更新与版本」先演一段装载：九宫格方块沿对角线依次亮起，版本号随后浮现，下面的版本历史再整体出现。',
     notes: [
-      '版本卡展开加了 3×3 方块加载动画，加载结束才显示日期与摘要',
-      '版本号由渐变字改为正文黑字，和浅色渐变底对比更清楚',
+      '版本卡加入 3×3 方块加载动画，装载结束后才显示版本号与详情',
     ],
   },
   {
-    v: '1.6.0', date: '2026-11-13', tag: '界面重构',
+    v: '1.2.0', date: '2026-11-13', tag: '界面重构',
     lead: '顶部的当前版本卡片收成了一行版本号，鼠标移上去或点一下才展开日期、类型和本次更新摘要。',
     notes: [
       '当前版本默认只显示版本号，不再占三行',
@@ -3465,7 +3476,7 @@ const APP_CHANGELOG = [
     ],
   },
   {
-    v: '1.5.1', date: '2026-11-13', tag: '界面调整',
+    v: '1.1.4', date: '2026-11-13', tag: '界面调整',
     lead: '更新日历按钮上的条数挪进了展开后的月历：翻到哪个月，月份右边就显示那个月的更新条数。',
     notes: [
       '「更新日历」按钮只留图标和标题，不再挂总条数',
@@ -3473,7 +3484,7 @@ const APP_CHANGELOG = [
     ],
   },
   {
-    v: '1.5.0', date: '2026-11-12', tag: '界面调整',
+    v: '1.1.3', date: '2026-11-12', tag: '界面调整',
     lead: '更新日历的展开面板换成更干净的月历：月份与年份居中、整月铺满六行，有更新的日子用主题色标出。',
     notes: [
       '月历标题改为「11 月 | 2026 年」，翻月箭头分列两端',
@@ -3482,7 +3493,7 @@ const APP_CHANGELOG = [
     ],
   },
   {
-    v: '1.4.0', date: '2026-11-11', tag: '界面重构',
+    v: '1.1.2', date: '2026-11-11', tag: '界面重构',
     lead: '更新日历收成一枚小按钮，点开才展开整月日期；有更新的日子高亮，点日期直接跳到当天条目。',
     notes: [
       '日历默认收起，不再占掉版本列表的空间，点「更新日历」按钮展开',
@@ -3491,14 +3502,14 @@ const APP_CHANGELOG = [
     ],
   },
   {
-    v: '1.3.1', date: '2026-11-10', tag: '界面调整',
+    v: '1.1.1', date: '2026-11-10', tag: '界面调整',
     lead: '更新日历里选中日期的底色换成主题蓝，和界面其它选中态保持一致。',
     notes: [
       '日历选中日期由粉橙渐变改为主题蓝实心，深色模式用更深的蓝保证白字对比度',
     ],
   },
   {
-    v: '1.3.0', date: '2026-11-09', tag: '新功能',
+    v: '1.1.0', date: '2026-11-09', tag: '新功能',
     lead: '「更新与版本」里加了更新日历：只列真正发布过更新的日期，每块写明当天有几条更新，点一下直接跳到那天的改动。',
     notes: [
       '新增更新日历：只显示有版本发布的日期，不用在一整月里翻找',
@@ -3507,21 +3518,21 @@ const APP_CHANGELOG = [
     ],
   },
   {
-    v: '1.2.2', date: '2026-11-08', tag: '小更新',
+    v: '1.0.4', date: '2026-11-08', tag: '小更新',
     lead: '顶部版本卡片的鼠标效果换成跟随指针的光斑：指针划过时透出绿蓝渐变和随机字符，移开就淡出。',
     notes: [
       '版本卡片加入跟随鼠标的径向光效，遮罩内叠一层绿→蓝渐变与随机字符',
     ],
   },
   {
-    v: '1.2.1', date: '2026-11-07', tag: '小更新',
+    v: '1.0.3', date: '2026-11-07', tag: '小更新',
     lead: '更新弹窗底部加了 GitHub 入口，想直接看仓库里的最新改动，点一下就跳过去。',
     notes: [
       '「更新与版本」弹窗底部新增 GitHub 按钮，在新标签页打开项目仓库',
     ],
   },
   {
-    v: '1.2.0', date: '2026-11-05', tag: '界面重构',
+    v: '1.0.2', date: '2026-11-05', tag: '界面重构',
     lead: '点左上角的 GeoAI 就能打开「更新与版本」：当前版本、本次更新和完整历史都在这一个弹窗里，每个版本先给一句摘要，想看细节点开标题就行。',
     notes: [
       '左上角的菜单键与 GeoAI 拆成两个按钮：汉堡开菜单，GeoAI 打开更新与版本',
@@ -3531,7 +3542,7 @@ const APP_CHANGELOG = [
     ],
   },
   {
-    v: '1.1.0', date: '2026-11-03', tag: '功能更新',
+    v: '1.0.1', date: '2026-11-03', tag: '功能更新',
     lead: '这一版主要改「工具怎么用」：以前点开工具后还要弹一个输入框才能填半径、角度、函数表达式，现在参数直接出现在画布顶部的提示条里，选完对象顺手输入、回车就好。',
     notes: [
       '工具参数不再弹二级对话框：数值 / 表达式 / 文本直接在画布提示条内输入，回车生效、Esc 取消（涉及定长线段、正多边形、圆半径、定角、旋转、位似、定积分上下限、文本、画函数、复选框、按钮、解方程、因式分解、展开、化简、便签、思维导图、方程，共 18 个工具）',
@@ -19410,6 +19421,17 @@ function updCalHTML() {
    只要在数组最上面加一条，这里会自动长出新的版本号、摘要与历史记录。
    每条先给摘要，标题点开看逐条改动。 */
 function showChangelog() {
+  renderChangelog();
+  /* 弹窗先弹出来，内容区盖一层装载动画；0.9s 后淡出，
+     再让版本号出现、版本历史跟上。整页不变灰 */
+  const bd = $('#changelogBackdrop');
+  if (bd) {
+    clearTimeout(bd._bootT);
+    bd.classList.add('booting');
+    bd._bootT = setTimeout(() => bd.classList.remove('booting'), 900);
+  }
+}
+function renderChangelog() {
   const host = $('#changelogBody'); if (!host) return;
   const cur = APP_CHANGELOG[0] || { v: APP_VERSION, date: '', tag: '', lead: '', notes: [] };
   /* 日历每次打开都收起，默认选中当前版本那天、显示它所在的月份 */
@@ -19434,11 +19456,12 @@ function showChangelog() {
     '<div class="uh-fx" aria-hidden="true"><div class="uh-grad"></div>' +
     '<div class="uh-code"><span class="uh-chars">' + updRandomChars(1200) + '</span></div></div>' +
     '<div class="upd-num">v' + esc(cur.v) + '</div>' +
-    '<div class="upd-load" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>' +
     '<div class="upd-more">' +
     '<div class="upd-meta">' + esc(cur.date) + (cur.tag ? ' · ' + esc(cur.tag) : '') + '</div>' +
     '<p class="upd-lead">' + esc(cur.lead || '') + '</p>' +
     '</div></div>' +
+    /* 版本号加载完成之后，日历与版本历史再整体出现 */
+    '<div class="upd-late">' +
     '<button type="button" class="uc-toggle" id="ucToggle" aria-expanded="false" aria-controls="updCal">' +
     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5" width="17" height="15.5" rx="2.5"></rect><path d="M8 3.5v3M16 3.5v3M3.5 10h17"></path></svg>' +
     '<span>更新日历</span>' +
@@ -19450,7 +19473,7 @@ function showChangelog() {
     '感谢 DeepSeek 提供稳定的模型接口，让「说一句话就把图画出来」成为可能；' +
     '感谢每一位用这块画板讲题、备课、出卷和做题的人——你们反馈的每一条「这条命令报错」「这个按钮不顺手」，都直接变成了这里的一条更新；' +
     '也感谢所有开源字体与工具链的作者。' +
-    '</p>';
+    '</p></div>';
   host.scrollTop = 0;
   openBackdrop('changelogBackdrop');
 }
@@ -19941,6 +19964,7 @@ async function runUITest() {
     if ($('#promptBackdrop').classList.contains('on')) resolvePrompt(false);
     ['settingsBackdrop', 'changelogBackdrop', 'layerBackdrop', 'probBackdrop', 'confirmBackdrop', 'promptBackdrop', 'shareBackdrop'].forEach(closeBackdrop);
     setFmenu(false);          /* 抽屉是浮层，用例之间也要收掉，免得挡住后续点击 */
+    const bd = $('#changelogBackdrop'); if (bd) { bd.classList.remove('booting'); clearTimeout(bd._bootT); }
     $('#ctxMenu').classList.remove('on');
   };
   const reset = () => {
@@ -20583,7 +20607,12 @@ async function runUITest() {
     if (!mb || mb.contains(vb) || vb.contains(mb)) throw new Error('汉堡与 GeoAI 应该拆成两枚按钮');
     vb.click(); await sleep(0);
     if ($('#fmenu').classList.contains('on')) throw new Error('点 GeoAI 不该同时打开菜单抽屉');
+    /* 弹窗先弹出来，内部再显示装载动画（不整页变灰） */
     if (!$('#changelogBackdrop').classList.contains('on')) throw new Error('点 GeoAI 没有打开更新与版本弹窗');
+    if (!$('#changelogBackdrop').classList.contains('booting')) throw new Error('弹窗弹出后没有先显示装载动画');
+    if (!$('#changelogBackdrop .modal #updBoot')) throw new Error('装载动画没有放在弹窗里');
+    await sleep(1000);
+    if ($('#changelogBackdrop').classList.contains('booting')) throw new Error('装载动画没有收起');
     const ver = ($('#changelogBody .upd-num') || {}).textContent;
     if (ver !== 'v' + APP_VERSION) throw new Error('版本号不对：' + ver);
     const items = $$('#changelogBody .upd-item');
@@ -20608,8 +20637,11 @@ async function runUITest() {
     /* 版本卡默认只露版本号，点击展开 / 收起详情 */
     const more = hero.querySelector('.upd-more');
     if (!more || !more.querySelector('.upd-meta') || !more.querySelector('.upd-lead')) throw new Error('版本详情没有收进折叠区');
-    if ($$('#changelogBody .upd-load i').length !== 9) throw new Error('版本卡缺少 3×3 加载动画');
-    if (getComputedStyle(hero.querySelector('.upd-num')).color === 'rgba(0, 0, 0, 0)') throw new Error('版本号不该是透明渐变字');
+    if ($$('#updBoot .upd-snake i').length !== 9) throw new Error('缺少页面级居中的 3×3 装载动画');
+    const numCS = getComputedStyle(hero.querySelector('.upd-num'));
+    if ((numCS.backgroundImage || '').indexOf('gradient') < 0) throw new Error('版本号没有用渐变');
+    if ((numCS.animationName || '').indexOf('upd-grad') < 0) throw new Error('版本号渐变没有动起来');
+    if (!$('#changelogBody .upd-late')) throw new Error('日历与版本历史没有放进延迟出现的分组');
     if (hero.classList.contains('open')) throw new Error('版本卡默认应收起');
     hero.click(); await sleep(0);
     if (!hero.classList.contains('open') || hero.getAttribute('aria-expanded') !== 'true') throw new Error('点版本号没有展开详情');
