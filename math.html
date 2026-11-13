@@ -604,6 +604,11 @@ body.tool-folded .tool-head{padding-bottom:0}
 .slider-inline .sv{font-family:var(--mono);font-size:var(--fs-2xs);color:var(--text-2);min-width:40px;text-align:right}
 .empty-hint{padding:30px 22px;text-align:center;color:var(--text-3);font-size:var(--fs-xs);line-height:1.9}
 .empty-hint b{display:block;color:var(--text-2);font-size:var(--fs-sm);margin-bottom:4px}
+/* CAS 面板标题行右侧的 π 快捷键：点一次算一次，结果追加在记录里 */
+.cas-pi{width:24px;height:24px;border-radius:50%;background:var(--accent-dim);color:var(--accent);
+  font-size:var(--fs-sm);font-weight:700;display:flex;align-items:center;justify-content:center;transition:var(--t-ui)}
+.cas-pi:hover{background:var(--accent);color:#fff}
+.cas-pi:active{transform:scale(.94)}
 /* CAS 空态：把提示垂直居中，例子一条一行，别让算式在 222px 面板里折成两半 */
 #paneCas{display:flex;flex-direction:column}
 #casOut{flex:1;min-height:0}
@@ -839,7 +844,7 @@ body.tool-folded .tool-head{padding-bottom:0}
 }
 .tool-hint .dot{width:7px;height:7px;border-radius:50%;background:var(--accent)}
 /* 步骤进度 / 已选数量：多步构造时知道走到第几步 */
-.tool-hint .th-step{font-size:var(--fs-3xs);font-weight:700;color:var(--accent);background:var(--accent-dim);border-radius:99px;padding:1px 7px;font-variant-numeric:tabular-nums}
+.tool-hint .th-step{font-size:var(--fs-3xs);font-weight:700;color:var(--accent);background:var(--accent-dim);border-radius:99px;padding:1px 7px;font-variant-numeric:tabular-nums;white-space:nowrap;flex:0 0 auto}
 .tool-hint kbd{background:var(--panel-2);border:.5px solid var(--border);border-radius:6px;padding:1px 6px;font-family:var(--mono);font-size:var(--fs-2xs)}
 /* 工具参数直接在提示条里输入：不再弹二级对话框，选完对象就能接着填数值 / 表达式 */
 .tool-hint.ask{pointer-events:auto;padding:6px 6px 6px 14px;gap:8px}
@@ -2173,7 +2178,8 @@ body.dark .toast{background:rgba(58,58,60,.9);color:#f2f2f7}
 .cas-out .cas-in{color:var(--text-3)}
 .cas-out .cas-res{color:var(--accent);font-weight:600}
 .cas-out .cas-err{color:var(--danger-ink)}
-.cas-ln{border-bottom:.5px solid var(--border);padding:11px 0}
+/* 长数字（π 的 60 位小数、大整数）在面板里按字符折行，不裁掉也不加省略号 */
+.cas-ln{border-bottom:.5px solid var(--border);padding:11px 0;overflow-wrap:anywhere}
 .cas-ln:first-child{padding-top:0}
 
 /* ---------- 表格视图 ---------- */
@@ -2509,7 +2515,7 @@ try {
       </div>
 
       <div class="panel-body hidden" id="paneCas">
-        <div class="algebra-head"><span>CAS 计算</span></div>
+        <div class="algebra-head"><span>CAS 计算</span><button class="cas-pi" id="casPiBtn" type="button" title="计算 π（60 位小数，可以反复点）">π</button></div>
         <div id="casOut" class="cas-out"></div>
       </div>
 
@@ -3462,8 +3468,20 @@ const state = {
    版本号在左上角 GeoAI 打开的「更新与版本」弹窗里展示。改完版本号后，在
    APP_CHANGELOG 最上面补一条（版本、日期、类型、一句摘要、几条说明），
    新版本会自动出现在版本历史里。 */
-const APP_VERSION = '1.4.1';
+const APP_VERSION = '1.5.0';
 const APP_CHANGELOG = [
+  {
+    v: '1.5.0', date: '2026-11-13', tag: '新功能',
+    lead: 'CAS 计算器换成精确数值计算：π 能给出 60 位小数且不省略，2^2000 这类大整数幂按科学计数或完整位数显示；标题栏还多了一个可反复点的 π 键。',
+    notes: [
+      'CAS 面板输入纯数值算式时走 BigInt 定点计算（60 位精度），大整数幂不再变成 Infinity',
+      '超过 64 位的整数显示为「a.bbb × 10^n（共 N 位）」，小数位完整显示、不加省略号；悬停结果可看完整数值',
+      'CAS 标题栏新增 π 键：点一次算一次，可一直算，结果都留在记录里',
+      '新增 CAS("表达式") / 计算(表达式) 命令，AI 也能直接调用大数计算',
+      '数学键盘「运算」页补了解方程 / 求导 / 积分 / 计算 / 因式分解 / 展开 / 化简 等键',
+      '修复工具提示条「已选 N」在小宽度下折成两行的问题',
+    ],
+  },
   {
     v: '1.4.1', date: '2026-11-13', tag: '小更新',
     lead: '「过点插值曲线」的上限放宽到 32 个点，并在工具提示与命令说明里标明 AI 也可以直接调用。',
@@ -10490,6 +10508,11 @@ C('Integrate', 'Integrate(表达式, [变量])', '符号积分', (a) => {
   if (r === null) throw new Error('暂不支持该表达式的符号积分');
   return [mkObj('text', { kind: 'plain', value: r, label: '', color: '#007aff', def: { pos: { x: state.view.cx, y: state.view.cy } } })];
 }, ['积分', 'Integrate']);
+C('CAS', 'CAS("表达式") 或 计算(表达式)', '精确计算：大整数幂 / 阶乘 / π（最多 60 位小数）', (a) => {
+  const out = casNumeric(asTextArg(a[0], 'CAS'));
+  if (out == null) throw new Error('CAS 只算纯数值算式：数字、π、e、+ − × ÷ ^ ! 与括号');
+  return [mkObj('text', { kind: 'plain', value: out, label: '', color: '#007aff', def: { pos: { x: state.view.cx, y: state.view.cy } } })];
+}, ['计算', '精确计算', 'Evaluate']);
 C('Factor', 'Factor(表达式)', '因式分解', (a) => {
   const src = a[0].src || String(a[0].val);
   const r = casFactor(src, 'x');
@@ -13540,13 +13563,118 @@ function expandPoly(expr, v, maxDeg) {
   let d = c.length - 1; while (d > 0 && Math.abs(c[d]) < 1e-12) d--;
   return c.slice(0, d + 1);
 }
+/* ── CAS 精确数值：BigInt 定点（60 位小数）+ Machin 公式算 π ──
+   普通表达式引擎用 IEEE double，2^2000 会直接变 Infinity、π 只有 16 位；
+   CAS 面板与 CAS("…") 命令走这套定点计算，整数幂 / 阶乘保持精确位数。 */
+const CAS_FP = 60;
+const CAS_S = 10n ** 60n;
+let CAS_PI = 0n;
+function casPi() {
+  if (CAS_PI) return CAS_PI;
+  const atan = x => {
+    let p = CAS_S / x, s = p;
+    for (let k = 1n; k < 4000n; k++) {
+      p /= x * x;
+      const t = p / (2n * k + 1n);
+      if (!t) break;
+      s += (k % 2n ? -t : t);
+    }
+    return s;
+  };
+  CAS_PI = 16n * atan(5n) - 4n * atan(239n);
+  return CAS_PI;
+}
+function casNumLit(str) {
+  const m = /^(\d+)(?:\.(\d*))?$/.exec(str);
+  if (!m) throw new Error('数值写法不对');
+  const frac = ((m[2] || '') + '0'.repeat(CAS_FP)).slice(0, CAS_FP);
+  return BigInt(m[1]) * CAS_S + BigInt(frac || '0');
+}
+function casPow(b, e) {
+  if (e % CAS_S) throw new Error('指数必须是整数');
+  const n = e / CAS_S;
+  if (n > 100000n || n < -100000n) throw new Error('指数太大');
+  if (!n) return CAS_S;
+  const neg = n < 0n; let k = neg ? -n : n, r = CAS_S, base = b;
+  while (k > 0n) {
+    if (k & 1n) r = r * base / CAS_S;
+    k >>= 1n;
+    if (k) base = base * base / CAS_S;
+  }
+  return neg ? CAS_S * CAS_S / r : r;
+}
+function casFact(v) {
+  if (v % CAS_S || v < 0n) throw new Error('阶乘只支持非负整数');
+  const n = v / CAS_S;
+  if (n > 5000n) throw new Error('阶乘最多 5000');
+  let r = 1n;
+  for (let k = 2n; k <= n; k++) r *= k;
+  return r * CAS_S;
+}
+function casParse(src) {
+  let i = 0;
+  const ws = () => { while (i < src.length && /\s/.test(src[i])) i++; };
+  function primary() {
+    ws();
+    if (src[i] === '(') { i++; const v = expr(); ws(); if (src[i] !== ')') throw new Error('括号不配对'); i++; return v; }
+    if (src[i] === '-') { i++; return -primary(); }
+    if (src[i] === '+') { i++; return primary(); }
+    if (/[0-9.]/.test(src[i])) { const j = i; while (i < src.length && /[0-9.]/.test(src[i])) i++; return casNumLit(src.slice(j, i)); }
+    /* π 不是 ASCII 单词字符，\b 在它后面不成立，这里用负向前瞻 */
+    const m = /^(pi|π|e)(?![0-9a-z])/i.exec(src.slice(i));
+    if (m) { i += m[0].length; return /^e$/i.test(m[0]) ? casNumLit(String(Math.E)) : casPi(); }
+    throw new Error('看不懂：' + src.slice(i));
+  }
+  function postfix() { let v = primary(); ws(); while (src[i] === '!') { i++; v = casFact(v); ws(); } return v; }
+  function power() { const b = postfix(); ws(); if (src[i] === '^') { i++; return casPow(b, power()); } return b; }
+  function term() {
+    let v = power(); ws();
+    while (src[i] === '*' || src[i] === '/') {
+      const op = src[i++], r = power();
+      if (op === '*') v = v * r / CAS_S;
+      else { if (!r) throw new Error('除数为 0'); v = v * CAS_S / r; }
+      ws();
+    }
+    return v;
+  }
+  function expr() {
+    let v = term(); ws();
+    while (src[i] === '+' || src[i] === '-') { const op = src[i++], r = term(); v = op === '+' ? v + r : v - r; ws(); }
+    return v;
+  }
+  const v = expr(); ws();
+  if (i < src.length) throw new Error('多余的符号：' + src.slice(i));
+  return v;
+}
+function casFmt(v) {
+  const neg = v < 0n; if (neg) v = -v;
+  const ip = v / CAS_S, fp = v % CAS_S;
+  const is = ip.toString();
+  let fs = fp ? fp.toString().padStart(CAS_FP, '0').replace(/0+$/, '') : '';
+  let out;
+  if (is.length > 64) {
+    const lead = is.slice(0, 16);
+    out = lead[0] + '.' + lead.slice(1) + ' × 10^' + (is.length - 1) + '（共 ' + is.length + ' 位）';
+  } else {
+    /* 小数位全部显示，不省略：π 这种需要看位数的值不应该被截断 */
+    out = is + (fs ? '.' + fs : '');
+  }
+  return (neg ? '-' : '') + out;
+}
+/* 纯数值算式 → 精确结果文本；不是纯数值（带变量 / 命令）时返回 null，交回表达式引擎 */
+function casNumeric(src) {
+  const raw = String(src == null ? '' : src).replace(/×/g, '*').replace(/÷/g, '/').replace(/−/g, '-').trim();
+  if (!raw || !/^[0-9piPIπeE+\-*/^!().\s]+$/.test(raw)) return null;
+  if (!/[0-9]/.test(raw) && !/pi|π/i.test(raw)) return null;
+  try { return casFmt(casParse(raw)); } catch (e) { return null; }
+}
 /* CAS 面板日志 */
 function casLog(input, result, isErr) {
   const host = $('#casOut'); if (!host) return;
   const hint = host.querySelector('.empty-hint'); if (hint) hint.remove();   /* 有内容了就把空状态收起来 */
   const div = document.createElement('div');
   div.className = 'cas-ln';
-  div.innerHTML = '<div class="cas-in">▸ ' + esc(input) + '</div><div class="' + (isErr ? 'cas-err' : 'cas-res') + '">' + esc(result) + '</div>';
+  div.innerHTML = '<div class="cas-in">▸ ' + esc(input) + '</div><div class="' + (isErr ? 'cas-err' : 'cas-res') + '" title="' + esc(result) + '">' + esc(result) + '</div>';
   host.appendChild(div);
   host.scrollTop = host.scrollHeight;
 }
@@ -13555,6 +13683,8 @@ function casEmptyHint() {
   const host = $('#casOut'); if (!host) return;
   if (host.querySelector('.cas-ln') || host.querySelector('.empty-hint')) return;
   host.innerHTML = '<div class="empty-hint"><b>还没有计算记录</b>在下方输入框写算式并回车，每一步都会记在这里。例如' +
+    '<code>2^2000</code>' +
+    '<code>π</code>' +
     '<code>解方程(x^2-5x+6=0)</code>' +
     '<code>求导(sin(x),x)</code>' +
     '<code>因式分解(x^2-1)</code>' +
@@ -15528,6 +15658,8 @@ const KB_TABS = [
       [['^', '^'], ['√', 'sqrt('], ['π', 'pi'], ['e', 'e'], ['∞', 'Infinity'], ['(', '('], [')', ')'], ['|', '|']],
       [['≤', '<='], ['≥', '>='], ['≠', '!='], ['±', '+-'], ['·', '*'], ['/', '/'], ['%', '%'], ['!', '!']],
       [['mod', ' mod '], ['a^b', '^'], ['x²', '^2'], ['x³', '^3']],
+      [['解方程', '解方程('], ['求导', '求导('], ['积分', '积分('], ['计算', '计算(']],
+      [['因式分解', '因式分解('], ['展开', '展开('], ['化简', '化简('], ['π', 'pi']],
     ],
   },
   {
@@ -15630,6 +15762,11 @@ function runInput() {
   try {
     for (const ln of lines) {
       try {
+        /* CAS 面板里的纯数值算式走 BigInt 定点：π 给到 40 位、2^2000 这类整数幂不溢出 */
+        if (state.panel === 'cas') {
+          const exact = casNumeric(ln.trim());
+          if (exact != null) { casLog(ln.trim(), exact, false); okCount++; continue; }
+        }
         const r = executeLine(ln.trim());
         okCount += (r.created || []).length;
         if (state.panel === 'cas') {
@@ -19891,6 +20028,14 @@ function init() {
     runInput();
   });
   $('#panelTabs').addEventListener('click', e => { const b = e.target.closest('button'); if (b) switchPanel(b.dataset.tab); });
+  /* CAS 标题栏的 π 键：填入 π 并立即计算，可连续点 */
+  const pib = $('#casPiBtn');
+  if (pib) pib.addEventListener('click', () => {
+    switchPanel('cas');
+    const f = $('#inputField'); f.value = 'π';
+    runInput();
+    f.focus();
+  });
   /* 更新弹窗里的版本条目：点标题展开 / 收起该版本的逐条说明 */
   $('#changelogBody').addEventListener('click', e => {
     /* 顶部版本卡：点一下展开 / 收起详情（悬停由 CSS 负责） */
@@ -21402,6 +21547,26 @@ async function runUITest() {
     if ($('#cvsRestore')) throw new Error('点丢弃后卡片没有消失');
     if (localStorage.getItem('geoai_canvas_autosave')) throw new Error('点丢弃后存档应被清掉');
     state.objects = []; recomputeAll();
+  });
+  /* CAS 精确数值：大整数幂按科学计数 + 位数显示，π 给足小数位 */
+  await A('CAS:大数与 π', async () => {
+    switchPanel('cas'); await sleep(0);
+    const inp = $('#inputField');
+    inp.value = '2^2000'; runInput(); await sleep(0);
+    const big = $$('#casOut .cas-ln').pop();
+    if (!big) throw new Error('CAS 没有记录 2^2000');
+    if (big.textContent.indexOf('× 10^602') < 0 || big.textContent.indexOf('603 位') < 0) throw new Error('2^2000 显示不对：' + big.textContent);
+    inp.value = 'π'; runInput(); await sleep(0);
+    const piLine = $$('#casOut .cas-ln').pop().textContent;
+    if (piLine.indexOf('3.1415926535897932384626433832795028841971') < 0) throw new Error('π 位数不够：' + piLine);
+    if (piLine.indexOf('…') >= 0) throw new Error('π 结果不该有省略号');
+    /* 标题栏 π 键：反复点，每次都追加一条 */
+    const before = $$('#casOut .cas-ln').length;
+    $('#casPiBtn').click(); await sleep(0);
+    $('#casPiBtn').click(); await sleep(0);
+    if ($$('#casOut .cas-ln').length !== before + 2) throw new Error('π 键没有每次都记一条');
+    if ((($$('#casOut .cas-ln').pop().querySelector('.cas-res') || {}).title || '').indexOf('3.14159') < 0) throw new Error('CAS 结果缺少完整数值的悬停提示');
+    switchPanel('algebra');
   });
   /* 工具体验：多步进度、连续取点计数、数值步骤直接点对象取值 */
   await A('工具:步骤进度与数值点选', async () => {
@@ -23714,7 +23879,7 @@ function runSelfTest() {
     'Median({1,2,3,4})','Mode({1,2,2,3})','Count({1,2,3})','SD({1,2,3,4})','Variance({1,2,3,4})',
     'Quartile({1,2,3,4,5},1)','Quartile({1,2,3,4,5},3)','Sort({3,1,2})','Random()','RandomInteger(1,1)',
     'Correlation({1,2,3},{2,4,6})','Covariance({1,2,3},{2,4,6})',
-    'FitLine({(1,1),(2,2),(3,3)})','FitPoly({(0,1),(1,2),(2,5)},2)','Lagrange({(0,1),(1,2),(2,5)})',
+    'FitLine({(1,1),(2,2),(3,3)})','FitPoly({(0,1),(1,2),(2,5)},2)','Lagrange({(0,1),(1,2),(2,5)})','CAS("2^2000")',
     'Normal(0,1,0)','Normal(0,1,1.96)','Normal(0,1,1,true)','Binomial(10,0.5,5)','Poisson(3,2)',
     /* 其他对象 */
     'sv=Slider(-3,3,0.1)','Pd=(sv,sv^2)','Locus(Pd,sv)','txt1=Text("hello",1,1)','SetColor(c1,"#ff0000")',
@@ -25699,6 +25864,7 @@ const AI_SYSTEM = `你是「GeoAI」的数学助手。GeoAI 是一个对标 GeoG
    · 控件会把每条命令的成功 / 失败和当前画布对象列表作为 Observation 返回给你，据此决定下一步；每一步都会单独请求你一次，所以不必提前列整幅图的计划。
    · 顺序通常是由点 → 线 → 圆 / 多边形 → 标注与度量；先把几何关系画对，再考虑配色与美化。
    · 需要一条精确经过多个点的曲线时用 Lagrange({A,B,C,…})（最多 32 个点，次数 = 点数 − 1）；点多于 6 个时优先用低次 FitPoly，避免插值曲线剧烈振荡。
+   · 遇到大整数幂、阶乘、π 这类需要精确位数的计算，用 CAS("2^2000") 或 计算("π")，结果会以文本对象放到画布上（不要自己算成 Infinity 或只写几位小数）。
    · 命令失败就换构造或换名字，不要原样重发；画布上已有的对象直接用标签引用，绝不重复定义。
    · 整幅图确实完整后，单独输出一个 \`\`\`done 代码块，写一句结论。
 4. 用户要求清空画布时，第一步直接用 DeleteAll()。
