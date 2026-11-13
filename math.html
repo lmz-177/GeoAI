@@ -503,12 +503,12 @@ body.tool-folded .tool-head{padding-bottom:0}
   opacity:0;transform:translateX(-18px);pointer-events:none;border-right-color:transparent;
 }
 /* ---------- 面板切换：和顶栏同款的 iOS 分段控件 ---------- */
-/* 五个页签（绘图 / 代数 / CAS / 命令 / 表格）做成与顶栏「代数 / 图形」同一枚分段控件，
+/* 六个页签（绘图 / 代数 / CAS / 命令 / 表格 / 更新）做成与顶栏「代数 / 图形」同一枚分段控件，
    整个面板的切换语言就统一了。原来的选中态是「饱和主色填充 + 主色外发光」，
    那圈发光的颜色是写死的 rgba(0,122,255,.28)（深色主题的主色是 #0a84ff，对不上），
    而且 iOS 的控件本来就不用彩色外发光，靠的是轨道底色和白色的滑块分出层次。
    等宽分段还顺手去掉了窄侧栏下的换行兜底：每格都按轨道等分，
-   侧栏拖到最窄 180px 时每格仍有 38px，装得下「代数」两个字。 */
+   侧栏拖到最窄 180px 时每格仍有 28px，装得下两个 13px 的汉字。 */
 .panel-tabs{
   display:flex;padding:10px 12px;
   border-bottom:.5px solid var(--border);background:var(--chrome);
@@ -518,13 +518,14 @@ body.tool-folded .tool-head{padding-bottom:0}
   position:relative;flex:1;min-width:0;display:flex;align-items:stretch;height:30px;padding:2px;
   background:var(--panel-3);border-radius:9px;box-shadow:var(--hi);
 }
-/* 五个等宽格子（绘图 / 代数 / CAS / 命令 / 表格），滑块就是轨道的五分之一 */
-.pt-seg .seg-thumb{width:calc(20% - .8px);border-radius:7px}
-/* 滑块跟着真实选中态走，五格各一条；仍然只认 .on，不额外存状态 */
+/* 六个等宽格子（绘图 / 代数 / CAS / 命令 / 表格 / 更新），滑块就是轨道的六分之一 */
+.pt-seg .seg-thumb{width:calc(16.6667% - .8px);border-radius:7px}
+/* 滑块跟着真实选中态走，六格各一条；仍然只认 .on，不额外存状态 */
 .pt-seg:has(> button[data-tab="algebra"].on) .seg-thumb{transform:translateX(100%)}
 .pt-seg:has(> button[data-tab="cas"].on) .seg-thumb{transform:translateX(200%)}
 .pt-seg:has(> button[data-tab="cmds"].on) .seg-thumb{transform:translateX(300%)}
 .pt-seg:has(> button[data-tab="sheet"].on) .seg-thumb{transform:translateX(400%)}
+.pt-seg:has(> button[data-tab="update"].on) .seg-thumb{transform:translateX(500%)}
 .pt-seg > button{
   position:relative;z-index:1;flex:1 1 0;min-width:0;border-radius:7px;
   display:flex;align-items:center;justify-content:center;white-space:nowrap;
@@ -1807,24 +1808,38 @@ body:has(.aii-eff.on) .ai-dock{z-index:230}
    靠字色 + 字号拉开层级，不再画线。 */
 .set-group{margin-bottom:22px}
 .set-group>h3{font-size:var(--fs-xs);font-weight:700;color:var(--text-2);letter-spacing:.3px;margin:0 0 8px;padding:0}
-/* 更新与版本：版本号做成页首的大数字，更新条目按组排 */
-.ver-hero{
-  display:flex;flex-direction:column;gap:6px;padding:18px 18px 16px;border-radius:var(--r-lg);margin-bottom:18px;
+/* 更新与版本：左侧一级页签。版本号做成页首的大数字；版本历史每条先给一句摘要，
+   点标题才展开逐条改动，默认只展开当前版本。 */
+.upd-wrap{padding:12px 12px 20px}
+.upd-hero{
+  padding:16px 16px 14px;border-radius:var(--r-lg);margin-bottom:16px;
   background:linear-gradient(135deg,var(--accent-dim),rgba(0,98,204,.02));border:.5px solid var(--border);
 }
-.ver-num{font-size:var(--fs-code);font-weight:800;letter-spacing:-.02em;color:var(--accent);font-variant-numeric:tabular-nums;line-height:1.15}
-.ver-meta{font-size:var(--fs-2xs);color:var(--text-3)}
-.ver-lead{font-size:var(--fs-sm);line-height:1.8;color:var(--text-2);margin:4px 0 0}
-.ver-list{margin:0;padding-left:18px;font-size:var(--fs-sm);line-height:1.85;color:var(--text-2)}
-.ver-list li{margin:2px 0}
-.ver-list li::marker{color:var(--accent)}
-.ver-hist{padding:10px 0;border-top:.5px solid var(--border)}
-.ver-hist:first-of-type{border-top:none;padding-top:0}
-.ver-hist b{font-size:var(--fs-sm);color:var(--text);font-variant-numeric:tabular-nums;margin-right:8px}
-.ver-hist span{font-size:var(--fs-2xs);color:var(--text-3)}
-.ver-hist p{margin:3px 0 0;font-size:var(--fs-xs);line-height:1.8;color:var(--text-2)}
-.ver-thanks{font-size:var(--fs-sm);line-height:1.9;color:var(--text-2);margin:0}
-body.dark .ver-hero{background:linear-gradient(135deg,rgba(10,132,255,.18),rgba(10,132,255,.03))}
+.upd-num{font-size:var(--fs-code);font-weight:800;letter-spacing:-.02em;color:var(--accent);font-variant-numeric:tabular-nums;line-height:1.15}
+.upd-meta{font-size:var(--fs-2xs);color:var(--text-3);margin-top:3px}
+.upd-lead{font-size:var(--fs-sm);line-height:1.8;color:var(--text-2);margin:6px 0 0}
+.upd-sec{font-size:var(--fs-xs);font-weight:700;color:var(--text-2);letter-spacing:.3px;margin:0 0 6px}
+.upd-item{border-top:.5px solid var(--border)}
+.upd-item:first-child{border-top:none}
+.upd-head{display:flex;flex-wrap:wrap;align-items:center;gap:7px;row-gap:3px;width:100%;padding:11px 2px;text-align:left;border-radius:7px;transition:background-color .18s ease}
+.upd-head:hover{background:var(--hover)}
+.upd-v{font-size:var(--fs-sm);font-weight:700;color:var(--text);font-variant-numeric:tabular-nums}
+.upd-date{font-size:var(--fs-2xs);color:var(--text-3)}
+.upd-tag{font-size:var(--fs-3xs);color:var(--accent);background:var(--accent-dim);border-radius:99px;padding:1px 7px}
+.upd-cur{font-size:var(--fs-3xs);font-weight:600;color:var(--accent);background:var(--accent-soft);border-radius:99px;padding:1px 7px}
+.upd-chev{margin-left:auto;color:var(--text-3);font-size:var(--fs-sm);line-height:1;transition:transform var(--t)}
+.upd-item.open .upd-chev{transform:rotate(90deg)}
+.upd-sum{margin:0;padding:0 2px 10px;font-size:var(--fs-xs);line-height:1.75;color:var(--text-2)}
+/* 当前版本的摘要已经在页首的大卡片里，列表里不再重复一遍 */
+.upd-item.cur>.upd-sum{display:none}
+.upd-item.cur.open>.upd-detail{padding-top:2px}
+.upd-detail{display:none;padding:0 2px 12px}
+.upd-item.open .upd-detail{display:block}
+.upd-notes{margin:0;padding-left:16px;font-size:var(--fs-xs);line-height:1.85;color:var(--text-2)}
+.upd-notes li{margin:2px 0}
+.upd-notes li::marker{color:var(--accent)}
+.upd-thanks{font-size:var(--fs-xs);line-height:1.9;color:var(--text-2);margin:0}
+body.dark .upd-hero{background:linear-gradient(135deg,rgba(10,132,255,.18),rgba(10,132,255,.03))}
 .set-row{display:flex;align-items:center;gap:12px;padding:11px 0;font-size:var(--fs-sm)}
 .set-row>label{flex:1;color:var(--text)}
 .set-row .sublabel{display:block;font-size:var(--fs-2xs);color:var(--text-3);margin-top:3px;line-height:1.45}
@@ -2265,8 +2280,6 @@ try {
           <button class="dd-item" data-act="exportCmd">导出命令脚本</button>
           <button class="dd-item" data-act="copyCmd">复制全部命令</button>
           <div class="dd-sep"></div>
-          <button class="dd-item" data-act="changelog">更新与版本 <span class="k" id="menuVersion">v1.1.1</span></button>
-          <div class="dd-sep"></div>
           <button class="dd-item" data-act="shareOnline">在线分享…</button>
           <button class="dd-item" data-act="openShare">打开在线分享…</button>
           <div class="dd-sep"></div>
@@ -2344,6 +2357,7 @@ try {
           <button data-tab="cas">CAS</button>
           <button data-tab="cmds">命令</button>
           <button data-tab="sheet">表格</button>
+          <button data-tab="update">更新</button>
         </div>
       </div>
 
@@ -2390,6 +2404,11 @@ try {
           <button class="btn sm" id="sheetClear">清空表格</button>
           <span class="spacer"></span>
         </div>
+      </div>
+
+      <!-- 更新与版本：一级页签（版本摘要常驻，点标题展开该版本的逐条改动） -->
+      <div class="panel-body hidden" id="paneUpdate">
+        <div class="upd-wrap" id="updatePane"></div>
       </div>
 
       <div class="input-bar">
@@ -2646,20 +2665,6 @@ try {
       <button class="btn" id="setReset">恢复默认</button>
       <span class="spacer"></span>
       <button class="btn primary" data-close="settingsBackdrop">完成</button>
-    </div>
-  </div>
-</div>
-
-<!-- ══════════ 更新与版本：独立的大板块（不挤在设置弹窗里） ══════════ -->
-<div class="backdrop" id="changelogBackdrop">
-  <div class="modal" style="max-width:720px">
-    <div class="modal-head">
-      <h2>更新与版本</h2>
-      <button class="icon-btn" data-close="changelogBackdrop" aria-label="关闭"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6 6 18"></path></svg></button>
-    </div>
-    <div class="modal-body" id="changelogBody"></div>
-    <div class="modal-foot">
-      <button class="btn primary" data-close="changelogBackdrop">完成</button>
     </div>
   </div>
 </div>
@@ -3307,30 +3312,27 @@ const state = {
   sheet: { cells: {}, sel: 'A1' },   // 表格视图：单元格原始内容（A1 形式标识符 → 文本/公式）
 };
 /* ── 版本与更新日志 ──
-   版本号规则（每次改动都要遵守）：
-   · 小修改（bug 修复、文案、样式微调）→ 第三位 +1，例如 1.1.0 → 1.1.1
-   · 大修改（新功能、交互改版、较大重构）→ 第二位 +1，第三位归零，例如 1.1.x → 1.2.0
-   改完版本号后，在 APP_CHANGELOG 最上面补一条（版本、日期、类型、几条人话说明），
-   文件菜单「更新与版本」里就能看到。 */
-const APP_VERSION = '1.1.1';
+   版本号在左栏「更新」页签里展示。改完版本号后在 APP_CHANGELOG 最上面补一条
+   （版本、日期、类型、一句摘要、几条说明），新版本会自动出现在版本历史里。 */
+const APP_VERSION = '1.2.0';
 const APP_CHANGELOG = [
   {
-    v: '1.1.1', date: '2026-11-13', tag: '界面调整',
-    lead: '「更新与版本」从设置弹窗里独立出来，改成单独的大板块：版本号、更新说明和版本历史都更宽敞；按你的要求精简了页面结构，补上致谢。',
+    v: '1.2.0', date: '2026-11-13', tag: '界面重构',
+    lead: '「更新与版本」从文件菜单里搬出来，成了左侧一个独立页签：当前版本、本次更新和完整历史都在这里，每个版本先给一句摘要，想看细节点开标题就行。',
     notes: [
-      '「更新与版本」改为独立弹窗（720px 大板块），不再与设置 / 帮助 / 关于共用同一个弹窗',
-      '精简页面结构：只保留版本、更新说明、版本历史与致谢',
-      '新增致谢板块：GeoGebra 与开源社区的交互范式、DeepSeek 的模型接口、每一位使用与反馈的人、开源字体与工具链',
+      '左侧页签新增「更新」：版本号、更新日期与更新说明集中在同一个页面，不用再翻菜单',
+      '版本历史保留每个版本的摘要，点击标题展开该版本的逐条改动，当前版本默认展开',
+      '历史版本长期保留，每一次改动都能回看',
+      '新增致谢板块',
     ],
   },
   {
     v: '1.1.0', date: '2026-11-13', tag: '功能更新',
-    lead: '这一版主要改「工具怎么用」：以前点开工具后还要弹一个输入框才能填半径、角度、函数表达式，现在参数直接出现在画布顶部的提示条里，选完对象顺手输入、回车就好。同时把 AI 绘图链路上发现的一批问题补掉，并加了这页版本说明。',
+    lead: '这一版主要改「工具怎么用」：以前点开工具后还要弹一个输入框才能填半径、角度、函数表达式，现在参数直接出现在画布顶部的提示条里，选完对象顺手输入、回车就好。',
     notes: [
       '工具参数不再弹二级对话框：数值 / 表达式 / 文本直接在画布提示条内输入，回车生效、Esc 取消（涉及定长线段、正多边形、圆半径、定角、旋转、位似、定积分上下限、文本、画函数、复选框、按钮、解方程、因式分解、展开、化简、便签、思维导图、方程，共 18 个工具）',
       '「距离 / 长度」选中线段或向量直接出结果，不再强迫点第二下；两点距离、点到直线距离仍按提示继续选',
       '工具执行后的提示更准确：显隐、删除、复制样式这类动作不再一律说「已创建」',
-      '新增本页「更新与版本」：版本号、更新日期、当前更新说明与版本历史，入口在文件菜单的保存 / 导出区域',
       '关于页同步为 107 个作图工具',
     ],
   },
@@ -16546,7 +16548,6 @@ function doMenuAction(a) {
     case 'shareOnline': openShareDialog('create'); break;
     case 'openShare': openShareDialog('open'); break;
     case 'examples': loadExample(); break;
-    case 'changelog': showChangelog(); break;
     case 'undo': undo(); break;
     case 'redo': redo(); break;
     case 'selectAll': state.selection = state.objects.filter(o => !o.aux).map(o => o.id); refreshAlgebra(); draw(); break;
@@ -16677,10 +16678,11 @@ function toggleAISheet(force) {
 function switchPanel(p) {
   state.panel = p;
   $$('#panelTabs button').forEach(b => b.classList.toggle('on', b.dataset.tab === p));
-  ['tools', 'algebra', 'cas', 'cmds', 'sheet'].forEach(k => { const el = document.getElementById('pane' + k[0].toUpperCase() + k.slice(1)); if (el) el.classList.toggle('hidden', k !== p); });
+  ['tools', 'algebra', 'cas', 'cmds', 'sheet', 'update'].forEach(k => { const el = document.getElementById('pane' + k[0].toUpperCase() + k.slice(1)); if (el) el.classList.toggle('hidden', k !== p); });
   if (p === 'cmds') renderCmdList('');
   if (p === 'sheet') sheetRender();
   if (p === 'cas') casEmptyHint();
+  if (p === 'update') renderUpdatePane();
 }
 /* 侧栏展开 / 收起：'algebra' = 展开，其它 = 收起。
    顶部那枚单键、窄屏侧栏上的收起按钮都走这一条路径，状态不会走岔。
@@ -19147,31 +19149,37 @@ function showAbout() {
     '</div></div>';
   openBackdrop('settingsBackdrop');
 }
-/* 文件菜单 → 更新与版本。数据来自 APP_CHANGELOG：改版本号时只要在数组最上面加一条，
-   这页会自动长出新的版本号、摘要与历史记录。 */
-function showChangelog() {
+/* 左栏「更新」页签。数据来自 APP_CHANGELOG：改版本号时只要在数组最上面加一条，
+   这页会自动长出新的版本号、摘要与历史记录。每条先给摘要，标题点开看逐条改动。 */
+function renderUpdatePane() {
+  const host = $('#updatePane'); if (!host) return;
   const cur = APP_CHANGELOG[0] || { v: APP_VERSION, date: '', tag: '', lead: '', notes: [] };
-  const hist = APP_CHANGELOG.slice(1).map(e =>
-    '<div class="ver-hist"><b>v' + esc(e.v) + '</b><span>' + esc(e.date) + (e.tag ? ' · ' + esc(e.tag) : '') + '</span>' +
-    '<p>' + esc(e.lead || '') + '</p></div>').join('');
-  const body = $('#changelogBody');
-  body.innerHTML =
-    '<div class="ver-hero">' +
-    '<div class="ver-num">v' + esc(cur.v) + '</div>' +
-    '<div class="ver-meta">' + esc(cur.date) + (cur.tag ? ' · ' + esc(cur.tag) : '') + '</div>' +
-    '<p class="ver-lead">' + esc(cur.lead || '') + '</p>' +
+  const items = APP_CHANGELOG.map((e, i) => {
+    const open = i === 0;
+    return '<div class="upd-item' + (open ? ' open' : '') + (i === 0 ? ' cur' : '') + '">' +
+      '<button class="upd-head" type="button" aria-expanded="' + (open ? 'true' : 'false') + '">' +
+      '<span class="upd-v">v' + esc(e.v) + '</span>' +
+      '<span class="upd-date">' + esc(e.date) + '</span>' +
+      (e.tag ? '<span class="upd-tag">' + esc(e.tag) + '</span>' : '') +
+      (i === 0 ? '<span class="upd-cur">当前版本</span>' : '') +
+      '<span class="upd-chev" aria-hidden="true">›</span></button>' +
+      '<p class="upd-sum">' + esc(e.lead || '') + '</p>' +
+      '<div class="upd-detail"><ul class="upd-notes">' +
+      (e.notes || []).map(t => '<li>' + esc(t) + '</li>').join('') + '</ul></div></div>';
+  }).join('');
+  host.innerHTML =
+    '<div class="upd-hero">' +
+    '<div class="upd-num">v' + esc(cur.v) + '</div>' +
+    '<div class="upd-meta">' + esc(cur.date) + (cur.tag ? ' · ' + esc(cur.tag) : '') + '</div>' +
+    '<p class="upd-lead">' + esc(cur.lead || '') + '</p>' +
     '</div>' +
-    '<div class="set-group"><h3>本次更新</h3><ul class="ver-list">' +
-    (cur.notes || []).map(t => '<li>' + esc(t) + '</li>').join('') + '</ul></div>' +
-    (hist ? '<div class="set-group"><h3>版本历史</h3>' + hist + '</div>' : '') +
-    '<div class="set-group"><h3>致谢</h3><p class="ver-thanks">' +
+    '<div class="upd-sec">版本历史</div>' + items +
+    '<div class="upd-sec" style="margin-top:18px">致谢</div><p class="upd-thanks">' +
     'GeoAI 的界面与交互参考了 GeoGebra 经典版的工具箱与操作方式，感谢 GeoGebra 团队和开源社区多年沉淀下来的数学工具范式；' +
     '感谢 DeepSeek 提供稳定的模型接口，让「说一句话就把图画出来」成为可能；' +
     '感谢每一位用这块画板讲题、备课、出卷和做题的人——你们反馈的每一条「这条命令报错」「这个按钮不顺手」，都直接变成了这里的一条更新；' +
     '也感谢所有开源字体与工具链的作者。' +
-    '</p></div>';
-  body.scrollTop = 0;
-  openBackdrop('changelogBackdrop');
+    '</p>';
 }
 function aiHelp() {
   toggleAI(true);
@@ -19505,6 +19513,13 @@ function init() {
     runInput();
   });
   $('#panelTabs').addEventListener('click', e => { const b = e.target.closest('button'); if (b) switchPanel(b.dataset.tab); });
+  /* 更新页签的版本条目：点标题展开 / 收起该版本的逐条说明 */
+  $('#paneUpdate').addEventListener('click', e => {
+    const h = e.target.closest('.upd-head'); if (!h) return;
+    const it = h.closest('.upd-item'); if (!it) return;
+    const open = it.classList.toggle('open');
+    h.setAttribute('aria-expanded', open ? 'true' : 'false');
+  });
   $('#cmdSearch').addEventListener('input', e => renderCmdList(e.target.value));
   $('#cmdList').addEventListener('click', e => { const it = e.target.closest('.cmd-item'); if (!it) return; switchPanel('algebra'); const f = $('#inputField'); f.value = it.dataset.ins; f.focus(); autoGrow(f); });
   $('#persp').addEventListener('click', e => {
@@ -19541,8 +19556,6 @@ function init() {
   $('#compatBasic').onclick = () => enterBasicMode();
   window.addEventListener('resize', () => { clearTimeout(compatTimer); compatTimer = setTimeout(compatResize, 150); });
   compatCheck();
-  /* 菜单里的版本号跟着 APP_VERSION 走，不在 HTML 里写死 */
-  { const mv = $('#menuVersion'); if (mv) mv.textContent = 'v' + APP_VERSION; }
   /* 在线分享：?share=geoai-xxxxxxxx（或完整链接里的 share 参数）在启动时读回来 */
   const shareParam = new URLSearchParams(location.search).get('share');
   if (shareParam) loadShare(shareParam).catch(e => toast('在线分享载入失败：' + ((e && e.message) || e), 'err', 3200));
@@ -19596,7 +19609,7 @@ async function runUITest() {
     /* 确认框 / 输入框是 Promise：只把 DOM 关掉会留下悬挂的回调，得走各自的 resolve 正常收尾 */
     if ($('#confirmBackdrop').classList.contains('on')) resolveConfirm(false);
     if ($('#promptBackdrop').classList.contains('on')) resolvePrompt(false);
-    ['settingsBackdrop', 'changelogBackdrop', 'layerBackdrop', 'probBackdrop', 'confirmBackdrop', 'promptBackdrop', 'shareBackdrop'].forEach(closeBackdrop);
+    ['settingsBackdrop', 'layerBackdrop', 'probBackdrop', 'confirmBackdrop', 'promptBackdrop', 'shareBackdrop'].forEach(closeBackdrop);
     setFmenu(false);          /* 抽屉是浮层，用例之间也要收掉，免得挡住后续点击 */
     $('#ctxMenu').classList.remove('on');
   };
@@ -20231,20 +20244,32 @@ async function runUITest() {
     const errs = state.objects.filter(o => o.error && !o.aux);
     if (errs.length) throw new Error('构造里有错误：' + errs.map(x => x.label + ':' + x.error).join(' | '));
   });
-  /* 更新与版本面板 + 工具参数内联输入（不再弹二级对话框） */
-  await A('更新与版本与工具内联输入', async () => {
+  /* 更新与版本页签 + 工具参数内联输入（不再弹二级对话框） */
+  await A('更新页签与工具内联输入', async () => {
     executeLine('DeleteAll()');
-    showChangelog();
-    if (!$('#changelogBackdrop').classList.contains('on')) throw new Error('更新面板没打开');
-    const ver = ($('#changelogBody .ver-num') || {}).textContent;
+    const tab = $('#panelTabs button[data-tab="update"]');
+    if (!tab) throw new Error('左侧没有「更新」页签');
+    tab.click(); await sleep(0);
+    if (!$('#paneUpdate') || $('#paneUpdate').classList.contains('hidden')) throw new Error('更新页签没有对应面板');
+    const ver = ($('#updatePane .upd-num') || {}).textContent;
     if (ver !== 'v' + APP_VERSION) throw new Error('版本号不对：' + ver);
-    if (!$('#changelogBody .ver-list li')) throw new Error('没有更新条目');
-    for (const h of Array.from($('#changelogBody').querySelectorAll('h3'))) {
-      if (h.textContent.indexOf('版本号规则') >= 0) throw new Error('不该再出现版本号规则板块');
-    }
-    if (!$('#changelogBody .ver-thanks')) throw new Error('缺少致谢板块');
-    if ($('#settingsBackdrop').classList.contains('on')) throw new Error('更新面板不该挤在设置弹窗里');
-    closeBackdrop('changelogBackdrop');
+    const items = $$('#updatePane .upd-item');
+    if (!items.length) throw new Error('没有版本条目');
+    if (!items[0].classList.contains('open')) throw new Error('当前版本应默认展开');
+    if (!items[0].querySelector('.upd-detail .upd-notes li')) throw new Error('当前版本没有详细介绍');
+    const sums = $$('#updatePane .upd-item .upd-sum');
+    if (sums.length !== items.length || !sums[0].textContent.trim()) throw new Error('每个版本都应保留摘要');
+    const old = items[1];
+    if (old.classList.contains('open')) throw new Error('历史版本不应默认展开');
+    old.querySelector('.upd-head').click(); await sleep(0);
+    if (!old.classList.contains('open') || !old.querySelector('.upd-detail .upd-notes li')) throw new Error('历史版本点标题没有展开详细介绍');
+    if (old.querySelector('.upd-head').getAttribute('aria-expanded') !== 'true') throw new Error('展开后 aria-expanded 不对');
+    old.querySelector('.upd-head').click(); await sleep(0);
+    if (old.classList.contains('open')) throw new Error('再点一次没有收起');
+    if (!$('#updatePane .upd-thanks')) throw new Error('缺少致谢板块');
+    if ($('#updatePane').textContent.indexOf('版本号规则') >= 0) throw new Error('不该再出现版本号规则');
+    if ($('#settingsBackdrop').classList.contains('on')) throw new Error('更新内容不该挤在设置弹窗里');
+    switchPanel('tools'); await sleep(0);
     setTool('functionPlot');
     const inp = $('.tool-hint.ask .th-input');
     if (!inp) throw new Error('工具参数没有在提示条里内联输入');
@@ -20301,18 +20326,18 @@ async function runUITest() {
     if (cs.transitionProperty.indexOf('width') < 0 || parseFloat(cs.transitionDuration) <= 0) throw new Error('侧栏没有展开 / 收起动画：' + cs.transitionProperty + ' ' + cs.transitionDuration);
     if (getComputedStyle(btn).fontSize !== '13px') throw new Error('单键字号没走 --fs-xs：' + getComputedStyle(btn).fontSize);
   });
-  /* 6c. 左侧面板页签：与顶栏同一枚分段控件（滑块滑到当前页，四格等宽） */
+  /* 6c. 左侧面板页签：与顶栏同一枚分段控件（滑块滑到当前页，六格等宽） */
   await A('面板页签:分段控件', async () => {
     const seg = $('#ptSeg'), thumb = seg.querySelector('.seg-thumb');
     if (!thumb) throw new Error('面板页签缺少滑动块');
     const tabs = Array.from(seg.querySelectorAll('button[data-tab]'));
-    if (tabs.length !== 5) throw new Error('分段格子数不对：' + tabs.length);
+    if (tabs.length !== 6) throw new Error('分段格子数不对：' + tabs.length);
     if (seg.getBoundingClientRect().width < 40) throw new Error('面板分段控件不可见，滑块位置量不出来');
     const ts = getComputedStyle(thumb);
     if (ts.transitionProperty.indexOf('transform') < 0 || parseFloat(ts.transitionDuration) <= 0) throw new Error('滑块没有滑动过渡：' + ts.transitionProperty);
-    /* 五格必须等宽：滑块是轨道的 1/5，格子靠文字长度凑宽窄的话滑块就对不齐了 */
+    /* 六格必须等宽：滑块是轨道的 1/6，格子靠文字长度凑宽窄的话滑块就对不齐了 */
     const w0 = tabs[0].getBoundingClientRect().width;
-    if (tabs.some(t => Math.abs(t.getBoundingClientRect().width - w0) > 1)) throw new Error('四个分段没有等宽');
+    if (tabs.some(t => Math.abs(t.getBoundingClientRect().width - w0) > 1)) throw new Error('六个分段没有等宽');
     /* 量位置前关掉过渡，理由同顶栏那条：虚拟时钟下会量到滑块滑到一半的位置 */
     thumb.style.transition = 'none';
     const L = el => el.getBoundingClientRect().left, R = el => el.getBoundingClientRect().right;
