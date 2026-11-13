@@ -2799,6 +2799,11 @@ function fmtVal(v, d) {
   if (Array.isArray(v)) return '{' + v.map(x => fmtVal(x, d)).join(', ') + '}';
   return fmt(v, d);
 }
+/* 文本里拼接出来的长小数按当前「小数位数」收一下：
+   "平均数 = 3.2857142857142856" → "平均数 = 3.29" */
+function tidyDecimals(s) {
+  return String(s).replace(/-?\d+\.\d{5,}/g, m => fmt(parseFloat(m), SET.round));
+}
 function toast(msg, kind, ms) {
   const host = $('#toasts');
   const t = document.createElement('div');
@@ -4312,7 +4317,15 @@ function getObj(id) { return objIndex().get(id) || null; }
 /* ggbLabel 是导入时的原始 GGB 名字：Sequence 的组长内部叫 list20，但文件里引用它
    一律写 list2（Element[list2, 1]），所以按原名字也要能找到 */
 function getObjByLabel(lb) {
-  return state.objects.find(o => o.label === lb) || state.objects.find(o => o.ggbLabel === lb) || null;
+  return state.objects.find(o => o.label === lb) || state.objects.find(o => o.ggbLabel === lb)
+    || state.objects.find(o => Array.isArray(o.aliases) && o.aliases.indexOf(lb) >= 0) || null;
+}
+/* 让既有对象再挂一个名字（f1 = First(list) 这类「别名」）：
+   对象只有一个，但两个名字都能引用它，别把原对象的 label 改掉。 */
+function addObjAlias(o, label) {
+  if (!o || !label || o.label === label) return;
+  o.aliases = Array.isArray(o.aliases) ? o.aliases : [];
+  if (o.aliases.indexOf(label) < 0) o.aliases.push(label);
 }
 /* 引用了不存在的名字时给出近似提示（大小写不一致、或被自动改名为 xxx1），AI 生成的脚本常踩 */
 function nearLabelHint(n) {
@@ -4460,6 +4473,13 @@ function auxLabel() {
   let i = 1; while (used.has('$' + i)) i++;
   return '$' + i;
 }
+/* 能被表达式解析的隐藏名（$1 带 $，写进算式会报「无法识别的字符」）：
+   表达式里代换命令结果时用它，zz1 这类名字不会和用户常写的短名冲突 */
+function exprHiddenLabel() {
+  const used = USED();
+  let i = 1; while (used.has('zz' + i)) i++;
+  return 'zz' + i;
+}
 /* 导入 GGB 时，文件里所有标签先预留起来：命令参数里的内联对象（例如
    Point(Segment[(0,1),(6.28319,1)]) 里那个临时线段）自动起名时不能占用
    后面才建出来的同名元素（扇形 c），否则真正的 c 会被迫改名成 c1，
@@ -4503,6 +4523,8 @@ function nameTakenError(label, old) {
 function dispLabel(o) {
   if (!o) return '';
   if (o.aux && o.type === 'point' && o.value) return '(' + fmt(o.value.x) + ', ' + fmt(o.value.y) + ')';
+  /* 隐藏的活数字（半径 a/n 这类表达式）：定义列显示原文，别露出 $2 这种内部名 */
+  if (o.aux && o.type === 'number' && o.src) return o.src;
   return o.label;
 }
 function buildDefinition(o) {
@@ -4526,8 +4548,14 @@ function buildDefinition(o) {
       return o.label + ' = 图片("' + (s.startsWith('data:') ? '内嵌图片' : s) + '")';
     }
     /* 列表以前被塞进 text 里（值是一串格式化好的花括号），于是 Mean(l)、First(l) 这类命令
-       拿到的是字符串，全都没法用。现在它是独立对象，值就是真数组，显示时再格式化。 */
-    case 'list': return o.label + ' = ' + fmtList(o.value);
+       拿到的是字符串，全都没法用。现在它是独立对象，值就是真数组，显示时再格式化。
+       装的是图形（Sequence / Zip 的每一项）时，值列是 null，定义列改为列出对象名。 */
+    case 'list': {
+      if (o.def && Array.isArray(o.def.objs) && o.def.objs.length &&
+        (!Array.isArray(o.value) || o.value.every(x => x === null || x === undefined)))
+        return o.label + ' = {' + o.def.objs.map(q => (q && q.label) || '?').join(', ') + '}';
+      return o.label + ' = ' + fmtList(o.value);
+    }
     case 'lineq': return o.label + ': ' + (o.src || ((o.def.lhs || '') + ' ' + (o.def.op || '') + ' ' + (o.def.rhs || '')));
     default: {
       /* 隐式方程按原样回显（如 eq: x^2 + y^2 = r^2），比「圆锥曲线(...)」好读得多 */
@@ -5204,6 +5232,12 @@ function computeObject(o) {
             o.value = st.kind === 'parabola' ? (i === 0 ? { ...st.focus } : null) : { ...(i === 0 ? st.f1 : st.f2) };
             if (!o.value) o.error = '该圆锥曲线没有这个焦点';
           } else o.error = '无法解析这条圆锥曲线';
+        } else if (o.kind === 'polyVertex') {
+          /* Vertex(多边形, k)：跟着多边形的第 k 个顶点走 */
+          const poly = P[0];
+          const pts = poly && poly.data && Array.isArray(poly.data.pts) ? poly.data.pts : null;
+          const i = o.def.i | 0;
+          o.value = (pts && pts[i]) ? { x: pts[i].x, y: pts[i].y } : null;
         } else if (o.kind === 'conicVertex') {
           /* 顶点：椭圆 / 双曲线是长轴（实轴）两端，抛物线是顶点本身 */
           const st = conicState(P[0]);
@@ -8183,6 +8217,9 @@ function ensureObj(a, types) {
 function eachObjArg(a, fn) {
   const os = (a && a.objs && a.objs.length) ? a.objs : null;
   if (os) { os.forEach(fn); return []; }
+  /* 传进来的是 Sequence / Zip 生成的列表对象：样式落到列表里每个对象上（GeoGebra 的写法） */
+  const lo = a && a.obj;
+  if (lo && lo.def && Array.isArray(lo.def.objs)) { lo.def.objs.forEach(o => { if (o) fn(o); }); return []; }
   fn(ensureObj(a));
   return [];
 }
@@ -8246,6 +8283,14 @@ function serializeObject(o) {
     layer: o.layer | 0, group: o.group || '', centered: !!o.centered,
   };
   if (['point', 'number', 'slider', 'boolean', 'text', 'list'].includes(o.type)) d.value = o.value;
+  if (Array.isArray(o.aliases) && o.aliases.length) d.aliases = o.aliases.slice();
+  /* def.objs 里是对象的整份引用（Sequence / Zip 的每一项）：直接 JSON 化会把
+     一整个图形复制进快照，恢复时拿到的还是旧副本。改成存标签，载入后按标签重建。 */
+  if (o.def && Array.isArray(o.def.objs)) {
+    d.objRefs = o.def.objs.map(q => (q && q.label) || '').filter(Boolean);
+    d.def = Object.assign({}, o.def);
+    delete d.def.objs;
+  }
   return d;
 }
 function serializeAll() { return state.objects.map(serializeObject); }
@@ -8331,6 +8376,8 @@ function loadSnapshot(json) {
         lineWidth: s.lineWidth, lineStyle: s.lineStyle || 0, pointSize: s.pointSize,
         fill: !!s.fill, fillOpacity: s.fillOpacity, showLabel: s.showLabel !== false, value: s.value,
         layer: s.layer | 0, group: s.group || '', centered: !!s.centered,
+        aliases: Array.isArray(s.aliases) ? s.aliases.slice() : undefined,
+        objRefs: Array.isArray(s.objRefs) ? s.objRefs.slice() : undefined,
       });
       o.parents = (s.parents || []).map(lb => { const p = getObjByLabel(lb); return p ? p.id : null; }).filter(Boolean);
       hydrate(o);
@@ -8341,6 +8388,24 @@ function loadSnapshot(json) {
     } catch (e) { console.warn('对象载入失败', s, e); }
   }
   touchObjects();
+  /* Sequence / Zip 的列表存的是对象引用：按标签重新挂回真正的对象 */
+  for (const o of state.objects) {
+    if (!Array.isArray(o.objRefs)) continue;
+    o.def = o.def || {};
+    o.def.objs = o.objRefs.map(lb => getObjByLabel(lb)).filter(Boolean);
+  }
+  /* Zip 记下的「底下列表快照」里是旧 id，换成当前的，免得载入后白白重建一遍（样式会丢） */
+  for (const o of state.objects) {
+    const z = o.def && o.def.zip;
+    if (!z || !Array.isArray(z.pairs)) continue;
+    const gs = [];
+    for (const p of z.pairs) {
+      const h = p.listLabel ? getObjByLabel(p.listLabel) : null;
+      if (!h || !h.def || !Array.isArray(h.def.objs)) { gs.length = 0; break; }
+      gs.push(h.def.objs);
+    }
+    if (gs.length === z.pairs.length) z.stamp = gs.map(g => g.map(q => q.id).join(',')).join('|');
+  }
   endBatch();
   state.view = Object.assign({ cx: 0, cy: 0, scale: 46 }, d.v || {});
   state.selection = [];
@@ -8444,6 +8509,65 @@ function parseCall(s) {
   const inner = m[2].trim();
   return { name: m[1], args: inner === '' ? [] : splitTopLevel(inner, ',').map(x => x.trim()) };
 }
+/* 表达式里夹着命令调用（Distance(A,B)/2、Area(poly)+1、Radius(c)*2）时，
+   表达式引擎本身不认识这些命令：先把调用执行成隐藏对象，再把这段文本换成
+   对象标签，剩下的算式照常求值。指向对象的标签让结果保持「活」的。 */
+function findCmdSpan(s) {
+  const str = String(s);
+  let q = null;
+  for (let i = 0; i < str.length; i++) {
+    const ch = str[i];
+    if (q) { if (ch === q) q = null; continue; }
+    if (ch === '"' || ch === "'") { q = ch; continue; }
+    if (!/[A-Za-z_\u4e00-\u9fa5]/.test(ch)) continue;
+    if (i > 0 && /[\w\u4e00-\u9fa5]/.test(str[i - 1])) continue;
+    let j = i;
+    while (j < str.length && /[\w\u4e00-\u9fa5']/.test(str[j])) j++;
+    const name = str.slice(i, j);
+    let k = j;
+    while (k < str.length && /\s/.test(str[k])) k++;
+    if (str[k] !== '(' || !COMMANDS[name.toLowerCase()]) { i = j - 1; continue; }
+    let depth = 0, end = -1, qq = null;
+    for (let p = k; p < str.length; p++) {
+      const c2 = str[p];
+      if (qq) { if (c2 === qq) qq = null; continue; }
+      if (c2 === '"' || c2 === "'") { qq = c2; continue; }
+      if (c2 === '(') depth++;
+      else if (c2 === ')') { depth--; if (!depth) { end = p; break; } }
+    }
+    if (end < 0) return null;
+    return { start: i, end: end + 1, text: str.slice(i, end + 1) };
+  }
+  return null;
+}
+function compileSmart(src) {
+  let out = String(src);
+  for (let guard = 0; guard < 12; guard++) {
+    const span = findCmdSpan(out);
+    if (!span) break;
+    const beforeIds = new Set(state.objects.map(o => o.id));
+    const r = resolveArg(span.text);
+    if (!r) break;
+    let rep = null;
+    if (r.obj) {
+      /* 这些中间对象只为求值服务：藏起来，换成 zzN 这种可解析的内部名，
+         别把 a / k 这些用户还想用的短名字占掉 */
+      if (!beforeIds.has(r.obj.id)) {
+        r.obj.aux = true; r.obj.visible = false;
+        if (!/^\$/.test(r.obj.label || '')) r.obj.label = uniqueLabel(exprHiddenLabel(), r.obj.id);
+      }
+      rep = r.obj.label || (isNum(r.obj.value) ? fmt(r.obj.value, 12) : null);
+    } else if (Array.isArray(r.val)) {
+      rep = '{' + r.val.map(v => fmtVal(v, 12)).join(', ') + '}';
+    } else if (isNum(r.val)) {
+      rep = fmt(r.val, 12);
+    }
+    if (rep == null) break;
+    out = out.slice(0, span.start) + rep + out.slice(span.end);
+  }
+  const ast = parseExpr(out);
+  return { ast, val: compile(ast)(scopeOf()), src: out };
+}
 function resolveArg(s) {
   const t = String(s).trim();
   if (/^[A-Za-z_\u4e00-\u9fa5][\w\u4e00-\u9fa5]*$/.test(t)) {
@@ -8474,8 +8598,9 @@ function resolveArg(s) {
       return { obj: null, objs: out, val: out.map(o => o.value), src: t };
     }
   }
-  const v = compile(parseExpr(t))(scopeOf());
-  return { obj: null, val: v, src: t };
+  /* 表达式里夹命令调用（Circle(O, Distance(A,B)/2) 这类）：命令先执行成对象再代入 */
+  const r = compileSmart(t);
+  return { obj: null, val: r.val, src: t };
 }
 function AV(a) { return (a && a.obj && a.obj.value !== undefined) ? a.obj.value : (a ? a.val : NaN); }
 /* 数值参数若是个「数值对象」（滑动条 / 数值），把它的 id 交给调用方当父对象，
@@ -8504,6 +8629,29 @@ function numObjOf(a) {
   const o = a && a.obj;
   return (o && (o.type === 'number' || o.type === 'slider')) ? o : null;
 }
+/* 数值参数写成表达式（Circle(O, a/n)）时，建一个隐藏的活数字挂在它下面：
+   拖动 a / n 时半径才会跟着变，否则半径会被烤成建对象那一刻的值。
+   （注意与数学工具命令的 liveNumObj 区分：那个是按命令原文现算结果。） */
+function liveNumFor(a) {
+  const o = numObjOf(a);
+  if (o) return o;
+  const src = a && a.src;
+  if (!src) return null;
+  const t = String(src).trim();
+  if (!/[A-Za-z\u4e00-\u9fa5_]/.test(t)) return null;   /* 纯字面量：没有可跟的对象 */
+  try {
+    /* 表达式里可能夹命令（Distance(A,B)/2）：先代换再解析，和普通算式同一套 */
+    const r = compileSmart(t);
+    if (!isNum(r.val)) return null;
+    const ids = [];
+    for (const nm of freeVars(r.ast)) { const p = getObjByLabel(nm); if (p && !ids.includes(p.id)) ids.push(p.id); }
+    if (!ids.length) return null;
+    const n = createObject('number', { kind: 'value', src: t, label: '', aux: true, visible: false, parents: ids, value: r.val });
+    n.ast = r.ast; addObject(n, true); computeObject(n);
+    if (!isNum(n.value)) { removeObjectById(n.id, false); return null; }
+    return n;
+  } catch (e) { return null; }
+}
 function liveNumId(P, id, fallback) {
   if (id != null) { const o = P.find(x => x && x.id === id); if (o && isNum(o.value)) return o.value; }
   return fallback;
@@ -8516,7 +8664,14 @@ function mapArgs(cmd, argStrs) {
   const raw = (cmd && cmd.raw) || [];
   return argStrs.map((s, i) => raw.indexOf(i) >= 0
     ? { obj: null, val: null, src: String(s).trim() }
-    : resolveArg(s));
+    : (() => {
+      try { return resolveArg(s); }
+      catch (e) {
+        /* Delete 一次删一长串，里面夹着已经不存在的名字（AI 常这么写）时跳过即可 */
+        if (cmd && cmd.tolerant) return { obj: null, val: NaN, src: String(s).trim() };
+        throw e;
+      }
+    })());
 }
 /* 把表达式参数当成函数对象 */
 function asFunction(a, hidden) {
@@ -8780,7 +8935,11 @@ C('Circle', 'Circle(圆心, 半径) / Circle(圆心, 圆上点) / Circle(点1,�
   if (second && second.obj && ['segment', 'polyline', 'circle', 'arc', 'sector', 'conic', 'curve'].includes(second.obj.type))
     return [mkObj('circle', { kind: 'radiusRef', parents: [c.id, second.obj.id], label: ctx.label })];
   if (second && second.obj && (second.obj.type === 'number' || second.obj.type === 'slider')) return [mkObj('circle', { kind: 'centerRadius', parents: [c.id, second.obj.id], def: { r: Math.abs(second.obj.value) }, label: ctx.label })];
-  if (second && isNum(second.val)) return [mkObj('circle', { kind: 'centerRadius', parents: [c.id], def: { r: Math.abs(second.val) }, label: ctx.label })];
+  /* 半径是 a/n 这类表达式：挂一个隐藏的活数字当父对象，拖动 a、n 半径跟着变 */
+  if (second && isNum(second.val)) {
+    const rObj = liveNumFor(second);
+    return [mkObj('circle', { kind: 'centerRadius', parents: rObj ? [c.id, rObj.id] : [c.id], def: { r: Math.abs(second.val) }, label: ctx.label })];
+  }
   if (second && isPt(second.val)) { const p2 = ensurePoint(second); return [mkObj('circle', { kind: 'centerPoint', parents: [c.id, p2.id], label: ctx.label })]; }
   throw new Error('Circle 参数不正确');
 }, ['圆']);
@@ -8990,8 +9149,14 @@ C('Distance', 'Distance(点1, 点2) 或 Distance(点, 直线)', '距离 / 长度
   const p1 = ensurePoint(a[0]), p2 = ensurePoint(a[1]);
   return [mkObj('number', { kind: 'distance', parents: [p1.id, p2.id], src: '', label: ctx.label, value: GEO.dist(p1.value, p2.value) })];
 }, ['距离']);
-C('Length', 'Length(线段)', '线段长度', (a, ctx) => {
+C('Length', 'Length(线段 / 向量 / 列表)', '线段长度；传列表时给元素个数', (a, ctx) => {
   const o = ensureObj(a[0]);
+  /* GeoGebra 的 Length(列表) 是元素个数（与 Count 一致） */
+  if (o.type === 'list') {
+    const arr = Array.isArray(o.value) ? o.value : (o.def && Array.isArray(o.def.objs) ? o.def.objs : null);
+    if (!arr) throw new Error('这个列表没有内容');
+    return [numObj(arr.length, ctx)];
+  }
   if (!o.data || !o.data.p) throw new Error('需要线段或向量');
   return [mkObj('number', { kind: 'length', parents: [o.id], src: '', label: ctx.label, value: GEO.dist(o.data.p, o.data.q) })];
 }, ['长度']);
@@ -9274,8 +9439,22 @@ C('Eccentricity', 'Eccentricity(圆锥曲线)', '离心率', (a, ctx) => {
   if (!st) throw new Error('需要圆或圆锥曲线');
   return [mkObj('number', { kind: 'ecc', parents: [o.id], src: '', label: ctx.label, value: st.e })];
 }, ['离心率']);
-C('Vertex', 'Vertex(圆锥曲线 / 函数)', '顶点（椭圆 / 双曲线两个；对函数取极值点）', (a, ctx) => {
+C('Vertex', 'Vertex(圆锥曲线 / 函数 / 多边形[, 序号])', '顶点（椭圆 / 双曲线两个；对函数取极值点；多边形取第 k 个顶点）', (a, ctx) => {
   const o = ensureObj(a[0]);
+  /* Vertex(多边形, k)：GeoGebra 的写法，k 从 1 起、超出范围按周期绕回 */
+  if (o.type === 'polygon') {
+    const pts = (o.parents || []).map(getObj).filter(q => q && q.type === 'point');
+    if (!pts.length) throw new Error('这个多边形没有顶点');
+    if (a[1] != null) {
+      let k = Math.round(AN(a[1]));
+      if (!isFinite(k)) throw new Error('顶点序号需要是数字');
+      const n = pts.length;
+      k = ((k - 1) % n + n) % n;
+      /* 建一个跟着多边形走的点（多边形顶点本身是隐藏的辅助点，直接返回会看不见） */
+      return [mkObj('point', { kind: 'polyVertex', parents: [o.id], def: { i: k }, label: ctx.label })];
+    }
+    return [listObj(pts.map(p => p.value), ctx)];
+  }
   /* 模型经常对函数写 Vertex(f)：GeoGebra 里那其实是 Extremum，这里直接兼容，
      默认取当前可视区间，找不到再退回 ±20。 */
   if (o.type === 'function') {
@@ -9645,8 +9824,37 @@ C('Solve', 'Solve(方程, 变量)', '解方程（符号优先）', (a, ctx) => {
 }, ['解方程']);
 C('Sequence', 'Sequence(表达式, 变量, 起点, 终点)', '生成序列', (a, ctx) => {
   const src = a[0].src; const v = a[1].src || String(a[1].val);
-  const lo = Math.round(AN(a[2])), hi = Math.round(AN(a[3]));
+  /* 起止点也算原文（可以是 n、m 这类滑动条）：range 变化时要按当前值重建整组 */
+  const evalN = x => Math.round(compile(parseExpr((x && x.src != null) ? x.src : String(AN(x))))(scopeOf()));
+  let lo, hi;
+  try { lo = evalN(a[2]); hi = evalN(a[3]); } catch (e) { throw new Error('序列范围不合法'); }
   if (hi < lo || hi - lo > 300) throw new Error('序列范围不合法');
+  /* 函数体是一整条命令（Circle / Rotate / Segment…）时表达式引擎算不了：
+     逐项把循环变量代成常数、执行一次命令，再把整组登记成一个隐藏列表，
+     Element(列表, i)、SetColor(列表, …) 才有东西可指。GeoGebra 里这就是 list。 */
+  const fnName = (String(src).match(/^\s*([A-Za-z][A-Za-z0-9_']*)\s*\(/) || [])[1];
+  if (fnName && COMMANDS[fnName.toLowerCase()]) {
+    const sq = {
+      src, raw: src, v,
+      lo: (a[2] && a[2].src) || String(lo), hi: (a[3] && a[3].src) || String(hi),
+      rawLo: a[2] && a[2].src, rawHi: a[3] && a[3].src,
+      cmdBody: true, direct: true, builtLo: lo, builtHi: hi,
+    };
+    const group = ctx.label || '';
+    const made = [];
+    for (let ki = lo; ki <= hi; ki++) {
+      const r = buildSeqCommandItem(sq, ki, group);
+      if (!r) continue;
+      r.aux = false;           /* 直接输入时这些图形要看得见（GGB 导入路径仍保持 aux） */
+      made.push(r);
+    }
+    if (!made.length) throw new Error('Sequence 里没有生成任何对象' + (sq.lastErr ? '：' + sq.lastErr : '（检查循环体里的命令参数）'));
+    const list = registerSeqList(group, sq, made);
+    /* 有名字时由列表对象负责「范围变化后重建」；没名字就让第一项兼任 */
+    if (!list) made[0].def.seqOwner = true;
+    return list ? made.concat([list]) : made;
+  }
+  if (hi < lo) throw new Error('序列范围不合法');
   /* 表达式里除循环变量与内置常量之外的标识符才算依赖：把它们登记成父对象，
      并让每一项记下「循环变量 + 表达式」，运行时现算。
      旧实现只在建对象时算一次就把值存死，于是 Sequence((k, a*k), k, -3, 3)
@@ -9689,11 +9897,186 @@ C('Sequence', 'Sequence(表达式, 变量, 起点, 终点)', '生成序列', (a,
       else out.push(mkObj('number', base));
     }
   }
-  return out;
+  /* 和命令体那条路一样挂上「同组」标记：n / m 改项数时 syncSequenceGroups 会
+     增删这一组，标签按「名字+序号」复原（Element(pts, i) 才不会指丢）。 */
+  const sq = {
+    src, raw: src, v,
+    lo: (a[2] && a[2].src) || String(lo), hi: (a[3] && a[3].src) || String(hi),
+    rawLo: a[2] && a[2].src, rawHi: a[3] && a[3].src,
+    cmdBody: false, direct: true, builtLo: lo, builtHi: hi,
+  };
+  const group = ctx.label || '';
+  out.forEach((q, i) => {
+    q.def = q.def || {};
+    q.def.seq = sq; q.def.seqGroup = group;
+    q.def.seqVisual = true; q.def.seqIndex = lo + i;
+    q.def.seqBuildTag = group + '#' + (lo + i);
+    if (group) q.def.seqLabelPrefix = group;
+    q.seqItem = true;
+  });
+  const list = registerSeqList(group, sq, out);
+  if (!list && out.length) out[0].def.seqOwner = true;
+  return list ? out.concat([list]) : out;
 }, ['序列']);
 
-/* 表达式类参数不预先求值 */
-COMMANDS['sequence'].raw = [0, 1];
+/* ── Zip：把表达式逐项作用到列表上（GeoGebra 的 list 构造） ──
+   变量绑到列表元素本身：元素是对象时换成它的标签，于是 Circle(P, a/n) 这类
+   「命令体」按项执行后仍挂在那些元素对象上，拖动滑动条 / 父对象会跟着变。 */
+function zipArgList(a, i) {
+  const arg = a[i];
+  if (!arg) return null;
+  const name = (arg.src || '').trim();
+  const host = name ? getObjByLabel(name) : (arg.obj || null);
+  if (host && host.def && Array.isArray(host.def.objs) && host.def.objs.length) {
+    const objs = host.def.objs.slice();
+    return { host, objs, vals: objs.map(o => o.value) };
+  }
+  let vals = null;
+  if (name) {
+    try { const v = compile(parseExpr(name))(scopeOf()); if (Array.isArray(v)) vals = v; } catch (e) { }
+  }
+  if (!vals) vals = asArray(arg, 'Zip 的列表参数');
+  return { host, objs: null, vals };
+}
+function zipSubstitute(src, map) {
+  let out = String(src);
+  for (const n of Object.keys(map).sort((x, y) => y.length - x.length)) {
+    out = out.replace(new RegExp('\\b' + n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b', 'g'), map[n]);
+  }
+  return out;
+}
+function zipLit(v) {
+  if (isNum(v)) return fmt(v, 12);
+  if (isPt(v)) return '(' + zipLit(v.x) + ', ' + zipLit(v.y) + ')';
+  return String(v);
+}
+/* 造一项：命令体走 executeLine（与 Sequence 的命令体同一套），表达式体用 bound 现算 */
+function zipMakeItem(src, binds, isCmd, group, idx) {
+  const map = {}, depIds = [];
+  for (const b of binds) {
+    const el = b.objs ? b.objs[b.i] : null;
+    if (el && el.label) {
+      map[b.v] = el.label;
+      if (!depIds.includes(el.id)) depIds.push(el.id);
+    } else {
+      map[b.v] = zipLit(b.vals[b.i]);
+    }
+  }
+  if (isCmd) {
+    const body = zipSubstitute(src, map);
+    const before = state.objects.length;
+    let rr = null;
+    BATCH++;
+    try { rr = executeLine(ggbToAppExpr(body), { ggb: true }); }
+    catch (e) { rr = null; }
+    finally { BATCH = Math.max(0, BATCH - 1); }
+    const created = (rr && rr.created) || [];
+    const res = created[created.length - 1];
+    if (!res) {
+      for (let i = before; i < state.objects.length; i++) if (state.objects[i]) state.objects[i].aux = true;
+      return null;
+    }
+    for (let i = before; i < state.objects.length; i++) {
+      const q = state.objects[i];
+      if (q && q !== res) q.aux = true;
+    }
+    res.aux = false;
+    res.def = res.def || {};
+    res.def.zipGroup = group; res.def.zipIndex = idx;
+    return res;
+  }
+  const body = zipSubstitute(src, map);
+  let ast, val;
+  try { ast = parseExpr(body); val = compile(ast)(scopeOf()); } catch (e) { return null; }
+  if (val === undefined || val === null) return null;
+  const parents = depIds.slice();
+  try {
+    for (const nm of freeVars(ast)) {
+      const p = getObjByLabel(nm);
+      if (p && !parents.includes(p.id)) parents.push(p.id);
+    }
+  } catch (e) { }
+  const def = { bound: { v: '__zipK', src: body, k: 1 }, zipGroup: group, zipIndex: idx };
+  let o = null;
+  if (isPt(val)) o = mkObj('point', { kind: 'formula', parents, def, label: '', value: { x: val.x, y: val.y } });
+  else if (isNum(val)) o = mkObj('number', { kind: 'value', parents, def, label: '', value: val });
+  if (!o) return null;
+  o.aux = false;
+  return o;
+}
+function registerZipList(label, z, objs) {
+  if (!label) return null;
+  return mkObj('list', {
+    kind: 'value',
+    value: objs.map(o => (o ? o.value : null)),
+    label,
+    aux: true,
+    def: { objs: objs.slice(), zipList: true, zip: z, zipGroup: label },
+  });
+}
+/* 底下列表的项变了（n 滑动条改数量、序列重建）：整组重造，列表里的引用同步更新 */
+function rebuildZip(owner) {
+  const z = owner.def && owner.def.zip;
+  if (!z || !Array.isArray(z.pairs) || !z.pairs.length) return;
+  const groups = [];
+  for (const p of z.pairs) {
+    if (!p.listLabel) return;      /* 字面量列表：项是静态的，不用重建 */
+    const h = getObjByLabel(p.listLabel);
+    const objs = h && h.def && Array.isArray(h.def.objs) ? h.def.objs : null;
+    if (!objs) return;
+    groups.push({ p, objs });
+  }
+  const stamp = groups.map(g => g.objs.map(o => o.id).join(',')).join('|');
+  if (stamp === z.stamp) return;
+  z.stamp = stamp;
+  state.objects = state.objects.filter(o => !(o.def && o.def.zipGroup === z.group && o !== owner));
+  const n = Math.min(...groups.map(g => g.objs.length));
+  const made = [];
+  for (let i = 0; i < n; i++) {
+    const binds = groups.map(g => ({ v: g.p.v, objs: g.objs, vals: g.objs.map(o => o.value), i }));
+    const it = zipMakeItem(z.src, binds, z.isCmd, z.group, i);
+    if (it) made.push(it);
+  }
+  owner.def.objs = made;
+  owner.value = made.map(o => o.value);
+}
+C('Zip', 'Zip(表达式, 变量, 列表, …)', '把表达式逐项作用到列表上', (a, ctx) => {
+  const src = a[0] && a[0].src;
+  if (!src) throw new Error('Zip 的第一个参数要写成表达式或命令');
+  const listed = [];
+  for (let i = 1; i < a.length; i += 2) {
+    const v = (a[i] && (a[i].src || String(a[i].val == null ? '' : a[i].val)) || '').trim();
+    if (!v) throw new Error('Zip 的变量名不能为空');
+    if (!a[i + 1]) throw new Error('Zip 需要「变量, 列表」成对出现');
+    const L = zipArgList(a, i + 1);
+    listed.push({ v, listLabel: (L.host && L.host.label) || '', objs: L.objs, vals: L.vals });
+  }
+  if (!listed.length) throw new Error('Zip 参数不完整');
+  const n = Math.min(...listed.map(p => p.vals.length));
+  if (!n) throw new Error('Zip 的列表是空的');
+  if (n > 300) throw new Error('Zip 一次最多生成 300 项');
+  const fnName = (String(src).match(/^\s*([A-Za-z][A-Za-z0-9_']*)\s*\(/) || [])[1];
+  const isCmd = !!(fnName && COMMANDS[fnName.toLowerCase()]);
+  const group = ctx.label || '';
+  const made = [];
+  for (let i = 0; i < n; i++) {
+    const binds = listed.map(p => ({ v: p.v, objs: p.objs, vals: p.vals, i }));
+    const it = zipMakeItem(src, binds, isCmd, group, i);
+    if (it) made.push(it);
+  }
+  if (!made.length) throw new Error('Zip 没有生成任何对象');
+  const live = listed.every(p => p.objs);
+  const obj = registerZipList(group, {
+    src, isCmd, group,
+    pairs: listed.map(p => ({ v: p.v, listLabel: p.listLabel })),
+    stamp: live ? listed.map(p => p.objs.map(o => o.id).join(',')).join('|') : '',
+  }, made);
+  return obj ? made.concat([obj]) : made;
+}, ['压缩', 'Map']);
+
+/* 表达式类参数不预先求值（起止点也留原文：n 这类滑动条要能驱动整组的项数） */
+COMMANDS['sequence'].raw = [0, 1, 2, 3];
+COMMANDS['zip'].raw = [0, 1, 2, 3, 4, 5, 6];
 COMMANDS['function'].raw = [0];
 /* 参数曲线的两个表达式与「参数名」都要原文：程序里的参数变量是自己绑定的，
    预先求值会因为 u 这类名字不在作用域里而直接抛「未定义的变量 u」。 */
@@ -9840,7 +10223,12 @@ C('Mode', 'Mode(列表)', '众数（并列时取最小值）', (a, ctx) => {
   });
   return [numObj(best, ctx)];
 }, ['众数']);
-C('Count', 'Count(列表)', '数据个数', (a, ctx) => [numObj(numList(a).length, ctx)], ['计数']);
+C('Count', 'Count(列表) 或 Count(列表, 值)', '元素个数 / 某个值出现的次数', (a, ctx) => {
+  const l = asArray(a[0], 'Count 的参数');
+  if (!a[1]) return [numObj(l.length, ctx)];
+  const v = AV(a[1]);
+  return [numObj(l.filter(x => (isNum(x) && isNum(v)) ? Math.abs(x - v) < 1e-10 : x === v).length, ctx)];
+}, ['计数']);
 C('SD', 'SD(列表)', '标准差（总体口径，除以 n）', (a, ctx) => {
   return [numObj(Math.sqrt(statPopVar(numList(a))), ctx)];
 }, ['标准差', 'stdevp']);
@@ -9909,6 +10297,28 @@ function asArray(a, what) {
   throw new Error((what || '这里') + '需要一个列表，例如 {1, 2, 3}');
 }
 function listObj(arr, ctx) { return mkObj('list', { kind: 'value', value: arr, label: (ctx && ctx.label) || '', definition: '' }); }
+/* Sequence 的整组登记：一个隐藏的 list 对象，元素本身仍是画布上的对象。
+   Element(list, i) 用 def.objs 取具体对象（保持「活」的引用），
+   value 里放当前值，Count / First / Sum 这类按数组处理的命令也能直接用。 */
+function registerSeqList(label, sq, objs) {
+  if (!label || !objs || !objs.length) return null;
+  return mkObj('list', {
+    kind: 'value',
+    value: objs.map(x => (x && x.value !== undefined ? x.value : null)),
+    label,
+    aux: true,
+    def: { objs: objs.slice(), seqList: true, seqOwner: !!sq, seq: sq || null, seqGroup: label,
+      seqLabelPrefix: (sq && !sq.cmdBody) ? label : '' },
+  });
+}
+/* 列表对象里装的是图形（Sequence / Zip 逐项建出来的圆、线段…）时按对象取项：
+   First / Last 拿到的是对象本身，而不是顶层 value 里的 null。 */
+function listObjAt(a, i) {
+  const h = a && a.obj;
+  if (!h || !h.def || !Array.isArray(h.def.objs)) return null;
+  if (i < 0 || i >= h.def.objs.length) return null;
+  return h.def.objs[i] || null;
+}
 /* 单个元素的返回值：列表里装的可能是数、点或嵌套列表，按类型还原成对象 */
 function valueToObj(v, ctx) {
   if (isNum(v)) return numObj(v, ctx);
@@ -9925,7 +10335,7 @@ function buildSeqCommandItem(sq, ki, group, label) {
   let rr = null;
   BATCH++;
   try { rr = executeLine(ggbToAppExpr(body), { ggb: true }); }
-  catch (e) { rr = null; }
+  catch (e) { rr = null; if (sq) sq.lastErr = String((e && e.message) || e); }
   finally { BATCH = Math.max(0, BATCH - 1); }
   const objs = (rr && rr.created) || [];
   const res = objs[objs.length - 1];
@@ -9967,12 +10377,17 @@ function syncSequenceGroups() {
   function buildGenericItem(owner, sq, group, ki, lo) {
     const ord = ki - lo + 1;
     try {
-      const it = seqItemObj(owner, ord, {});
-      if (!it) return;
+      /* 直接输入的序列标签是「名字+序号」（pts1…）：重建时按同一规则复原，
+         引用过 pts3 的命令不会因为 n 一变就找不到对象 */
+      const pre = owner.def && owner.def.seqLabelPrefix;
+      const it = seqItemObj(owner, ord, pre ? { label: pre + ki } : {});
+      if (!it) return null;
       it.aux = true; it.seqItem = true; it.ggbLabel = group;
       it.def.seqVisual = true; it.def.seqIndex = ki;
       it.def.seqBuildTag = group + '#' + ki;
-    } catch (e) { }
+      if (pre) it.def.seqLabelPrefix = pre;
+      return it;
+    } catch (e) { return null; }
   }
   for (const owner of owners) {
     const sq = owner.def.seq, group = owner.def.seqGroup;
@@ -9998,12 +10413,21 @@ function syncSequenceGroups() {
       touchObjects();
     }
     for (let ki = lo; ki <= hi; ki++) if (!keep.has(ki)) {
-      if (sq.cmdBody) buildSeqCommandItem(sq, ki, group);
-      else buildGenericItem(owner, sq, group, ki, lo);
+      const it = sq.cmdBody ? buildSeqCommandItem(sq, ki, group) : buildGenericItem(owner, sq, group, ki, lo);
+      /* 直接输入（而不是 GGB 导入）建的列表，元素是要画出来的 */
+      if (it && sq.direct) it.aux = false;
     }
     sq.builtLo = lo; sq.builtHi = hi;
     owner.def.seq = sq;
+    /* 列表对象跟着重建：Element(list, i) / SetColor(list) 取到的必须是最新那批对象 */
+    if (owner.def.seqList) {
+      owner.def.objs = state.objects.filter(o => o.def && o.def.seqVisual && o.def.seqGroup === group)
+        .sort((x, y) => (x.def.seqIndex || 0) - (y.def.seqIndex || 0));
+      owner.value = owner.def.objs.map(o => o.value);
+    }
   }
+  /* Zip 的项跟着底下的列表走：pts 这类列表增删项后，花边 / 副本整组重建 */
+  for (const owner of state.objects.filter(o => o.def && o.def.zipList)) rebuildZip(owner);
 }
 /* Sequence 导入后的第 ord 项（1 起）：按循环变量现算，仍返回带 bound 的活对象。
    Element[list, i] 在嵌套命令（Rotate / Sector）里靠它保持依赖。 */
@@ -10046,6 +10470,7 @@ function pairOf(a) {
 }
 
 C('First', 'First(列表) 或 First(列表, n)', '第一个元素 / 前 n 个元素', (a, ctx) => {
+  if (!a[1]) { const it = listObjAt(a[0], 0); if (it) return [it]; }
   const l = asArray(a[0], 'First 的第一个参数');
   if (!a[1]) { if (!l.length) throw new Error('列表是空的'); return [valueToObj(l[0], ctx)]; }
   const n = Math.round(AN(a[1]));
@@ -10053,6 +10478,12 @@ C('First', 'First(列表) 或 First(列表, n)', '第一个元素 / 前 n 个元
   return [listObj(l.slice(0, n), ctx)];
 }, ['首项', '前几项']);
 C('Last', 'Last(列表) 或 Last(列表, n)', '最后一个元素 / 后 n 个元素', (a, ctx) => {
+  if (!a[1]) {
+    const h = a[0] && a[0].obj;
+    const len = h && h.def && Array.isArray(h.def.objs) ? h.def.objs.length : 0;
+    const it = len ? listObjAt(a[0], len - 1) : null;
+    if (it) return [it];
+  }
   const l = asArray(a[0], 'Last 的第一个参数');
   if (!a[1]) { if (!l.length) throw new Error('列表是空的'); return [valueToObj(l[l.length - 1], ctx)]; }
   const n = Math.round(AN(a[1]));
@@ -10080,6 +10511,14 @@ C('Element', 'Element(列表, n)', '第 n 个元素', (a, ctx) => {
   /* Sequence 导入的列表：第 i 项按循环变量现算，返回的仍是带 bound 的活对象，
      这样 Element[list1, 1] 放进 Rotate / Sector 里也能继续跟着 k、n 变 */
   const host = a[0].obj;
+  /* Sequence / Zip 登记出来的列表：直接返回那一项对象本身，后续 Rotate / SetColor 都能接着用 */
+  if (host && host.def && Array.isArray(host.def.objs)) {
+    const i = Math.round(AN(a[1]));
+    if (!(i >= 1 && i <= host.def.objs.length)) throw new Error('序号超出序列范围（共 ' + host.def.objs.length + ' 项）');
+    const it = host.def.objs[i - 1];
+    if (!it || !state.objects.includes(it)) throw new Error('列表第 ' + i + ' 项已失效');
+    return [it];
+  }
   if (host && host.def && host.def.seqOwner) return [seqItemObj(host, Math.round(AN(a[1])), ctx)];
   const l = asArray(a[0], 'Element 的第一个参数');
   return [valueToObj(l[idxArg(a[1], l.length)], ctx)];
@@ -11176,7 +11615,13 @@ C('Slider', 'Slider(最小值, 最大值, 步长)', '滑动条', (a, ctx) => {
 C('Text', 'Text("内容", x, y) 或 Text(对象, x, y)', '文本', (a, ctx) => {
   let content = '';
   if (a.length && a[0].obj) content = a[0].obj.label;
-  else if (a.length && typeof a[0].val === 'string') content = a[0].val;
+  else if (a.length && typeof a[0].val === 'string') {
+    content = a[0].val;
+    /* 拼出来的数（"平均数 = " + m1）会带满屏小数位，按「小数位数」收一下；
+       整段都是引号里的原样文字则不动 */
+    const raw = String(a[0].src || '').trim();
+    if (!/^"[\s\S]*"$/.test(raw) && !/^'[\s\S]*'$/.test(raw)) content = tidyDecimals(content);
+  }
   else if (a.length) content = String(a[0].src);
   let pos = { x: state.view.cx, y: state.view.cy };
   if (a.length >= 3) pos = { x: AN(a[1]), y: AN(a[2]) };
@@ -11434,6 +11879,7 @@ C('Delete', 'Delete(对象)', '删除对象及其后代', (a) => {
   a.forEach(x => { const o = x.obj; if (o) removeObjectById(o.id, true); });
   return [];
 }, ['删除']);
+COMMANDS['delete'].tolerant = true;   /* 删除列表里可以夹不存在的名字 */
 C('DeleteAll', 'DeleteAll()', '清空所有对象', () => { clearAll(); return []; }, ['清空']);
 C('SetColor', 'SetColor(对象, "#ff0000")', '设置颜色', (a) => {
   const c = String(a[1].val ?? a[1].src).replace(/"/g, '');
@@ -11619,10 +12065,15 @@ C('ShowAxes', 'ShowAxes(true)', '显示 / 隐藏坐标轴', (a) => { SET.axes = 
 C('CenterView', 'CenterView(x, y) 或 CenterView(对象)', '把视图中心移到坐标 / 对象上', (a) => {
   if (a.length >= 2) { state.view.cx = AN(a[0]); state.view.cy = AN(a[1]); }
   else {
-    const o = ensureObj(a[0]);
-    const p = (o.value && isPt(o.value)) ? o.value : (o.data && o.data.c ? o.data.c : null);
-    if (!p) throw new Error('这个对象没有可以用来居中的位置');
-    state.view.cx = p.x; state.view.cy = p.y;
+    /* CenterView((0,0)) / CenterView(P)：坐标点和点对象都认（GeoGebra 里就是这个写法） */
+    const v = AV(a[0]);
+    if (isPt(v)) { state.view.cx = v.x; state.view.cy = v.y; }
+    else {
+      const o = ensureObj(a[0]);
+      const p = (o.value && isPt(o.value)) ? o.value : (o.data && o.data.c ? o.data.c : null);
+      if (!p) throw new Error('这个对象没有可以用来居中的位置');
+      state.view.cx = p.x; state.view.cy = p.y;
+    }
   }
   draw(); return [];
 }, ['居中显示']);
@@ -11966,6 +12417,36 @@ function applyEffortCommand(line) {
   toast('思考强度已切换为 ' + label, 'ok', 1800);
   return true;
 }
+/* 命令返回单个对象却没接住「名字 = 命令(...)」里的名字时（Mean / Product / Median …
+   这些纯数值命令），按用户写的名字改名，后面才引用得到。 */
+function applyCmdLabel(out, label, beforeIds) {
+  if (!label || !out || out.length !== 1) return out;
+  const o = out[0];
+  if (!o || o.label === label) return out;
+  /* 返回的是「已有的对象」（First / Last / Element 取出来的项）：改名会连带改掉
+     列表里那一项，改成挂别名，两个名字指向同一个对象 */
+  if (beforeIds && beforeIds.has(o.id)) { addObjAlias(o, label); return out; }
+  o.label = label;
+  return out;
+}
+/* AI 经常整行重写同一处标注（t1 = Text(...) 再来一次）：文本 / 列表这类叶子对象
+   直接按新定义重建，别报「名字已被占用」逼它改名。图形对象仍按占名处理。 */
+function dropRedefinable(label) {
+  const old = label ? getObjByLabel(label) : null;
+  if (!old) return null;
+  if (old.type === 'text' || old.type === 'list') {
+    /* 列表可能是 Sequence / Zip 登记出来的：连它生成的整组图形一起清掉，
+       否则重写 l1 = Sequence(...) 会留下上一批孤零零的点 */
+    const d = old.def || {};
+    const group = d.seqList ? d.seqGroup : (d.zipList ? d.zipGroup : '');
+    removeObjectById(old.id, true);
+    if (group) {
+      state.objects = state.objects.filter(o => !(o.def && (o.def.seqGroup === group || o.def.zipGroup === group)));
+    }
+    return null;
+  }
+  return old;
+}
 function _executeLine(raw, opts) {
   opts = opts || {};
   let line = stripMathComment(normalizeMathLine(raw)).trim();
@@ -11992,11 +12473,16 @@ function _executeLine(raw, opts) {
   if (call) {
     const cmd = COMMANDS[call.name.toLowerCase()];
     if (cmd) {
-      if (explicitLabel) { const old = getObjByLabel(explicitLabel); if (old) throw nameTakenError(explicitLabel, old); }
+      if (explicitLabel) { const old = dropRedefinable(explicitLabel); if (old) throw nameTakenError(explicitLabel, old); }
       const args = mapArgs(cmd, call.args);
       /* opts.ggb：导入 .ggb 时标着「角度按弧度用」等文件级差异，命令要能读到 */
-      const out = cmd.fn(args, { label: explicitLabel, src: line, ggb: !!opts.ggb });
-      (out || []).forEach(o => { o.definition = o.definition || buildDefinition(o); created.push(o); });
+      const beforeIds = new Set(state.objects.map(o => o.id));
+      const out = cmd.fn(args, { label: explicitLabel, src: line, ggb: !!opts.ggb }) || [];
+      /* 有些命令（Mean / Product / Median …）只返回数值、不接标签，于是
+         「m1 = Mean(data)」里的 m1 会被改成自动名字，后面再引用就报未定义。
+         有显式标签且只返回一个对象时，按用户写的名字改名。 */
+      applyCmdLabel(out, explicitLabel, beforeIds);
+      out.forEach(o => { o.definition = o.definition || buildDefinition(o); created.push(o); });
       return { ok: true, created, line };
     }
   }
@@ -12049,15 +12535,17 @@ function _executeLine(raw, opts) {
       /* 写了「标签:」时以标签为准，等号左边不再另起名字 */
       const label = named ? explicitLabel : simple[1];
       if (rc2 && COMMANDS[rc2.name.toLowerCase()]) {
-        if (label) { const old = getObjByLabel(label); if (old) throw nameTakenError(label, old); }
+        if (label) { const old = dropRedefinable(label); if (old) throw nameTakenError(label, old); }
         const cmd = COMMANDS[rc2.name.toLowerCase()];
         const args = mapArgs(cmd, rc2.args);
+        const beforeIds = new Set(state.objects.map(o => o.id));
         const out = cmd.fn(args, { label, src: rhs, ggb: !!opts.ggb }) || [];
+        applyCmdLabel(out, label, beforeIds);
         out.forEach(o => { o.definition = o.definition || buildDefinition(o); created.push(o); });
         return { ok: true, created, line };
       }
       let ast = null, val = null;
-      try { ast = parseExpr(rhs); val = compile(ast)(scopeOf()); } catch (e) { }
+      try { const r = compileSmart(rhs); ast = r.ast; val = r.val; } catch (e) { }
       if (isPt(val)) {
         const oldP = label ? getObjByLabel(label) : null;
         if (oldP) {
@@ -12071,7 +12559,9 @@ function _executeLine(raw, opts) {
           computeObject(oldP); created.push(oldP);
           return { ok: true, created, line, redefined: true };
         }
-        const o = createObject('point', { kind: 'formula', src: rhs, label, value: { x: val.x, y: val.y } });
+        const pids = [];
+        try { for (const n of freeVars(ast)) { const p = getObjByLabel(n); if (p && !pids.includes(p.id)) pids.push(p.id); } } catch (e) { }
+        const o = createObject('point', { kind: 'formula', src: rhs, label, parents: pids, value: { x: val.x, y: val.y } });
         o.ast = ast; addObject(o, true); created.push(o);
         return { ok: true, created, line };
       }
@@ -12114,6 +12604,7 @@ function _executeLine(raw, opts) {
           return { ok: true, created, line };
         }
       }
+      if (label) { const old0 = dropRedefinable(label); if (old0) throw nameTakenError(label, old0); }
       const o = valueObjectFromExpr(rhs, label);
       if (o) created.push(o);
       return { ok: true, created, line };
@@ -12139,28 +12630,33 @@ function _executeLine(raw, opts) {
     return { ok: true, created, line };
   }
   /* 纯表达式或命令 */
+  if (explicitLabel) { const old = dropRedefinable(explicitLabel); if (old) throw nameTakenError(explicitLabel, old); }
   const o = valueObjectFromExpr(line, explicitLabel);
   if (o) created.push(o);
   return { ok: true, created, line };
 }
 function valueObjectFromExpr(src, label) {
-  const ast = parseExpr(src);
-  const val = compile(ast)(scopeOf());
+  /* 允许表达式里夹命令调用（h = Distance(A,B)/2）：先代换再求值 */
+  const r = compileSmart(src);
+  const ast = r.ast, val = r.val;
+  /* 依赖对象登记成父对象：滑动条 / 点一动，这个值跟着重算 */
+  const pids = [];
+  try { for (const n of freeVars(ast)) { const p = getObjByLabel(n); if (p && !pids.includes(p.id)) pids.push(p.id); } } catch (e) { }
   if (isPt(val)) {
-    const o = createObject('point', { kind: 'formula', src, label: label || '', value: { x: val.x, y: val.y } });
+    const o = createObject('point', { kind: 'formula', src, label: label || '', parents: pids, value: { x: val.x, y: val.y } });
     o.ast = ast; addObject(o, true); return o;
   }
   if (isNum(val)) {
-    const o = createObject('number', { kind: 'value', src, label: label || '', value: val });
+    const o = createObject('number', { kind: 'value', src, label: label || '', parents: pids, value: val });
     o.ast = ast; addObject(o, true); return o;
   }
   if (typeof val === 'boolean') {
-    const o = createObject('boolean', { kind: 'plain', src, label: label || '', value: val });
+    const o = createObject('boolean', { kind: 'plain', src, label: label || '', parents: pids, value: val });
     o.ast = ast; addObject(o, true); return o;
   }
   if (Array.isArray(val)) {
     /* 列表是真对象，不是「长得像花括号的文本」：只有这样才能当参数喂给 Mean / First / Sum… */
-    const o = createObject('list', { kind: 'value', src, label: label || '', value: val });
+    const o = createObject('list', { kind: 'value', src, label: label || '', parents: pids, value: val });
     o.ast = ast; addObject(o, true); return o;
   }
   if (typeof val === 'string' && label) {
@@ -18900,7 +19396,7 @@ async function runUITest() {
       return Math.abs(Math.atan2(bb, a) * 180 / Math.PI);
     };
     if (angle(bars[0]) > 2) throw new Error('收起态关闭键不该已经是叉号');
-    setFmenu(true); await sleep(460);          /* 过渡 340ms，等它走完再量 */
+    setFmenu(true); await sleep(620);          /* 过渡 340ms，等它走完再量（headless 首帧会晚到） */
     if (b.getAttribute('aria-expanded') !== 'true') throw new Error('展开后 aria-expanded 未同步');
     /* 触发键必须整枚让开：留在画布上会变成一枚孤零零的叉号 */
     if (!b.classList.contains('behind')) throw new Error('展开后触发键没有让开');
@@ -18908,7 +19404,7 @@ async function runUITest() {
     if (Math.abs(angle(bars[0]) - 45) > 3) throw new Error('关闭键上横线没有转成 45°：' + getComputedStyle(bars[0]).transform);
     if (Math.abs(angle(bars[2]) - 45) > 3) throw new Error('关闭键下横线没有转成 45°：' + getComputedStyle(bars[2]).transform);
     if (+getComputedStyle(bars[1]).opacity > 0.05) throw new Error('关闭键中间横线没有淡出');
-    setFmenu(false); await sleep(460);
+    setFmenu(false); await sleep(620);
     if (b.classList.contains('behind')) throw new Error('收起后触发键没有回来');
     if (angle(bars[0]) > 2) throw new Error('收起后关闭键没有变回三条横线');
   });
@@ -19382,8 +19878,61 @@ async function runUITest() {
     try { executeLine('Root(f, 9)'); } catch (e) { threw = true; }
     if (!threw) throw new Error('序号超出应报错');
   });
+  /* Sequence 的命令体（Circle / Rotate…）、Zip、Element(列表) 与 CenterView(点)：
+     AI 写「花边 / 玫瑰线」这类图案时最常用，不能报「未知函数 Circle」「未定义的变量 pts」 */
+  await A('命令:Sequence 命令体与 Zip 列表', async () => {
+    executeLine('DeleteAll()');
+    const mk = s => { try { return executeLine(s); } catch (e) { throw new Error(s + ' 失败：' + e.message); } };
+    mk('n = Slider(4, 10, 1)');
+    mk('a = Slider(2, 5, 0.1)');
+    const nVal = () => Math.round(getObjByLabel('n').value);
+    mk('pts = Sequence((a*cos(2*pi*i/n), a*sin(2*pi*i/n)), i, 1, n)');
+    const listOf = lb => { const o = getObjByLabel(lb); return o && o.def && Array.isArray(o.def.objs) ? o.def.objs : null; };
+    if (!listOf('pts') || listOf('pts').length !== nVal()) throw new Error('Sequence 表达式列表项数不对');
+    /* 命令体：逐项生成圆，整组登记成列表，样式命令能批量套用 */
+    mk('petals = Sequence(Circle(Element(pts, i), a/n), i, 1, n)');
+    if (!listOf('petals') || listOf('petals').length !== nVal()) throw new Error('Sequence 命令体没有逐项建圆');
+    mk('SetColor(petals, "#f2a33c")');
+    if (listOf('petals')[0].color.toLowerCase() !== '#f2a33c') throw new Error('样式没有落到列表里每个圆上');
+    /* 半径是 a/n 这类表达式也要活的：拖 a 半径跟着变 */
+    const c0 = listOf('petals')[0], r0 = c0.data && c0.data.r;
+    getObjByLabel('a').value = 4; recomputeAll();
+    if (!isNum(c0.data.r) || Math.abs(c0.data.r - r0) < 1e-9) throw new Error('半径没有跟着 a 变');
+    /* n 改项数：pts / petals 都要增删 */
+    getObjByLabel('n').value = 6; recomputeAll();
+    if (listOf('pts').length !== 6 || listOf('petals').length !== 6) throw new Error('n 变化后序列没有重建');
+    /* Zip：对象变量绑到列表里的点 */
+    mk('z1 = Zip(Circle(P, 0.4), P, pts)');
+    if (!listOf('z1') || listOf('z1').length !== 6) throw new Error('Zip 命令体项数不对');
+    mk('z2 = Zip(P + (2, 0), P, pts)');
+    if (!listOf('z2') || listOf('z2').length !== 6) throw new Error('Zip 表达式项数不对');
+    getObjByLabel('n').value = 5; recomputeAll();
+    if (listOf('z1').length !== 5 || listOf('z2').length !== 5) throw new Error('Zip 没有跟着底下的列表重建');
+    /* 表达式里夹命令（Distance(A,B)/2）：要能求值，并且随点一起变 */
+    mk('A0 = (0,0)'); mk('B0 = (4,0)');
+    mk('h0 = Distance(A0, B0) / 2');
+    if (Math.abs(getObjByLabel('h0').value - 2) > 1e-9) throw new Error('表达式里的命令没有求值');
+    mk('SetCoords(B0, 8, 0)'); recomputeAll();
+    if (Math.abs(getObjByLabel('h0').value - 4) > 1e-9) throw new Error('Distance 结果没有随点变');
+    /* Vertex(多边形, k) 取第 k 个顶点 */
+    mk('poly0 = Polygon((0,0),(4,0),(4,3),(0,3))');
+    mk('vv = Vertex(poly0, 3)');
+    const vv = getObjByLabel('vv') && getObjByLabel('vv').value;
+    if (!vv || Math.abs(vv.x - 4) > 1e-9 || Math.abs(vv.y - 3) > 1e-9) throw new Error('Vertex(poly,k) 取错顶点：' + JSON.stringify(vv));
+    /* 文本 / 列表整行重写：就地替换，不再报「名字已被占用」 */
+    mk('tx0 = Text("一", (0,0))'); mk('tx0 = Text("二", (0,0))');
+    if (!getObjByLabel('tx0') || getObjByLabel('tx0').value !== '二') throw new Error('文本没有就地重定义');
+    /* Delete 里夹着不存在的名字也不报错 */
+    mk('Delete(vv, NOPE_X)');
+    if (getObjByLabel('vv')) throw new Error('Delete 没有删掉列出的对象');
+    /* CenterView(点)：以前报「此处需要一个对象」 */
+    mk('CenterView((0,0))');
+    if (Math.abs(state.view.cx) > 1e-6 || Math.abs(state.view.cy) > 1e-6) throw new Error('CenterView(点) 没有把视野移到该点');
+    mk('ZoomFit()');
+    const errs = state.objects.filter(o => o.error && !o.aux);
+    if (errs.length) throw new Error('构造里有错误：' + errs.map(x => x.label + ':' + x.error).join(' | '));
+  });
   await A('视图缩放按钮', async () => { $('#gvIn').click(); $('#gvOut').click(); $('#gvHome').click(); await sleep(0); });
-  /* 缩放比例与适合窗口：SetZoom 的口径必须和右上角徽标的「比例 N×」一致 */
   await A('视图:比例与适合窗口', async () => {
     executeLine('DeleteAll()');
     executeLine('A=(100,100)');
@@ -24338,7 +24887,8 @@ Curve(x表达式,y表达式,t,起点,终点) 参数曲线：Curve(cos(t),sin(t),
 符号运算（结果是贴在视图中央的蓝色文本，可直接抄进后续命令）：Factor(表达式) Expand(表达式) Simplify(表达式) Diff(表达式[,变量]) Integrate(表达式[,变量])
 关系判定（都是活的，父对象一动就重判）：AreParallel(a,b) ArePerpendicular(a,b) AreCollinear(A,B,C) AreConcyclic(A,B,C,D) AreConcurrent(l1,l2,l3) AreCongruent(obj1,obj2) IsTangent(直线,圆锥曲线) AreEqual(a,b) IsDefined(obj) Relation(a,b)
 圆锥曲线性质（都随母曲线实时更新）：Focus Directrix Axes FirstAxis SecondAxis Eccentricity Vertex SemiMajorAxis SemiMinorAxis LinearEccentricity Asymptote(双曲线) Diameter(圆锥曲线,向量)
-序列与列表：Sequence(表达式,k,1,5) Locus(P,slider) First Last Take Remove Reverse Element(列表,i) IndexOf Append Join Flatten Insert Unique Union Intersection PointList RemoveUndefined(列表)
+序列与列表：Sequence(表达式,k,1,5) Zip(表达式,变量,列表) Locus(P,slider) First Last Take Remove Reverse Element(列表,i) IndexOf Append Join Flatten Insert Unique Union Intersection PointList RemoveUndefined(列表)
+   Sequence 的「表达式」也可以直接写一条命令：Sequence(Circle(Element(pts,i), r), i, 1, n) 会逐项生成对象，整组登记成一个可传给 SetColor / SetVisible 的列表；Zip(Circle(P, r), P, pts) 也可（P 绑到列表里的每个点）。
 统计（数据用列表 {1,2,3} 传入）：Mean Median Mode Count SD Variance Quartile(列表,1|2|3) Sum Product Min Max Sort Random() RandomInteger(a,b) Covariance(列表X,列表Y) Correlation(列表X,列表Y) MAD SigmaXX SigmaXY SigmaYY
    SampleSD SampleVariance SDp Q1 Q3 Percentile GeometricMean HarmonicMean RootMeanSquare MeanX MeanY SXX SYY SXY PMCC CorrelationCoefficient cov var RSquare Sample Shuffle
    （SD / Variance / Covariance 是总体口径，除以 n；SampleSD / SampleVariance 是样本口径，除以 n-1）
@@ -25863,46 +26413,62 @@ async function callAI(messages, eff, onDelta) {
   if (!AI_CONF.key) throw new Error('还没填 API Key：点输入区工具排上的钥匙图标填入 DeepSeek Key');
   const ctrl = new AbortController();
   state.aiAbort = ctrl;
+  /* 网络中途卡死（流不再吐数据）时不要让「正在思考」一直转：
+     60 秒没有任何分片就主动中断，给出可重试的提示 */
+  let idleTimer = 0, timedOut = false;
+  const bumpIdle = () => {
+    clearTimeout(idleTimer);
+    idleTimer = setTimeout(() => { timedOut = true; try { ctrl.abort(); } catch (e) { } }, 60000);
+  };
+  bumpIdle();
   const body = { model: AI_MODEL, messages, stream: true };
   if (eff.api) { body.thinking = { type: 'enabled' }; body.reasoning_effort = eff.effort; }
   else { body.thinking = { type: 'disabled' }; }
-  const res = await fetch(AI_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json; charset=utf-8', 'Authorization': 'Bearer ' + AI_CONF.key },
-    body: JSON.stringify(body),
-    signal: ctrl.signal,
-  });
-  if (!res.ok) {
-    let detail = '';
-    try { const j = await res.json(); detail = (j.error && (j.error.message || j.error.type)) || JSON.stringify(j); } catch (e) { detail = await res.text().catch(() => ''); }
-    throw new Error(aiApiStatusText(res.status, detail));
-  }
-  const reader = res.body.getReader();
-  const dec = new TextDecoder('utf-8');
-  let buf = '', reasoning = '', content = '';
-  for (;;) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    buf += dec.decode(value, { stream: true });
-    const lines = buf.split('\n');
-    buf = lines.pop();
-    for (const line of lines) {
-      const t = line.trim();
-      if (!t.startsWith('data:')) continue;
-      const payload = t.slice(5).trim();
-      if (payload === '[DONE]') continue;
-      try {
-        const j = JSON.parse(payload);
-        const d = j.choices && j.choices[0] && j.choices[0].delta;
-        if (!d) continue;
-        if (d.reasoning_content) reasoning += d.reasoning_content;
-        if (d.content) content += d.content;
-        onDelta && onDelta(reasoning, content);
-      } catch (e) { }
+  try {
+    const res = await fetch(AI_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json; charset=utf-8', 'Authorization': 'Bearer ' + AI_CONF.key },
+      body: JSON.stringify(body),
+      signal: ctrl.signal,
+    });
+    if (!res.ok) {
+      let detail = '';
+      try { const j = await res.json(); detail = (j.error && (j.error.message || j.error.type)) || JSON.stringify(j); } catch (e) { detail = await res.text().catch(() => ''); }
+      throw new Error(aiApiStatusText(res.status, detail));
     }
+    const reader = res.body.getReader();
+    const dec = new TextDecoder('utf-8');
+    let buf = '', reasoning = '', content = '';
+    for (;;) {
+      bumpIdle();
+      const { done, value } = await reader.read();
+      if (done) break;
+      buf += dec.decode(value, { stream: true });
+      const lines = buf.split('\n');
+      buf = lines.pop();
+      for (const line of lines) {
+        const t = line.trim();
+        if (!t.startsWith('data:')) continue;
+        const payload = t.slice(5).trim();
+        if (payload === '[DONE]') continue;
+        try {
+          const j = JSON.parse(payload);
+          const d = j.choices && j.choices[0] && j.choices[0].delta;
+          if (!d) continue;
+          if (d.reasoning_content) reasoning += d.reasoning_content;
+          if (d.content) content += d.content;
+          onDelta && onDelta(reasoning, content);
+        } catch (e) { }
+      }
+    }
+    return { reasoning, content };
+  } catch (e) {
+    if (timedOut) throw new Error('AI 响应超时（60 秒没有收到数据），已停止；可以重试或换个问法');
+    throw e;
+  } finally {
+    clearTimeout(idleTimer);
+    state.aiAbort = null;
   }
-  state.aiAbort = null;
-  return { reasoning, content };
 }
 async function aiSend() {
   const inp = $('#aiInput');
