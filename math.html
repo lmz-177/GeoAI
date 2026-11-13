@@ -198,11 +198,14 @@ body.dark .app::before{
    现在收成一枚浮在画布左上角的胶囊按钮，点开从左侧滑出抽屉 —— 和 WPS 的菜单入口一致：
    菜单是「用完就收」的临时浮层，不常驻、不占画布；右侧的「代数 / 图形」切换也单独成浮层，
    于是纵向的空间全部还给画布。 */
-/* 按钮挂在 .graphics 里（absolute 相对画布），宽屏有侧栏时自然落在画布左缘、
-   不会盖住左侧面板的页签；窄屏侧栏变成浮层时由媒体查询改回 fixed 并抬高层级。 */
+/* 左上角两枚玻璃胶囊挂在 .graphics 里（absolute 相对画布），宽屏有侧栏时自然落在画布
+   左缘、不会盖住左侧面板的页签；窄屏侧栏变成浮层时由媒体查询改回 fixed 并抬高层级。
+   汉堡管菜单，GeoAI 管更新与版本——原来是一枚按钮里塞了图标和文字，两种意图共用
+   一个点击区；拆开后各自的命中区与语义都对得上。 */
+.fmenu-bar{position:absolute;top:10px;left:12px;z-index:50;display:flex;align-items:center;gap:4px;pointer-events:none}
+.fmenu-bar .fmenu-btn{pointer-events:auto}
 .fmenu-btn{
-  position:absolute;top:10px;left:12px;z-index:50;
-  display:flex;align-items:center;gap:7px;height:38px;padding:0 12px 0 11px;border-radius:14px;
+  position:relative;display:flex;align-items:center;gap:7px;height:38px;padding:0 11px;border-radius:14px;
   background:var(--glass);border:.5px solid var(--glass-brd);
   box-shadow:var(--shadow),var(--hi-strong);color:var(--text);
   font-weight:800;font-size:15px;letter-spacing:-.35px;white-space:nowrap;
@@ -211,9 +214,10 @@ body.dark .app::before{
   user-select:none;
 }
 .fmenu-btn:hover{background:var(--glass-2)}
+.fmenu-ver{padding:0 12px}
 /* 抽屉打开时触发按钮淡出缩小（visibility 延到淡出结束再切，否则是「啪」地消失）：
    抽屉头部有自己的关闭键，留在画布上只会变成一枚孤零零的叉 */
-.fmenu-btn.behind{
+.fmenu-btn.behind,.fmenu-bar.behind .fmenu-btn{
   opacity:0;transform:scale(.9);pointer-events:none;visibility:hidden;
   transition:opacity .16s ease,transform .16s ease,visibility 0s linear .16s;
 }
@@ -503,12 +507,12 @@ body.tool-folded .tool-head{padding-bottom:0}
   opacity:0;transform:translateX(-18px);pointer-events:none;border-right-color:transparent;
 }
 /* ---------- 面板切换：和顶栏同款的 iOS 分段控件 ---------- */
-/* 六个页签（绘图 / 代数 / CAS / 命令 / 表格 / 更新）做成与顶栏「代数 / 图形」同一枚分段控件，
+/* 五个页签（绘图 / 代数 / CAS / 命令 / 表格）做成与顶栏「代数 / 图形」同一枚分段控件，
    整个面板的切换语言就统一了。原来的选中态是「饱和主色填充 + 主色外发光」，
    那圈发光的颜色是写死的 rgba(0,122,255,.28)（深色主题的主色是 #0a84ff，对不上），
    而且 iOS 的控件本来就不用彩色外发光，靠的是轨道底色和白色的滑块分出层次。
    等宽分段还顺手去掉了窄侧栏下的换行兜底：每格都按轨道等分，
-   侧栏拖到最窄 180px 时每格仍有 28px，装得下两个 13px 的汉字。 */
+   侧栏拖到最窄 180px 时每格仍有 38px，装得下「代数」两个字。 */
 .panel-tabs{
   display:flex;padding:10px 12px;
   border-bottom:.5px solid var(--border);background:var(--chrome);
@@ -518,14 +522,13 @@ body.tool-folded .tool-head{padding-bottom:0}
   position:relative;flex:1;min-width:0;display:flex;align-items:stretch;height:30px;padding:2px;
   background:var(--panel-3);border-radius:9px;box-shadow:var(--hi);
 }
-/* 六个等宽格子（绘图 / 代数 / CAS / 命令 / 表格 / 更新），滑块就是轨道的六分之一 */
-.pt-seg .seg-thumb{width:calc(16.6667% - .8px);border-radius:7px}
-/* 滑块跟着真实选中态走，六格各一条；仍然只认 .on，不额外存状态 */
+/* 五个等宽格子（绘图 / 代数 / CAS / 命令 / 表格），滑块就是轨道的五分之一 */
+.pt-seg .seg-thumb{width:calc(20% - .8px);border-radius:7px}
+/* 滑块跟着真实选中态走，五格各一条；仍然只认 .on，不额外存状态 */
 .pt-seg:has(> button[data-tab="algebra"].on) .seg-thumb{transform:translateX(100%)}
 .pt-seg:has(> button[data-tab="cas"].on) .seg-thumb{transform:translateX(200%)}
 .pt-seg:has(> button[data-tab="cmds"].on) .seg-thumb{transform:translateX(300%)}
 .pt-seg:has(> button[data-tab="sheet"].on) .seg-thumb{transform:translateX(400%)}
-.pt-seg:has(> button[data-tab="update"].on) .seg-thumb{transform:translateX(500%)}
 .pt-seg > button{
   position:relative;z-index:1;flex:1 1 0;min-width:0;border-radius:7px;
   display:flex;align-items:center;justify-content:center;white-space:nowrap;
@@ -1808,9 +1811,8 @@ body:has(.aii-eff.on) .ai-dock{z-index:230}
    靠字色 + 字号拉开层级，不再画线。 */
 .set-group{margin-bottom:22px}
 .set-group>h3{font-size:var(--fs-xs);font-weight:700;color:var(--text-2);letter-spacing:.3px;margin:0 0 8px;padding:0}
-/* 更新与版本：左侧一级页签。版本号做成页首的大数字；版本历史每条先给一句摘要，
-   点标题才展开逐条改动，默认只展开当前版本。 */
-.upd-wrap{padding:12px 12px 20px}
+/* 更新与版本弹窗（点左上角 GeoAI 打开）：版本号做成页首的大数字；版本历史
+   每条先给一句摘要，点标题才展开逐条改动，默认只展开当前版本。 */
 .upd-hero{
   padding:16px 16px 14px;border-radius:var(--r-lg);margin-bottom:16px;
   background:linear-gradient(135deg,var(--accent-dim),rgba(0,98,204,.02));border:.5px solid var(--border);
@@ -1839,6 +1841,8 @@ body:has(.aii-eff.on) .ai-dock{z-index:230}
 .upd-notes li{margin:2px 0}
 .upd-notes li::marker{color:var(--accent)}
 .upd-thanks{font-size:var(--fs-xs);line-height:1.9;color:var(--text-2);margin:0}
+/* 更新弹窗底部的 GitHub 入口：和「完成」同一档按钮，但只做跳转 */
+.gh-btn{display:inline-flex;align-items:center;gap:7px;text-decoration:none}
 body.dark .upd-hero{background:linear-gradient(135deg,rgba(10,132,255,.18),rgba(10,132,255,.03))}
 .set-row{display:flex;align-items:center;gap:12px;padding:11px 0;font-size:var(--fs-sm)}
 .set-row>label{flex:1;color:var(--text)}
@@ -1977,8 +1981,8 @@ body.dark .toast{background:rgba(58,58,60,.9);color:#f2f2f7}
   /* 窄屏侧栏是浮层：它从左边盖住画布，而菜单按钮这时也落在画布层里 —— 会被压住。
      所以窄屏把按钮改回固定定位并抬到浮层之上；侧栏展开时按钮整体移到它的右边，
      既不被压住，也不会压住「代数 / CAS / 命令 / 表格」这排页签。 */
-  .fmenu-btn{position:fixed;top:10px;left:12px;z-index:210}
-  body:has(#sidebar:not(.hidden)) .fmenu-btn{left:calc(var(--sb-w) + 12px)}
+  .fmenu-bar{position:fixed;top:10px;left:12px;z-index:210}
+  body:has(#sidebar:not(.hidden)) .fmenu-bar{left:calc(var(--sb-w) + 12px)}
   /* 窄屏缩放条挪到了右上角；对话区展开是从底部往上长到 84vh，矮窗口会一路顶到顶，
      把缩放条压在下面。给顶部留出一行（按钮 + 间距），缩放条任何时候都点得到。 */
   .ai-dock.sheet-open .ai-sheet{max-height:min(84vh,calc(100vh - 240px))}
@@ -2004,8 +2008,9 @@ body.dark .toast{background:rgba(58,58,60,.9);color:#f2f2f7}
   body:not(.basic):has(#sidebar:not(.hidden)) .ai-dock{left:10px;right:10px;width:auto;transform:none;z-index:200}
   /* 手机上侧栏几乎铺满屏：按钮再「右让」到侧栏右边（302 + 12）会整枚跑到屏幕外，
      手机上就再也点不到菜单。宽屏那套让位逻辑在这里换成「原地留图标 + 页签让位」。 */
-  body:has(#sidebar:not(.hidden)) .fmenu-btn{left:12px}
-  body:has(#sidebar:not(.hidden)) .fmenu-btn .wm{max-width:0;opacity:0;margin-left:-7px}
+  body:has(#sidebar:not(.hidden)) .fmenu-bar{left:12px}
+  /* 手机上侧栏几乎铺满屏，GeoAI 胶囊没有地方待：先收起，版本内容从侧栏的「更新」页签进 */
+  body:has(#sidebar:not(.hidden)) .fmenu-ver{display:none}
   body:has(#sidebar:not(.hidden)) .panel-tabs{padding-left:62px}
 }
 /* ≥1000：AI 输入条居中；右下角只剩缩放 / 图层两列小按钮，不再给图层卡让位 */
@@ -2357,7 +2362,6 @@ try {
           <button data-tab="cas">CAS</button>
           <button data-tab="cmds">命令</button>
           <button data-tab="sheet">表格</button>
-          <button data-tab="update">更新</button>
         </div>
       </div>
 
@@ -2406,11 +2410,6 @@ try {
         </div>
       </div>
 
-      <!-- 更新与版本：一级页签（版本摘要常驻，点标题展开该版本的逐条改动） -->
-      <div class="panel-body hidden" id="paneUpdate">
-        <div class="upd-wrap" id="updatePane"></div>
-      </div>
-
       <div class="input-bar">
         <div class="input-wrap">
           <div class="prefix" id="inputPrefix"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 7 4 12l5 5M15 7l5 5-5 5"></path></svg></div>
@@ -2430,9 +2429,14 @@ try {
       <!-- 菜单按钮挂在画布层：宽屏有侧栏时它落在画布左缘（侧栏右外侧），
            不会盖住「代数 / CAS / 命令 / 表格」这排页签；窄屏侧栏变成浮层时，
            媒体查询把它改回固定定位并抬到浮层之上，同时给页签行留出它占的宽度。 -->
-      <button class="fmenu-btn" id="fmenuBtn" aria-expanded="false" aria-controls="fmenu" aria-label="菜单：文件、编辑、视图、帮助" title="菜单（文件 / 编辑 / 视图 / 帮助）">
-        <span class="mbars" id="fmenuIc" aria-hidden="true"><i></i><i></i><i></i></span><span class="wm">Geo<b>AI</b></span>
-      </button>
+      <div class="fmenu-bar" id="fmenuBar">
+        <button class="fmenu-btn" id="fmenuBtn" aria-expanded="false" aria-controls="fmenu" aria-label="菜单：文件、编辑、视图、帮助" title="菜单（文件 / 编辑 / 视图 / 帮助）">
+          <span class="mbars" id="fmenuIc" aria-hidden="true"><i></i><i></i><i></i></span>
+        </button>
+        <button class="fmenu-btn fmenu-ver" id="versionBtn" aria-label="更新与版本" title="更新与版本">
+          <span class="wm">Geo<b>AI</b></span>
+        </button>
+      </div>
       <div class="gv-badge" id="viewBadge">比例 0.77×   36 px/单位</div>
       <div class="gv-zoom">
         <button id="gvPlay" title="播放全部动画" aria-label="播放全部动画"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4.5 19 12 7 19.5z" fill="currentColor" opacity=".2"></path><path d="M7 4.5 19 12 7 19.5z"></path></svg></button>
@@ -2665,6 +2669,25 @@ try {
       <button class="btn" id="setReset">恢复默认</button>
       <span class="spacer"></span>
       <button class="btn primary" data-close="settingsBackdrop">完成</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ 更新与版本：点左上角 GeoAI 打开的一级弹窗 ══════════ -->
+<div class="backdrop" id="changelogBackdrop">
+  <div class="modal" style="max-width:720px">
+    <div class="modal-head">
+      <h2>更新与版本</h2>
+      <button class="icon-btn" data-close="changelogBackdrop" aria-label="关闭"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6 6 18"></path></svg></button>
+    </div>
+    <div class="modal-body" id="changelogBody"></div>
+    <div class="modal-foot">
+      <a class="btn gh-btn" href="https://github.com/lmz-177/GeoAI" target="_blank" rel="noopener noreferrer">
+        <svg viewBox="0 0 16 16" width="15" height="15" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82a7.5 7.5 0 0 1 2-.27c.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8Z"></path></svg>
+        GitHub 查看更新
+      </a>
+      <span class="spacer"></span>
+      <button class="btn primary" data-close="changelogBackdrop">完成</button>
     </div>
   </div>
 </div>
@@ -3312,15 +3335,23 @@ const state = {
   sheet: { cells: {}, sel: 'A1' },   // 表格视图：单元格原始内容（A1 形式标识符 → 文本/公式）
 };
 /* ── 版本与更新日志 ──
-   版本号在左栏「更新」页签里展示。改完版本号后在 APP_CHANGELOG 最上面补一条
-   （版本、日期、类型、一句摘要、几条说明），新版本会自动出现在版本历史里。 */
-const APP_VERSION = '1.2.0';
+   版本号在左上角 GeoAI 打开的「更新与版本」弹窗里展示。改完版本号后，在
+   APP_CHANGELOG 最上面补一条（版本、日期、类型、一句摘要、几条说明），
+   新版本会自动出现在版本历史里。 */
+const APP_VERSION = '1.2.1';
 const APP_CHANGELOG = [
   {
-    v: '1.2.0', date: '2026-11-13', tag: '界面重构',
-    lead: '「更新与版本」从文件菜单里搬出来，成了左侧一个独立页签：当前版本、本次更新和完整历史都在这里，每个版本先给一句摘要，想看细节点开标题就行。',
+    v: '1.2.1', date: '2026-11-13', tag: '小更新',
+    lead: '更新弹窗底部加了 GitHub 入口，想直接看仓库里的最新改动，点一下就跳过去。',
     notes: [
-      '左侧页签新增「更新」：版本号、更新日期与更新说明集中在同一个页面，不用再翻菜单',
+      '「更新与版本」弹窗底部新增 GitHub 按钮，在新标签页打开项目仓库',
+    ],
+  },
+  {
+    v: '1.2.0', date: '2026-11-13', tag: '界面重构',
+    lead: '点左上角的 GeoAI 就能打开「更新与版本」：当前版本、本次更新和完整历史都在这一个弹窗里，每个版本先给一句摘要，想看细节点开标题就行。',
+    notes: [
+      '左上角的菜单键与 GeoAI 拆成两个按钮：汉堡开菜单，GeoAI 打开更新与版本',
       '版本历史保留每个版本的摘要，点击标题展开该版本的逐条改动，当前版本默认展开',
       '历史版本长期保留，每一次改动都能回看',
       '新增致谢板块',
@@ -6434,10 +6465,10 @@ function sliderGeom(o) {
   } else {
     y = clamp(y, SLIDER_PAD + 16, Math.max(SLIDER_PAD + 20, H - SLIDER_PAD));
     x0 = clamp(x0, SLIDER_PAD, Math.max(SLIDER_PAD, W - w - 30));
-    /* 左上角的浮动菜单键（GeoAI）是 HTML 层，压在画布上会吃掉鼠标事件：
-       轨道落进它的范围就让到键下方，连轨道上方的数值标签也一起露出来，
+    /* 左上角那组浮动胶囊（汉堡 + GeoAI）是 HTML 层，压在画布上会吃掉鼠标事件：
+       轨道落进它的范围就让到按钮下方，连轨道上方的数值标签也一起露出来，
        老存档里的 y=42 也不用重摆 */
-    const menu = document.getElementById('fmenuBtn');
+    const menu = document.getElementById('fmenuBar');
     if (menu) {
       const mr = menu.getBoundingClientRect(), cr = canvas.getBoundingClientRect();
       if (mr.width && mr.height) {
@@ -16488,6 +16519,13 @@ function bindMenus() {
   const btn = $('#fmenuBtn'), dr = $('#fmenu'), scrim = $('#fmenuScrim');
   if (!btn || !dr) return;
   btn.addEventListener('click', e => { e.stopPropagation(); setFmenu(!fmenuState); });
+  /* GeoAI 胶囊 → 打开「更新与版本」弹窗：版本号、说明、版本历史与致谢都在里面 */
+  const vbtn = $('#versionBtn');
+  if (vbtn) vbtn.addEventListener('click', e => {
+    e.stopPropagation();
+    setFmenu(false);
+    showChangelog();
+  });
   if (scrim) scrim.addEventListener('click', () => setFmenu(false));
   const cl = $('#fmenuClose');
   if (cl) cl.addEventListener('click', () => { setFmenu(false); btn.focus({ preventScroll: true }); });
@@ -16521,6 +16559,7 @@ function setFmenu(open) {
   if (s) s.classList.toggle('on', fmenuState);
   /* 触发按钮淡出：抽屉头右侧那枚关闭键负责收起，同时由它演「汉堡 → 叉」 */
   b.classList.toggle('behind', fmenuState);
+  const bar = $('#fmenuBar'); if (bar) bar.classList.toggle('behind', fmenuState);
   b.setAttribute('aria-expanded', fmenuState ? 'true' : 'false');
   d.setAttribute('aria-hidden', fmenuState ? 'false' : 'true');
   /* 焦点进抽屉容器（不落在具体条目上，免得一开抽屉就出现一圈焦点环）；
@@ -16678,11 +16717,10 @@ function toggleAISheet(force) {
 function switchPanel(p) {
   state.panel = p;
   $$('#panelTabs button').forEach(b => b.classList.toggle('on', b.dataset.tab === p));
-  ['tools', 'algebra', 'cas', 'cmds', 'sheet', 'update'].forEach(k => { const el = document.getElementById('pane' + k[0].toUpperCase() + k.slice(1)); if (el) el.classList.toggle('hidden', k !== p); });
+  ['tools', 'algebra', 'cas', 'cmds', 'sheet'].forEach(k => { const el = document.getElementById('pane' + k[0].toUpperCase() + k.slice(1)); if (el) el.classList.toggle('hidden', k !== p); });
   if (p === 'cmds') renderCmdList('');
   if (p === 'sheet') sheetRender();
   if (p === 'cas') casEmptyHint();
-  if (p === 'update') renderUpdatePane();
 }
 /* 侧栏展开 / 收起：'algebra' = 展开，其它 = 收起。
    顶部那枚单键、窄屏侧栏上的收起按钮都走这一条路径，状态不会走岔。
@@ -19149,10 +19187,11 @@ function showAbout() {
     '</div></div>';
   openBackdrop('settingsBackdrop');
 }
-/* 左栏「更新」页签。数据来自 APP_CHANGELOG：改版本号时只要在数组最上面加一条，
-   这页会自动长出新的版本号、摘要与历史记录。每条先给摘要，标题点开看逐条改动。 */
-function renderUpdatePane() {
-  const host = $('#updatePane'); if (!host) return;
+/* 点左上角 GeoAI 打开的「更新与版本」弹窗。数据来自 APP_CHANGELOG：改版本号时
+   只要在数组最上面加一条，这里会自动长出新的版本号、摘要与历史记录。
+   每条先给摘要，标题点开看逐条改动。 */
+function showChangelog() {
+  const host = $('#changelogBody'); if (!host) return;
   const cur = APP_CHANGELOG[0] || { v: APP_VERSION, date: '', tag: '', lead: '', notes: [] };
   const items = APP_CHANGELOG.map((e, i) => {
     const open = i === 0;
@@ -19180,6 +19219,8 @@ function renderUpdatePane() {
     '感谢每一位用这块画板讲题、备课、出卷和做题的人——你们反馈的每一条「这条命令报错」「这个按钮不顺手」，都直接变成了这里的一条更新；' +
     '也感谢所有开源字体与工具链的作者。' +
     '</p>';
+  host.scrollTop = 0;
+  openBackdrop('changelogBackdrop');
 }
 function aiHelp() {
   toggleAI(true);
@@ -19513,8 +19554,8 @@ function init() {
     runInput();
   });
   $('#panelTabs').addEventListener('click', e => { const b = e.target.closest('button'); if (b) switchPanel(b.dataset.tab); });
-  /* 更新页签的版本条目：点标题展开 / 收起该版本的逐条说明 */
-  $('#paneUpdate').addEventListener('click', e => {
+  /* 更新弹窗里的版本条目：点标题展开 / 收起该版本的逐条说明 */
+  $('#changelogBody').addEventListener('click', e => {
     const h = e.target.closest('.upd-head'); if (!h) return;
     const it = h.closest('.upd-item'); if (!it) return;
     const open = it.classList.toggle('open');
@@ -19609,7 +19650,7 @@ async function runUITest() {
     /* 确认框 / 输入框是 Promise：只把 DOM 关掉会留下悬挂的回调，得走各自的 resolve 正常收尾 */
     if ($('#confirmBackdrop').classList.contains('on')) resolveConfirm(false);
     if ($('#promptBackdrop').classList.contains('on')) resolvePrompt(false);
-    ['settingsBackdrop', 'layerBackdrop', 'probBackdrop', 'confirmBackdrop', 'promptBackdrop', 'shareBackdrop'].forEach(closeBackdrop);
+    ['settingsBackdrop', 'changelogBackdrop', 'layerBackdrop', 'probBackdrop', 'confirmBackdrop', 'promptBackdrop', 'shareBackdrop'].forEach(closeBackdrop);
     setFmenu(false);          /* 抽屉是浮层，用例之间也要收掉，免得挡住后续点击 */
     $('#ctxMenu').classList.remove('on');
   };
@@ -20244,20 +20285,23 @@ async function runUITest() {
     const errs = state.objects.filter(o => o.error && !o.aux);
     if (errs.length) throw new Error('构造里有错误：' + errs.map(x => x.label + ':' + x.error).join(' | '));
   });
-  /* 更新与版本页签 + 工具参数内联输入（不再弹二级对话框） */
-  await A('更新页签与工具内联输入', async () => {
+  /* 更新与版本弹窗 + 工具参数内联输入（不再弹二级对话框） */
+  await A('更新弹窗与工具内联输入', async () => {
     executeLine('DeleteAll()');
-    const tab = $('#panelTabs button[data-tab="update"]');
-    if (!tab) throw new Error('左侧没有「更新」页签');
-    tab.click(); await sleep(0);
-    if (!$('#paneUpdate') || $('#paneUpdate').classList.contains('hidden')) throw new Error('更新页签没有对应面板');
-    const ver = ($('#updatePane .upd-num') || {}).textContent;
+    /* 左上角的 GeoAI 胶囊打开版本弹窗；汉堡仍只管菜单，两者各是一枚按钮 */
+    const vb = $('#versionBtn'), mb = $('#fmenuBtn');
+    if (!vb) throw new Error('左上角没有 GeoAI 版本按钮');
+    if (!mb || mb.contains(vb) || vb.contains(mb)) throw new Error('汉堡与 GeoAI 应该拆成两枚按钮');
+    vb.click(); await sleep(0);
+    if ($('#fmenu').classList.contains('on')) throw new Error('点 GeoAI 不该同时打开菜单抽屉');
+    if (!$('#changelogBackdrop').classList.contains('on')) throw new Error('点 GeoAI 没有打开更新与版本弹窗');
+    const ver = ($('#changelogBody .upd-num') || {}).textContent;
     if (ver !== 'v' + APP_VERSION) throw new Error('版本号不对：' + ver);
-    const items = $$('#updatePane .upd-item');
+    const items = $$('#changelogBody .upd-item');
     if (!items.length) throw new Error('没有版本条目');
     if (!items[0].classList.contains('open')) throw new Error('当前版本应默认展开');
     if (!items[0].querySelector('.upd-detail .upd-notes li')) throw new Error('当前版本没有详细介绍');
-    const sums = $$('#updatePane .upd-item .upd-sum');
+    const sums = $$('#changelogBody .upd-item .upd-sum');
     if (sums.length !== items.length || !sums[0].textContent.trim()) throw new Error('每个版本都应保留摘要');
     const old = items[1];
     if (old.classList.contains('open')) throw new Error('历史版本不应默认展开');
@@ -20266,10 +20310,13 @@ async function runUITest() {
     if (old.querySelector('.upd-head').getAttribute('aria-expanded') !== 'true') throw new Error('展开后 aria-expanded 不对');
     old.querySelector('.upd-head').click(); await sleep(0);
     if (old.classList.contains('open')) throw new Error('再点一次没有收起');
-    if (!$('#updatePane .upd-thanks')) throw new Error('缺少致谢板块');
-    if ($('#updatePane').textContent.indexOf('版本号规则') >= 0) throw new Error('不该再出现版本号规则');
+    if (!$('#changelogBody .upd-thanks')) throw new Error('缺少致谢板块');
+    const gh = $('#changelogBackdrop .gh-btn');
+    if (!gh || gh.href.indexOf('github.com/lmz-177/GeoAI') < 0 || gh.target !== '_blank') throw new Error('更新弹窗缺少 GitHub 入口');
+    if ($('#changelogBody').textContent.indexOf('版本号规则') >= 0) throw new Error('不该再出现版本号规则');
     if ($('#settingsBackdrop').classList.contains('on')) throw new Error('更新内容不该挤在设置弹窗里');
-    switchPanel('tools'); await sleep(0);
+    if ($('#panelTabs button[data-tab="update"]')) throw new Error('更新不该是左侧页签');
+    closeBackdrop('changelogBackdrop');
     setTool('functionPlot');
     const inp = $('.tool-hint.ask .th-input');
     if (!inp) throw new Error('工具参数没有在提示条里内联输入');
@@ -20326,18 +20373,18 @@ async function runUITest() {
     if (cs.transitionProperty.indexOf('width') < 0 || parseFloat(cs.transitionDuration) <= 0) throw new Error('侧栏没有展开 / 收起动画：' + cs.transitionProperty + ' ' + cs.transitionDuration);
     if (getComputedStyle(btn).fontSize !== '13px') throw new Error('单键字号没走 --fs-xs：' + getComputedStyle(btn).fontSize);
   });
-  /* 6c. 左侧面板页签：与顶栏同一枚分段控件（滑块滑到当前页，六格等宽） */
+  /* 6c. 左侧面板页签：与顶栏同一枚分段控件（滑块滑到当前页，五格等宽） */
   await A('面板页签:分段控件', async () => {
     const seg = $('#ptSeg'), thumb = seg.querySelector('.seg-thumb');
     if (!thumb) throw new Error('面板页签缺少滑动块');
     const tabs = Array.from(seg.querySelectorAll('button[data-tab]'));
-    if (tabs.length !== 6) throw new Error('分段格子数不对：' + tabs.length);
+    if (tabs.length !== 5) throw new Error('分段格子数不对：' + tabs.length);
     if (seg.getBoundingClientRect().width < 40) throw new Error('面板分段控件不可见，滑块位置量不出来');
     const ts = getComputedStyle(thumb);
     if (ts.transitionProperty.indexOf('transform') < 0 || parseFloat(ts.transitionDuration) <= 0) throw new Error('滑块没有滑动过渡：' + ts.transitionProperty);
-    /* 六格必须等宽：滑块是轨道的 1/6，格子靠文字长度凑宽窄的话滑块就对不齐了 */
+    /* 五格必须等宽：滑块是轨道的 1/5，格子靠文字长度凑宽窄的话滑块就对不齐了 */
     const w0 = tabs[0].getBoundingClientRect().width;
-    if (tabs.some(t => Math.abs(t.getBoundingClientRect().width - w0) > 1)) throw new Error('六个分段没有等宽');
+    if (tabs.some(t => Math.abs(t.getBoundingClientRect().width - w0) > 1)) throw new Error('五个分段没有等宽');
     /* 量位置前关掉过渡，理由同顶栏那条：虚拟时钟下会量到滑块滑到一半的位置 */
     thumb.style.transition = 'none';
     const L = el => el.getBoundingClientRect().left, R = el => el.getBoundingClientRect().right;
@@ -21321,7 +21368,7 @@ async function runUITest() {
     if (!has('#splitterL', 'display:none')) throw new Error('窄屏没有隐藏无用的分隔条');
     if (!has('.sb-close', 'display:flex')) throw new Error('窄屏没有显示侧栏收起按钮');
     if (!has('.gv-zoom', 'bottom:auto')) throw new Error('窄屏没有把缩放控件从底部挪开');
-    if (!has('.fmenu-btn', 'z-index:210')) throw new Error('窄屏没有把菜单按钮提到侧栏浮层之上');
+    if (!has('.fmenu-bar', 'z-index:210')) throw new Error('窄屏没有把菜单按钮提到侧栏浮层之上');
     if (!has('.panel-tabs', 'padding')) throw new Error('窄屏没有给菜单按钮在页签行里留出位置');
     /* 极窄窗口：抽屉要占到几乎整宽，组名与快捷键才写得下 */
     const tiny = leaf.filter(r => r.q.replace(/\s+/g, '').indexOf('max-width:620px') >= 0);
@@ -21346,11 +21393,11 @@ async function runUITest() {
       if (parseFloat(getComputedStyle(document.querySelector('.gv-zoom')).top) > 60) throw new Error('窄屏下缩放控件没挪到顶部');
       /* 侧栏浮层盖住画布时，菜单按钮 / 视图切换必须仍在其之上；绘图工具在侧栏内部，跟着侧栏一起在上层 */
       const zSb = +getComputedStyle($('#sidebar')).zIndex;
-      if (!(+getComputedStyle($('#fmenuBtn')).zIndex > zSb)) throw new Error('窄屏下菜单按钮没盖在侧栏之上：btn=' + getComputedStyle($('#fmenuBtn')).zIndex + ' sidebar=' + zSb);
+      if (!(+getComputedStyle($('#fmenuBar')).zIndex > zSb)) throw new Error('窄屏下菜单按钮没盖在侧栏之上：btn=' + getComputedStyle($('#fmenuBar')).zIndex + ' sidebar=' + zSb);
       if (!(+getComputedStyle($('#persp')).zIndex > zSb)) throw new Error('窄屏下视图切换没盖在侧栏之上');
       if (!$('#sidebar #toolbar')) throw new Error('绘图工具没有放进左侧代数面板');
       /* 菜单按钮不能压住页签：两者矩形不相交 */
-      const mr = $('#fmenuBtn').getBoundingClientRect(), pr = $('.pt-seg').getBoundingClientRect();
+      const mr = $('#fmenuBar').getBoundingClientRect(), pr = $('.pt-seg').getBoundingClientRect();
       const over = mr.right > pr.left && mr.left < pr.right && mr.bottom > pr.top && mr.top < pr.bottom;
       if (pr.width > 2 && over) throw new Error('窄屏菜单按钮压住了面板页签：'
         + Math.round(mr.left) + '-' + Math.round(mr.right) + ' vs ' + Math.round(pr.left) + '-' + Math.round(pr.right));
@@ -21541,7 +21588,7 @@ async function runUITest() {
     const gTop = sliderGeom(sv);
     /* 只有菜单键真的横向压住轨道时才要求下移：窄屏侧栏展开时菜单键被推到侧栏右侧，
        此时轨道在画布左缘并不与它重叠，不该强求 y>=60 */
-    const mb = document.getElementById('fmenuBtn');
+    const mb = document.getElementById('fmenuBar');
     const mr = mb ? mb.getBoundingClientRect() : null;
     const overlapsKey = mr && mr.width && mr.height &&
       gTop.x0 + gTop.w > (mr.left - rect.left) - 8 && gTop.x0 < (mr.right - rect.left) + 8;
