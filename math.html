@@ -7083,6 +7083,9 @@ function screenLenPts(pts) {
   return d;
 }
 function screenLenList(list) { let d = 0; for (const s of (list || [])) d += screenLenPts(s); return d; }
+/* 只有真在播入场动画时才去量路径长度：长函数、轨迹动辄上千个采样点，
+   每帧都量一遍纯属白烧 CPU（静止绘制时传 0 就是走正常虚线样式）。 */
+function revLen(o, fn) { return (o._p == null || o._p >= 1) ? 0 : fn(); }
 /* 非路径类对象（点 / 文本 / 图片 / 控件）统一淡入 */
 function withReveal(o, fn) {
   const p = o._p == null ? 1 : o._p;
@@ -7145,7 +7148,7 @@ function draw() {
   for (const o of objs) {
     /* 参数曲线不属于圆锥曲线，单独绘制采样折线 */
     if (o.type === 'curve') {
-      if (o.data.poly) { ctx.beginPath(); for (const s of o.data.poly) strokePolyline(s); strokeObj(o, screenLenList(o.data.poly)); }
+      if (o.data.poly) { ctx.beginPath(); for (const s of o.data.poly) strokePolyline(s); strokeObj(o, revLen(o, () => screenLenList(o.data.poly))); }
       continue;
     }
     if (isConicType(o)) {
@@ -7166,16 +7169,15 @@ function draw() {
       } else {
         /* 圆锥曲线按当前视图实时重建：解析曲线用参数采样，缩小放大都保持平滑 */
         const pp = ensureConicPoly(o);
-        if (pp && pp.length) { ctx.beginPath(); for (const s of pp) strokePolyline(s); strokeObj(o, screenLenList(pp)); }
+        if (pp && pp.length) { ctx.beginPath(); for (const s of pp) strokePolyline(s); strokeObj(o, revLen(o, () => screenLenList(pp))); }
       }
       if (o.type === 'polygon' && o.data.pts) {
         ctx.beginPath();
         o.data.pts.forEach((p, i) => i ? ctx.lineTo(toScreenX(p.x), toScreenY(p.y)) : ctx.moveTo(toScreenX(p.x), toScreenY(p.y)));
         ctx.closePath();
-        const per = screenLenPts(o.data.pts) + Math.hypot(
+        strokeObj(o, revLen(o, () => screenLenPts(o.data.pts) + Math.hypot(
           toScreenX(o.data.pts[0].x) - toScreenX(o.data.pts[o.data.pts.length - 1].x),
-          toScreenY(o.data.pts[0].y) - toScreenY(o.data.pts[o.data.pts.length - 1].y));
-        strokeObj(o, per);
+          toScreenY(o.data.pts[0].y) - toScreenY(o.data.pts[o.data.pts.length - 1].y))));
       }
       if ((o.type === 'circle' || o.type === 'conic') && o.data.center && o.def.showCenter) {
         dot(toScreenX(o.data.center.x), toScreenY(o.data.center.y), 2.5, rc(o.color));
@@ -7187,7 +7189,7 @@ function draw() {
     if (o.type === 'function' && o.data.polys) {
       ctx.beginPath();
       for (const poly of o.data.polys) poly.forEach((p, i) => i ? ctx.lineTo(toScreenX(p.x), toScreenY(p.y)) : ctx.moveTo(toScreenX(p.x), toScreenY(p.y)));
-      strokeObj(o, screenLenList(o.data.polys));
+      strokeObj(o, revLen(o, () => screenLenList(o.data.polys)));
     }
   }
   /* 4. 直线族 */
@@ -7216,14 +7218,14 @@ function draw() {
       }
     } else if (o.type === 'polyline' && o.data.pts) {
       ctx.beginPath(); o.data.pts.forEach((p, i) => i ? ctx.lineTo(toScreenX(p.x), toScreenY(p.y)) : ctx.moveTo(toScreenX(p.x), toScreenY(p.y)));
-      strokeObj(o, screenLenPts(o.data.pts));
+      strokeObj(o, revLen(o, () => screenLenPts(o.data.pts)));
     } else if (o.type === 'locus' && o.data.pts) {
       /* 分段绘制：轨迹在「没有交点」的区段真的断开，不会跨过缺口连出假弦 */
       const bs = (o.data.branches && o.data.branches.length) ? o.data.branches : [o.data.pts];
       for (const b of bs) {
         if (b.length < 2) continue;
         ctx.beginPath(); b.forEach((p, i) => i ? ctx.lineTo(toScreenX(p.x), toScreenY(p.y)) : ctx.moveTo(toScreenX(p.x), toScreenY(p.y)));
-        strokeObj(o, screenLenPts(b));
+        strokeObj(o, revLen(o, () => screenLenPts(b)));
       }
     }
   }
@@ -7310,7 +7312,7 @@ function draw() {
     if (o.type !== 'pen' || !o.data.pts || o.data.pts.length < 2) continue;
     ctx.beginPath();
     o.data.pts.forEach((p, i) => i ? ctx.lineTo(toScreenX(p.x), toScreenY(p.y)) : ctx.moveTo(toScreenX(p.x), toScreenY(p.y)));
-    strokeObj(o, screenLenPts(o.data.pts));
+    strokeObj(o, revLen(o, () => screenLenPts(o.data.pts)));
   }
   /* 7.5 画布上的滑动条与控件（屏幕固定，画在最上层） */
   for (const o of objs) if (o.type === 'slider') withReveal(o, () => drawCanvasSlider(o));
@@ -11817,18 +11819,21 @@ function stripMathComment(s) {
 }
 /* 指令：框选区域截图 → 直接进 AI 附件。
    shot(x1,y1,x2,y2) / 截图 x1,y1,x2,y2，坐标是世界坐标。
-   不要求这块区域当前可见：把主画布临时改成这块区域的尺寸与视野、同步画一遍、
+   不算要求这块区域当前可见：把主画布临时改成这块区域的尺寸与视野、同步画一遍、
    取像素后立刻还原。全程不让出事件循环，浏览器不会把中间帧画出来，等于后台渲染。
-   输出边长 720（长边封顶），区域很小也能得到清晰图片。 */
+   输出边长 640（长边封顶），区域很小也能得到清晰图片。
+   注意 1x 渲染（不用 devicePixelRatio）：图是给模型看的，视网膜 2x 会让像素量翻四倍，
+   JPEG 编码要上百毫秒，主线程一卡就是肉眼可见的掉帧。 */
 function canvasShotRegion(x1, y1, x2, y2) {
   const sx = Math.min(x1, x2), sy = Math.min(y1, y2), ex = Math.max(x1, x2), ey = Math.max(y1, y2);
   const wW = ex - sx, wH = ey - sy;
   if (!(wW > 1e-9) || !(wH > 1e-9)) throw new Error('截图区域的宽或高为 0，请给出两个不同的角点');
   if (state.aiImages.length >= AI_IMG_MAX) throw new Error('一次最多 ' + AI_IMG_MAX + ' 张图片，先删一张再截');
-  const OUT = 720;
+  const OUT = 640;
   const k = Math.min(OUT / wW, OUT / wH);
   const outW = Math.max(48, Math.round(wW * k)), outH = Math.max(48, Math.round(wH * k));
-  const dpr = window.devicePixelRatio || 1;
+  /* 固定 1x：AI 只看内容，不需要视网膜精度，2x 会让 JPEG 编码耗时翻四倍 */
+  const dpr = 1;
   const saved = {
     w: canvas.width, h: canvas.height, cssW: canvas.style.width, cssH: canvas.style.height,
     view: { ...state.view }, sel: state.selection.slice(), hov: state.hover,
@@ -11848,7 +11853,7 @@ function canvasShotRegion(x1, y1, x2, y2) {
     /* 也别等入场动画：把还没画完的对象一律按画完处理，否则发给 AI 的图里是半截图形 */
     for (const o of state.objects) o._bornAt = 0;
     draw();
-    data = canvas.toDataURL('image/jpeg', .92);
+    data = canvas.toDataURL('image/jpeg', .85);
   } finally {
     canvas.style.width = saved.cssW;
     canvas.style.height = saved.cssH;
@@ -25643,17 +25648,21 @@ function stepsCardHtml(code) {
     items.map(t => '<li>' + esc(t) + '</li>').join('') + '</ol></div>';
 }
 function extractGeoCommands(text) {
-  /* 先剔掉 search / ask / steps 三种「对控件说的话」——原来的正则允许空语言标记，
-     会把它们里面的检索词、问题文案、步骤描述也当成命令去执行。 */
-  const src = String(text).replace(/```(search|ask|steps)\s*\n?[\s\S]*?```/gi, '');
+  /* 先剔掉 search / ask / steps / done 四种「对控件说的话」——原来的正则允许空语言标记，
+     会把它们里面的检索词、问题文案、步骤描述、结束语也当成命令去执行（「未定义的变量 done」
+     就是这么来的）。 */
+  const src = String(text).replace(/```(search|ask|steps|done)\s*\n?[\s\S]*?```/gi, '');
   const out = [];
   const re = /```(?:geogebra|GeoGebra|ggb|ggbscript|ggbcode|)\s*([\s\S]*?)```/gi;
   let m;
   while ((m = re.exec(src)) !== null) {
-    m[1].split(/\r?\n/).forEach(l => { const t = l.trim(); if (t && !t.startsWith('//') && !t.startsWith('#')) out.push(t.replace(/^[-*•]\s*/, '')); });
+    m[1].split(/\r?\n/).forEach(l => { const t = l.trim(); if (t && !t.startsWith('//') && !t.startsWith('#') && !isAiDoneLine(t)) out.push(t.replace(/^[-*•]\s*/, '')); });
   }
   return out;
 }
+/* 模型偶尔会把结束标记写成 geogebra 块里的一行「done」——那是收尾信号，不是命令。
+   不认出来就会执行成「未定义的变量 done」，在清单里挂一条莫名其妙的红字。 */
+function isAiDoneLine(t) { return /^(done|finish(ed)?|完成|结束|作图完成)[.。!！]?$/i.test(String(t || '').trim()); }
 function buildCanvasContext() {
   const list = state.objects.filter(o => !o.aux);
   if (!list.length) return '【当前画布】空（还没有任何对象）';
@@ -26012,16 +26021,38 @@ async function aiSend() {
      立刻入画，再继续等下一块。execCount 保证同一块只跑一次；pushUndo 推迟到第一块
      真正执行前，整轮作图仍是一步撤销。 */
   let execCount = 0, streamResults = [], undoPushed = false, turnBefore = null;
+  let streamSteps = 0;   /* 首轮回复里已经画了几步（ReAct 的步骤号接着往下排） */
   const geoBlocks = (s) => {
-    const src = String(s).replace(/```(search|ask|steps)\s*\n?[\s\S]*?```/gi, '');
+    /* 和 extractGeoCommands 同一套规则：search / ask / steps / done 都不是命令块，
+       尤其 done —— 空语言标记的正则会把它也算进来，最后一行「done」就被执行成变量了 */
+    const src = String(s).replace(/```(search|ask|steps|done)\s*\n?[\s\S]*?```/gi, '');
     const out = [];
     const re = /```(?:geogebra|GeoGebra|ggb|ggbscript|ggbcode|)\s*([\s\S]*?)```/gi;
-    let m;
-    while ((m = re.exec(src)) !== null) out.push(m[1]);
+    let m, last = 0;
+    while ((m = re.exec(src)) !== null) {
+      out.push({ code: m[1], pre: src.slice(last, m.index) });
+      last = re.lastIndex;
+    }
     return out;
   };
+  /* 代码块前面那段文字里通常是一行 Thought：取最后一条带 Thought 的行，没有就用最后一行 */
+  const thoughtOf = (pre) => {
+    const lines = String(pre || '').split(/\r?\n/).map(l => l.replace(/[*_`>#]+/g, '').trim()).filter(Boolean);
+    if (!lines.length) return '';
+    const th = [...lines].reverse().find(l => /^(thought|思考|思路)\s*[:：]/i.test(l)) || lines[lines.length - 1];
+    return th.replace(/^(thought|思考|思路)\s*[:：]\s*/i, '').slice(0, 90);
+  };
+  const mkStepCard = (n, thought, label) => {
+    const el = document.createElement('div');
+    el.className = 'ai-step';
+    el.innerHTML = '<div class="ai-step-hd"><span class="ai-step-n">第 ' + n + ' 步</span><span class="ai-step-go"></span></div>';
+    el.querySelector('.ai-step-go').textContent = thought || label || '作图';
+    body.appendChild(el);
+    keepBottom();
+    return el;
+  };
   const parseCmds = (text) => String(text).split(/\r?\n/).map(l => l.trim())
-    .filter(t => t && !t.startsWith('//') && !t.startsWith('#'))
+    .filter(t => t && !t.startsWith('//') && !t.startsWith('#') && !isAiDoneLine(t))
     .map(t => t.replace(/^[-*•]\s*/, ''));
   /* 执行一组命令；host 传了就把执行清单挂到那一步的块里（分步作图） */
   const execLines = (cmds, host) => {
@@ -26033,7 +26064,6 @@ async function aiSend() {
     renderExec(rs, host);   /* 每步单独一条执行结果，画布同步更新 */
     return rs;
   };
-  const execOneBlock = (text, host) => execLines(parseCmds(text), host);
   let lastExecLen = -1;
   streamExec = (full) => {
     const s = String(full);
@@ -26042,7 +26072,16 @@ async function aiSend() {
     /* 出现分步计划就说明这轮要走「逐步单独请求」：规划轮不执行任何命令，免得和后续步骤重复 */
     if (/```steps\b/i.test(s)) return;
     const blocks = geoBlocks(s);
-    for (; execCount < blocks.length; execCount++) execOneBlock(blocks[execCount]);
+    for (; execCount < blocks.length; execCount++) {
+      const b = blocks[execCount];
+      const cmds = parseCmds(b.code);
+      /* 只有 done 的块不建空步骤，也别让步骤号跳号 */
+      if (!cmds.length) continue;
+      /* 首轮回复常常一口气写好几个代码块：每块都单独记成一步（标题取模型自己的 Thought），
+         否则所有执行结果会堆成末尾一坨红绿清单，看不出「第几步画了什么」 */
+      const card = mkStepCard(++streamSteps, thoughtOf(b.pre));
+      execLines(cmds, card);
+    }
   };
   const noteFix = (n, cnt, extra) => {
     const el = document.createElement('div');
@@ -26214,15 +26253,16 @@ async function aiSend() {
           (failed ? '\n其中 ' + failed + ' 条失败：请换一种构造或改用正确的对象名，不要原样重发同一条命令。'
             : '\n继续下一步；如果整幅图已经画完，就输出 ```done 结束。');
       };
-      let actionNo = 0;
+      /* 步骤号接着首轮流式阶段已经画过的块往下排，界面上不会出现两个「第 1 步」 */
+      let actionNo = streamSteps;
       /* 第一步：首轮回复已经边流式边画上图了，把它的执行结果作为第一条 Observation 回传 */
       const firstCmds = extractGeoCommands(curContent);
       if (firstCmds.length) {
-        actionNo = 1;
+        if (!actionNo) actionNo = 1;
         stepOk += streamResults.filter(r => r.ok).length;
         /* 首轮失败数只作初值；后面任何一步整体成功都会被清零（见下） */
         stepBadN = streamResults.filter(r => !r.ok).length;
-        stepLog.push('第 1 步：' + firstCmds.join('; '));
+        stepLog.push('第 ' + actionNo + ' 步：' + firstCmds.join('; '));
         planMsgs.push({ role: 'assistant', content: curContent });
         planMsgs.push({ role: 'user', content: obsText(streamResults, curContent) });
         if (/```done\b/i.test(curContent)) reactDone = true;
