@@ -3532,7 +3532,7 @@ const APP_CHANGELOG = [
       '计算精度拆成 π 的位数、e 的位数、除法三项：除法可选「算到循环节」或「固定位数」，改完立即生效',
       'CAS 标题栏实时显示当前精度，点它直接打开设置的计算精度分组',
       '更新与版本的装载动画先显示 GeoAI 与动态 logo，再放出当前版本号；装载时长随机 2–5 秒',
-      '打开网页时新增启动画面：同步显示 GeoAI 与动态 logo，随机停 2–5 秒后淡出，期间提示语每 0.7 秒切换一句',
+      '打开网页时新增启动画面：第一次打开真正等字体与首帧就绪（至少 650ms），之后再打开随机停 2–5 秒；期间提示语每 0.7 秒切换一句',
       '输入框上的 hello 手写动画等启动画面结束后才开始播放，不会被装载挡掉',
       '思考强度面板改为对齐输入框中心，工具排增减按钮时不再左右乱跳',
       '从本版起版本条目记录代码量',
@@ -20856,8 +20856,9 @@ function init() {
   morphBind($('#brandLogo'), 22);
   morphBind($('#aiiThink'), 22);
   morphBind($('#updBootLogo'), 54);   /* 更新与版本弹窗装载层的动态 logo */
-  /* 网页首次打开时的启动画面：同步显示，初始化完成后随机停 2–5 秒再淡出；
-     自测模式直接撤掉，别拖慢用例 */
+  /* 网页首次打开时的启动画面：同步显示，装载结束再淡出。
+     第一次打开是真的等加载（init 已跑完 → 等字体与首帧画完，至少 650ms）；
+     之后打开才随机停 2–5 秒。自测模式直接撤掉，别拖慢用例。 */
   const splash = $('#bootSplash');
   if (splash) {
     if (TEST_MODE) { splash.remove(); markBooted(); }
@@ -20865,13 +20866,26 @@ function init() {
       const stopTip = bootTips($('#bootSplashTip'));
       const sl = $('#bootSplashLogo');
       if (sl) { morphBind(sl, 64); morphSetLive(sl, true); }
-      setTimeout(() => {
+      let seen = false;
+      try { seen = !!localStorage.getItem('ggai_booted'); } catch (e) { }
+      const finish = () => {
         stopTip();
         splash.classList.add('off');
         if (sl) morphSetLive(sl, false);
         markBooted();                       /* 装载完成后 hello 才开始写字 */
+        try { localStorage.setItem('ggai_booted', '1'); } catch (e) { }
         setTimeout(() => splash.remove(), 700);
-      }, bootDelay());
+      };
+      if (!seen) {
+        /* 首次打开：这次等的是真实进度 —— 字体就绪 + 两帧后的首次绘制 */
+        const t0 = performance.now();
+        Promise.all([
+          (document.fonts && document.fonts.ready) ? document.fonts.ready : Promise.resolve(),
+          new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r))),
+        ]).then(() => setTimeout(finish, Math.max(0, 650 - (performance.now() - t0))));
+      } else {
+        setTimeout(finish, bootDelay());
+      }
     }
   } else markBooted();
   const fIc = $('#aiFoldIc'); if (fIc) fIc.innerHTML = ICON.chevDown;
