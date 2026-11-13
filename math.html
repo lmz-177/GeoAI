@@ -160,6 +160,9 @@ input:focus-visible,textarea:focus-visible,select:focus-visible,
 .bs-brand{display:flex;align-items:center;gap:14px}
 .bs-col{display:flex;flex-direction:column;align-items:center;gap:16px}
 .bs-tip{font-size:var(--fs-xs);color:var(--text-3);letter-spacing:.02em}
+/* 提示语每换一句都重新淡入一下 */
+.tip-in{animation:tipIn .28s var(--ease-out) both}
+@keyframes tipIn{from{opacity:0;transform:translateY(3px)}to{opacity:1;transform:none}}
 .bs-logo{display:inline-flex;width:64px;height:64px}
 .bs-word{font-size:var(--fs-display);font-weight:800;letter-spacing:-.02em;color:var(--text)}
 /* 等宽数字：数字占位宽度一致，缩放比例 / 代数值 / 计数 / 百分比刷新时不会左右跳。
@@ -3529,7 +3532,7 @@ const APP_CHANGELOG = [
       '计算精度拆成 π 的位数、e 的位数、除法三项：除法可选「算到循环节」或「固定位数」，改完立即生效',
       'CAS 标题栏实时显示当前精度，点它直接打开设置的计算精度分组',
       '更新与版本的装载动画先显示 GeoAI 与动态 logo，再放出当前版本号；装载时长随机 2–5 秒',
-      '打开网页时新增启动画面：同步显示 GeoAI 与动态 logo，随机停 2–5 秒后淡出，装载时轮换一句提示语',
+      '打开网页时新增启动画面：同步显示 GeoAI 与动态 logo，随机停 2–5 秒后淡出，期间提示语每 0.7 秒切换一句',
       '输入框上的 hello 手写动画等启动画面结束后才开始播放，不会被装载挡掉',
       '思考强度面板改为对齐输入框中心，工具排增减按钮时不再左右乱跳',
       '从本版起版本条目记录代码量',
@@ -20506,7 +20509,7 @@ function updCalHTML() {
    每条先给摘要，标题点开看逐条改动。 */
 function showChangelog() {
   renderChangelog();
-  const tip = $('#updBootTip'); if (tip) tip.textContent = bootTip();
+  const stopTip = bootTips($('#updBootTip'));
   /* 弹窗先弹出来，内容区盖一层装载动画；随机 2–5 秒后淡出，
      再让版本号出现、版本历史跟上。整页不变灰 */
   const bd = $('#changelogBackdrop');
@@ -20516,13 +20519,26 @@ function showChangelog() {
     morphSetLive($('#updBootLogo'), true);   /* 装载期间 logo 走形变动画 */
     bd._bootT = setTimeout(() => {
       bd.classList.remove('booting');
+      stopTip();
       morphSetLive($('#updBootLogo'), false);  /* 装载结束定妆，省电 */
     }, bootDelay());
   }
 }
-/* 装载时随便配的一句提示 */
+/* 装载提示：随机起点，每 0.7 秒换一句，直到装载结束 */
 const BOOT_TIPS = ['正在铺开坐标系…', '正在磨好一支笔…', '正在给函数描点…', '正在擦亮圆规…', '正在摆正三角板…', '正在数 π 的位数…', '正在整理画布…'];
-function bootTip() { return BOOT_TIPS[Math.floor(Math.random() * BOOT_TIPS.length)]; }
+function bootTips(el) {
+  if (!el) return () => {};
+  let i = Math.floor(Math.random() * BOOT_TIPS.length);
+  const show = () => {
+    el.textContent = BOOT_TIPS[i];
+    el.classList.remove('tip-in');
+    void el.offsetWidth;               /* 强制回流，让同一段动画能重新播 */
+    el.classList.add('tip-in');
+  };
+  show();
+  const t = setInterval(() => { i = (i + 1) % BOOT_TIPS.length; show(); }, 700);
+  return () => clearInterval(t);
+}
 /* 装载时长随机 2–5 秒：每次打开都不一样 */
 function bootDelay() { return 2000 + Math.round(Math.random() * 3000); }
 /* 启动画面结束后才允许写字：hello 的笔画动画与逐字提示都等这一刻 */
@@ -20846,10 +20862,11 @@ function init() {
   if (splash) {
     if (TEST_MODE) { splash.remove(); markBooted(); }
     else {
-      const tip = $('#bootSplashTip'); if (tip) tip.textContent = bootTip();
+      const stopTip = bootTips($('#bootSplashTip'));
       const sl = $('#bootSplashLogo');
       if (sl) { morphBind(sl, 64); morphSetLive(sl, true); }
       setTimeout(() => {
+        stopTip();
         splash.classList.add('off');
         if (sl) morphSetLive(sl, false);
         markBooted();                       /* 装载完成后 hello 才开始写字 */
