@@ -1853,40 +1853,46 @@ body:has(.aii-eff.on) .ai-dock{z-index:230}
 }
 .uc-toggle:hover{background:var(--hover)}
 .uc-toggle>svg{width:16px;height:16px;color:var(--accent);flex:0 0 auto}
-.uc-t-cnt{margin-left:auto;font-size:var(--fs-3xs);font-weight:500;color:var(--text-3);font-variant-numeric:tabular-nums}
-.uc-chev{color:var(--text-3);font-size:var(--fs-sm);line-height:1;transition:transform var(--t)}
+.uc-chev{margin-left:auto;color:var(--text-3);font-size:var(--fs-sm);line-height:1;transition:transform var(--t)}
 .uc-toggle.on .uc-chev{transform:rotate(90deg)}
 .upd-cal{
   margin-bottom:18px;padding:12px 12px 10px;border-radius:var(--r-lg);
   background:var(--panel-2);border:.5px solid var(--border);box-shadow:var(--hi);
   -webkit-backdrop-filter:blur(18px) saturate(180%);backdrop-filter:blur(18px) saturate(180%);
 }
-.uc-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px}
-.uc-month{font-size:var(--fs-sm);font-weight:800;color:var(--text);font-variant-numeric:tabular-nums}
-.uc-total{font-size:var(--fs-3xs);color:var(--text-3);margin-left:auto;white-space:nowrap}
-.uc-nav{display:flex;gap:2px}
-.uc-nav button{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:var(--text-2);transition:background-color .18s ease,color .18s ease}
+/* 月历的头部：「11 月 | 2026 年」居中，翻月箭头分列卡片两端 */
+.uc-head{position:relative;display:flex;align-items:center;justify-content:center;height:34px;margin-bottom:4px}
+.uc-month{display:flex;align-items:center;font-size:var(--fs-sm);color:var(--text);font-variant-numeric:tabular-nums}
+.uc-month b{font-size:var(--fs-md);font-weight:800}
+/* 当月更新条数：贴在月份右边，翻到哪个月就显示那个月的 */
+.uc-mcount{font-size:var(--fs-3xs);font-weight:600;color:var(--accent);background:var(--accent-dim);border-radius:99px;padding:1px 7px;margin-left:7px;font-variant-numeric:tabular-nums}
+.uc-mcount.zero{color:var(--text-3);background:var(--panel-3)}
+.uc-sep{width:.5px;height:14px;background:var(--border-2);margin:0 10px}
+.uc-year{color:var(--text-3);font-weight:500}
+.uc-nav{position:absolute;inset:0;display:flex;align-items:center;justify-content:space-between}
+.uc-nav button{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:var(--text-2);transition:background-color .18s ease,color .18s ease}
 .uc-nav button:hover{background:var(--hover);color:var(--text)}
 .uc-nav svg{width:16px;height:16px}
-.uc-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
-.uc-wd{font-size:var(--fs-3xs);color:var(--text-3);font-weight:600;text-align:center;padding:2px 0 4px}
-.uc-cell{height:36px}
-.uc-day{
-  position:relative;height:36px;border-radius:10px;
+.uc-grid{display:grid;grid-template-columns:repeat(7,1fr);row-gap:2px}
+.uc-wd{font-size:var(--fs-3xs);color:var(--text-3);font-weight:500;text-align:center;padding:6px 0 8px}
+.uc-day,.uc-other{
+  width:36px;height:36px;margin:0 auto;border-radius:50%;
   display:flex;align-items:center;justify-content:center;
-  font-size:var(--fs-xs);font-weight:600;color:var(--text-2);font-variant-numeric:tabular-nums;
-  transition:background-color .18s ease,color .18s ease,box-shadow .18s ease;
+  font-size:var(--fs-xs);font-weight:500;color:var(--text);font-variant-numeric:tabular-nums;
+  transition:background-color .18s ease,color .18s ease;
 }
+/* 前后相邻月份补齐的日期：浅灰、不可点，只用来把整月铺满六行 */
+.uc-other{color:var(--text-3);opacity:.5;font-weight:400}
 .uc-day:hover{background:var(--hover)}
-.uc-day.has-upd{color:var(--accent);background:var(--accent-dim);font-weight:700}
+.uc-day.has-upd{color:var(--accent);font-weight:700}
 .uc-day.has-upd::after{
-  content:'';position:absolute;bottom:5px;left:50%;width:4px;height:4px;margin-left:-2px;
+  content:'';position:absolute;bottom:4px;left:50%;width:4px;height:4px;margin-left:-2px;
   border-radius:50%;background:var(--accent);
 }
-/* 选中的日期用主题蓝实心，和界面其它选中态同一个语言 */
-.uc-day.sel{color:#fff;background:var(--accent);box-shadow:0 4px 12px var(--accent-soft)}
-.uc-day.sel::after{background:#fff}
-body.dark .uc-day.sel{background:#0a6ed1}
+.uc-day{position:relative}
+/* 选中的日期是实心圆：浅色主题黑底白字，深色主题反过来，跟参考图一致 */
+.uc-day.sel,.uc-day.sel:hover{background:var(--text);color:var(--modal-bg);font-weight:700}
+.uc-day.sel::after{background:var(--modal-bg)}
 .upd-item{border-top:.5px solid var(--border)}
 .upd-item:first-child{border-top:none}
 .upd-head{display:flex;flex-wrap:wrap;align-items:center;gap:7px;row-gap:3px;width:100%;padding:11px 2px;text-align:left;border-radius:7px;transition:background-color .18s ease}
@@ -3404,8 +3410,25 @@ const state = {
    版本号在左上角 GeoAI 打开的「更新与版本」弹窗里展示。改完版本号后，在
    APP_CHANGELOG 最上面补一条（版本、日期、类型、一句摘要、几条说明），
    新版本会自动出现在版本历史里。 */
-const APP_VERSION = '1.4.0';
+const APP_VERSION = '1.5.1';
 const APP_CHANGELOG = [
+  {
+    v: '1.5.1', date: '2026-11-13', tag: '界面调整',
+    lead: '更新日历按钮上的条数挪进了展开后的月历：翻到哪个月，月份右边就显示那个月的更新条数。',
+    notes: [
+      '「更新日历」按钮只留图标和标题，不再挂总条数',
+      '展开后月份旁显示当月更新条数，没有更新的月份显示灰色的 0 条',
+    ],
+  },
+  {
+    v: '1.5.0', date: '2026-11-13', tag: '界面调整',
+    lead: '更新日历的展开面板换成更干净的月历：月份与年份居中、整月铺满六行，有更新的日子用主题色标出。',
+    notes: [
+      '月历标题改为「11 月 | 2026 年」，翻月箭头分列两端',
+      '整月固定六行，前后相邻月份的日期用浅灰补齐',
+      '选中日期改为实心圆（浅色黑底白字、深色反色），有更新的日期保留主题色与圆点',
+    ],
+  },
   {
     v: '1.4.0', date: '2026-11-13', tag: '界面重构',
     lead: '更新日历收成一枚小按钮，点开才展开整月日期；有更新的日子高亮，点日期直接跳到当天条目。',
@@ -19307,7 +19330,8 @@ function updCalHTML() {
   const total = new Date(y, m + 1, 0).getDate();
   const marks = new Set(APP_CHANGELOG.map(e => e.date));
   let cells = ['日', '一', '二', '三', '四', '五', '六'].map(w => '<span class="uc-wd">' + w + '</span>').join('');
-  for (let i = 0; i < lead; i++) cells += '<span class="uc-cell"></span>';
+  /* 前后相邻月份补齐到 6 行（42 格），浅灰显示，和参考图一致 */
+  for (let i = 0; i < lead; i++) cells += '<span class="uc-other">' + new Date(y, m, i - lead + 1).getDate() + '</span>';
   for (let d = 1; d <= total; d++) {
     const ds = y + '-' + updPad2(m + 1) + '-' + updPad2(d);
     const has = marks.has(ds);
@@ -19315,9 +19339,15 @@ function updCalHTML() {
       '" data-date="' + ds + '" aria-label="' + y + ' 年 ' + (m + 1) + ' 月 ' + d + ' 日' + (has ? '，有更新' : '') + '">' +
       d + '</button>';
   }
+  const tail = 42 - lead - total;
+  for (let i = 1; i <= tail; i++) cells += '<span class="uc-other">' + new Date(y, m + 1, i).getDate() + '</span>';
+  const ym = y + '-' + updPad2(m + 1);
+  const monthCount = APP_CHANGELOG.filter(e => (e.date || '').slice(0, 7) === ym).length;
   const chev = s => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="' + s + '"/></svg>';
-  return '<div class="uc-head"><div class="uc-month">' + y + ' 年 ' + (m + 1) + ' 月</div>' +
-    '<div class="uc-total">共 ' + APP_CHANGELOG.length + ' 条更新</div>' +
+  return '<div class="uc-head">' +
+    '<div class="uc-month"><b>' + (m + 1) + ' 月</b>' +
+    '<span class="uc-mcount' + (monthCount ? '' : ' zero') + '">' + monthCount + ' 条更新</span>' +
+    '<span class="uc-sep"></span><span class="uc-year">' + y + ' 年</span></div>' +
     '<div class="uc-nav">' +
     '<button type="button" class="uc-prev" aria-label="上个月">' + chev('M15 5 8 12l7 7') + '</button>' +
     '<button type="button" class="uc-next" aria-label="下个月">' + chev('M9 5l7 7-7 7') + '</button>' +
@@ -19357,7 +19387,7 @@ function showChangelog() {
     '</div>' +
     '<button type="button" class="uc-toggle" id="ucToggle" aria-expanded="false" aria-controls="updCal">' +
     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5" width="17" height="15.5" rx="2.5"></rect><path d="M8 3.5v3M16 3.5v3M3.5 10h17"></path></svg>' +
-    '<span>更新日历</span><span class="uc-t-cnt">' + APP_CHANGELOG.length + ' 条更新</span>' +
+    '<span>更新日历</span>' +
     '<span class="uc-chev" aria-hidden="true">›</span></button>' +
     '<div class="upd-cal hidden" id="updCal">' + updCalHTML() + '</div>' +
     '<div class="upd-sec">版本历史</div>' + items +
@@ -20512,6 +20542,7 @@ async function runUITest() {
     /* 更新日历：默认收成小按钮，点开显示整月；有更新的日期高亮，点日期跳转 */
     const tg = $('#changelogBody .uc-toggle');
     if (!tg) throw new Error('缺少更新日历按钮');
+    if (tg.querySelector('.uc-t-cnt')) throw new Error('按钮上不该再显示更新条数');
     if (!$('#updCal').classList.contains('hidden')) throw new Error('日历默认应收起');
     tg.click(); await sleep(0);
     if ($('#updCal').classList.contains('hidden')) throw new Error('点按钮没有展开日历');
@@ -20522,12 +20553,18 @@ async function runUITest() {
     const dateSet = new Set(APP_CHANGELOG.map(e => e.date));
     if (days.filter(d => d.classList.contains('has-upd')).length !== dateSet.size) throw new Error('有更新的日期没有全部高亮');
     if (!$('#updCal .uc-day.sel')) throw new Error('日历没有选中当前版本那天');
+    /* 当月更新条数贴在月份右边 */
+    const monthN = APP_CHANGELOG.filter(e => (e.date || '').slice(0, 7) === '2026-11').length;
+    const mc = $('#updCal .uc-mcount');
+    if (!mc || mc.textContent.indexOf(monthN + ' 条') !== 0) throw new Error('当月更新条数不对：' + (mc ? mc.textContent : '无'));
     const m0 = $('#updCal .uc-month').textContent;
     $('#updCal .uc-next').click(); await sleep(0);
     if ($('#updCal .uc-month').textContent === m0) throw new Error('日历不能翻月');
     if ($$('#updCal .uc-day').length !== 31) throw new Error('翻月后日期数量不对');
+    if ($('#updCal .uc-mcount').textContent.indexOf('0 条') !== 0) throw new Error('无更新的月份应显示 0 条更新');
     $('#updCal .uc-prev').click(); await sleep(0);
-    const day1 = $$('#updCal .uc-day.has-upd').pop();
+    if ($$('#updCal .uc-other').length !== 12) throw new Error('月历没有用相邻月份补齐六行');
+    const day1 = $$('#updCal .uc-day.has-upd')[0];
     const day1Date = day1.dataset.date;
     day1.click(); await sleep(0);
     if (($('#updCal .uc-day.sel') || {}).dataset?.date !== day1Date) throw new Error('点日期后没有选中');
