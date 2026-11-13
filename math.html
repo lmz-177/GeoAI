@@ -5246,9 +5246,23 @@ function computeObject(o) {
           /* 极值点：守住当初挑的那一支（极大还是极小），函数一动位置跟着走 */
           const f = P[0], d = o.def || {};
           const lo = liveNum(P, d.loIdx, d.lo ?? -10), hi = liveNum(P, d.hiIdx, d.hi ?? 10);
-          const r = (f && f.fn) ? numericExtremum(f.fn, lo, hi, d.max ? 'max' : 'min') : null;
-          o.value = r ? { x: r.x, y: r.y } : null;
-          if (!o.value) o.error = '区间内未找到极值';
+          if (f && f.fn && d.nth != null) {
+            /* Extremum(f,n)：在「同类型」的极值里守住第 nth 个，位置变化时取离上一帧最近的那支 */
+            const es = extremumList(f.fn, lo, hi).filter(e => e.max === !!d.max);
+            let e = null;
+            if (es.length) {
+              if (o.value && isNum(o.value.x)) {
+                e = es[0]; let bd = Math.abs(es[0].x - o.value.x);
+                for (let i = 1; i < es.length; i++) { const dd = Math.abs(es[i].x - o.value.x); if (dd < bd) { bd = dd; e = es[i]; } }
+              } else e = es[Math.min(d.nth, es.length - 1)];
+            }
+            o.value = e ? { x: e.x, y: e.y } : null;
+            if (!o.value) o.error = '当前视野内极值点不足';
+          } else {
+            const r = (f && f.fn) ? numericExtremum(f.fn, lo, hi, d.max ? 'max' : 'min') : null;
+            o.value = r ? { x: r.x, y: r.y } : null;
+            if (!o.value) o.error = '区间内未找到极值';
+          }
         } else if (o.kind === 'turning') {
           /* TurningPoint：多项式的拐点（二阶导变号根，按横坐标排序，def.i 指定第几个） */
           const f = P[0];
@@ -8628,9 +8642,21 @@ C('Incenter', 'Incenter(点1, 点2, 点3)', '三角形内心', (a, ctx) => {
   const p = a.slice(0, 3).map(x => ensurePoint(x));
   return [mkObj('point', { kind: 'incenter', parents: p.map(x => x.id), label: ctx.label })];
 }, ['内心']);
-C('Extremum', 'Extremum(函数, a, b)', '在区间内求极值点', (a, ctx) => {
+C('Extremum', 'Extremum(函数, a, b) / Extremum(函数, n)', '在区间内求极值点；只给序号 n 时取当前视野里的第 n 个极值点', (a, ctx) => {
   const f = ensureObj(a[0], ['function']);
   const pids = [f.id];
+  /* GeoGebra 的 Extremum(f, n)：按当前视野从左到右数第 n 个极值点 */
+  if (a.length === 2) {
+    const n = Math.round(AN(a[1]));
+    if (!isNum(n) || n < 1) throw new Error('Extremum(函数, n)：n 是从 1 开始的序号');
+    const [lo, hi] = viewXRange();
+    const es = extremumList(f.fn, lo, hi);
+    if (es.length < n) throw new Error('当前视野内只有 ' + es.length + ' 个极值点，取不到第 ' + n + ' 个');
+    const target = es[n - 1];
+    /* nth 记「同类型（极大 / 极小）里的第几个」，拖动时守着自己那一支，不会和另一个极值互换 */
+    const k = es.filter(e => e.max === target.max).indexOf(target);
+    return [mkObj('point', { kind: 'extremum', parents: pids, def: { lo, hi, nth: k, max: target.max }, label: ctx.label })];
+  }
   const loIdx = numArgRef(a[1], pids), hiIdx = numArgRef(a[2], pids);
   const lo = a[1] ? AN(a[1]) : -10, hi = a[2] ? AN(a[2]) : 10;
   const r = numericExtremum(f.fn, lo, hi);
@@ -8645,9 +8671,19 @@ C('TurningPoint', 'TurningPoint(多项式函数)', '多项式的拐点（全部�
   /* 每个拐点按横坐标顺序取第 i 个：函数改了，位置跟着走，个数不变 */
   return xs.map((x, i) => mkObj('point', { kind: 'turning', parents: [f.id], def: { i }, label: i === 0 ? ctx.label : '' }));
 }, ['拐点', '转折点', 'InflectionPoint']);
-C('Root', 'Root(函数, a, b)', '在区间内求零点', (a, ctx) => {
+C('Root', 'Root(函数, a, b) / Root(函数, n)', '在区间内求零点；只给序号 n 时取当前视野里的第 n 个零点', (a, ctx) => {
   const f = ensureObj(a[0], ['function']);
   const pids = [f.id];
+  /* GeoGebra 的 Root(f, n)：按当前视野从左到右数第 n 个零点。模型和用户都会这么写，
+     以前这里把 n 当成区间右端点，于是报「区间内未找到零点」——白白绕好几步。 */
+  if (a.length === 2) {
+    const n = Math.round(AN(a[1]));
+    if (!isNum(n) || n < 1) throw new Error('Root(函数, n)：n 是从 1 开始的序号');
+    const [lo, hi] = viewXRange();
+    const xs = rootsOf(f, lo, hi);
+    if (xs.length < n) throw new Error('当前视野内只有 ' + xs.length + ' 个零点，取不到第 ' + n + ' 个');
+    return [mkObj('point', { kind: 'root', parents: pids, def: { lo, hi, nth: n - 1 }, label: ctx.label })];
+  }
   const loIdx = numArgRef(a[1], pids), hiIdx = numArgRef(a[2], pids);
   const lo = a[1] ? AN(a[1]) : -10, hi = a[2] ? AN(a[2]) : 10;
   if (rootOf(f.fn, lo, hi) === null) throw new Error('区间内未找到零点');
@@ -11707,6 +11743,34 @@ function bisect(f, a, b) {
   if (fa * fb > 0) return null;
   for (let i = 0; i < 80; i++) { const m = (a + b) / 2, fm = f(m); if (!isNum(fm)) return null; if (Math.abs(fm) < 1e-12 || (b - a) < 1e-12) return m; if (fa * fm < 0) { b = m; fb = fm; } else { a = m; fa = fm; } }
   return (a + b) / 2;
+}
+/* 当前视野的 x 范围：Root(f,n) / Extremum(f,n) 这种「第 n 个」的语义与 GeoGebra 一致，
+   按屏幕上看得见的这一段从左到右数 */
+function viewXRange() {
+  const half = ((canvas && canvas.clientWidth) || 800) / 2 / state.view.scale;
+  return [state.view.cx - half, state.view.cx + half];
+}
+/* 区间内全部极值点，按 x 排序（Extremum(f,n) 用；和 numericExtremum 不同，它不挑「最值的那个」） */
+function extremumList(f, a, b) {
+  if (!f) return [];
+  const n = 600, h = (b - a) / n;
+  const xs = [], vs = [];
+  for (let i = 0; i <= n; i++) { const x = a + i * h; xs.push(x); vs.push(f(x)); }
+  const out = [];
+  for (let i = 1; i < n; i++) {
+    const v0 = vs[i - 1], v1 = vs[i], v2 = vs[i + 1];
+    if (!isNum(v0) || !isNum(v1) || !isNum(v2)) continue;
+    const max = v1 > v0 && v1 >= v2, min = v1 < v0 && v1 <= v2;
+    if (max || min) out.push({ x: xs[i], y: v1, max });
+  }
+  /* 采样步长内的相邻候选合并成一个，避免同一个极值被数成两个 */
+  const merged = [];
+  for (const e of out) {
+    const p = merged[merged.length - 1];
+    if (p && Math.abs(e.x - p.x) < 3 * h && p.max === e.max) { if ((e.max && e.y > p.y) || (!e.max && e.y < p.y)) { p.x = e.x; p.y = e.y; } }
+    else merged.push(e);
+  }
+  return merged;
 }
 function scanRoots(f, a, b) {
   const out = []; const n = 800; const h = (b - a) / n;
@@ -19296,6 +19360,28 @@ async function runUITest() {
     dp.def.sel = 2; recomputeAll();
     if (!isNum(dp.value) || dp.value !== 3) throw new Error('下拉列表取值不对：' + dp.value);
   });
+  /* Root(f, n) / Extremum(f, n)：GeoGebra 的序号写法，当前视野内从左到右数第 n 个。
+     AI 与用户都会这么写，以前只支持区间形式，会一路报「区间内未找到零点」。 */
+  await A('命令:Root/Extremum 序号形式', async () => {
+    executeLine('DeleteAll()');
+    executeLine('f(x) = x^3 - 3x');
+    const mk = s => { try { return executeLine(s); } catch (e) { throw new Error(s + ' 失败：' + e.message); } };
+    mk('R1 = Root(f, 1)'); mk('R2 = Root(f, 2)'); mk('R3 = Root(f, 3)');
+    mk('E1 = Extremum(f, 1)'); mk('E2 = Extremum(f, 2)');
+    const val = lb => { const o = state.objects.find(x => x.label === lb); if (!o) throw new Error('没有建出 ' + lb); if (o.error) throw new Error(lb + ' 报错：' + o.error); return o.value; };
+    const near = (a, b) => Math.abs(a - b) < .06;
+    if (!near(val('R1').x, -Math.sqrt(3))) throw new Error('第 1 个零点不对：' + val('R1').x);
+    if (!near(val('R2').x, 0)) throw new Error('第 2 个零点不对：' + val('R2').x);
+    if (!near(val('R3').x, Math.sqrt(3))) throw new Error('第 3 个零点不对：' + val('R3').x);
+    if (!near(val('E1').x, -1) || val('E1').y < 1.9) throw new Error('第 1 个极值点不对：' + JSON.stringify(val('E1')));
+    if (!near(val('E2').x, 1) || val('E2').y > -1.9) throw new Error('第 2 个极值点不对：' + JSON.stringify(val('E2')));
+    /* 区间形式不受影响 */
+    mk('R4 = Root(f, -2, -1)');
+    if (!near(val('R4').x, -Math.sqrt(3))) throw new Error('区间形式的 Root 坏了：' + val('R4').x);
+    let threw = false;
+    try { executeLine('Root(f, 9)'); } catch (e) { threw = true; }
+    if (!threw) throw new Error('序号超出应报错');
+  });
   await A('视图缩放按钮', async () => { $('#gvIn').click(); $('#gvOut').click(); $('#gvHome').click(); await sleep(0); });
   /* 缩放比例与适合窗口：SetZoom 的口径必须和右上角徽标的「比例 N×」一致 */
   await A('视图:比例与适合窗口', async () => {
@@ -24247,6 +24333,7 @@ Curve(x表达式,y表达式,t,起点,终点) 参数曲线：Curve(cos(t),sin(t),
 变换：Reflect(obj,line)（别名 ReflectLine） Reflect(obj,point) Rotate(obj,角度,中心) Translate(obj,向量) Dilate(obj,k,中心) Mirror(对象,直线或点) Shear(对象,直线,k) Stretch(对象,直线,k)
 度量：Distance(A,B) Length(s) Area(c) Slope(l) Angle(A,B,C) Angle(l1,l2) Radius(c) Center(c) Perimeter(obj) Circumference(obj) Side(多边形,n) InteriorAngles(多边形) Direction(直线或向量) OrthogonalVector(v) AffineRatio(A,B,C) CrossRatio(A,B,C,D) CircumcircleArc(A,B,C)
 函数与微积分：Derivative(f) Integral(f,a,b) Antiderivative(f) IntegralFn(表达式) Solve(方程) NSolve(方程) Root(f,a,b) Roots(f) Extremum(f,a,b) TurningPoint(f)（多项式函数的全部拐点）
+   Root(f,n) / Extremum(f,n)：当前视野里从左到右第 n 个零点 / 极值点（与 GeoGebra 一致，求单个关键点时直接用这个，不要自己猜区间）
    NDerivative(f,a) IntegralBetween(f,g,a,b) LowerSum / UpperSum / LeftSum / TrapezoidalSum(f,a,b,n) Iteration(f,x0,n) IterationList(f,x0,n) TaylorPolynomial(f,a,n) Limit(f,a) LimitAbove(f,a) LimitBelow(f,a)
 符号运算（结果是贴在视图中央的蓝色文本，可直接抄进后续命令）：Factor(表达式) Expand(表达式) Simplify(表达式) Diff(表达式[,变量]) Integrate(表达式[,变量])
 关系判定（都是活的，父对象一动就重判）：AreParallel(a,b) ArePerpendicular(a,b) AreCollinear(A,B,C) AreConcyclic(A,B,C,D) AreConcurrent(l1,l2,l3) AreCongruent(obj1,obj2) IsTangent(直线,圆锥曲线) AreEqual(a,b) IsDefined(obj) Relation(a,b)
