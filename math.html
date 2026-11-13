@@ -5943,6 +5943,12 @@ function computeObject(o) {
       case 'text': {
         /* 关系描述（Relation）：父对象一动，文字跟着改（「互相平行」→「互相垂直」） */
         if (o.kind === 'relationtext') { o.value = relText(P); break; }
+        /* Text(对象)：数值 / 坐标变了，标注跟着变 */
+        if (o.kind === 'objtext') {
+          const src = (o.def && o.def.objId && getObj(o.def.objId)) || P[0];
+          o.value = textOfObject(src);
+          break;
+        }
         /* 从 .ggb 导入的动态文本：exp 里引用了滑动条 / 圆锥曲线，父对象一动重新求值 */
         if (o.kind === 'ggbexpr' && o.def && o.def.ggbExp) {
           let v = evalGgbText(o.def.ggbExp, 0);
@@ -11612,9 +11618,28 @@ C('Slider', 'Slider(最小值, 最大值, 步长)', '滑动条', (a, ctx) => {
   const o = createObject('slider', { kind: 'slider', label: ctx.label || '', value: (min + max) / 2, def: { min, max, step, steps: 160 } });
   addObject(o, true); return [o];
 }, ['滑动条']);
+/* Text(对象) 的正文：数值给值、点给坐标、文本给内容，其余给定义。
+   GeoGebra 里 Text(A) 显示的是取值，而不是对象名。 */
+function textOfObject(o) {
+  if (!o) return '';
+  if (o.type === 'text') return String(o.value == null ? '' : o.value);
+  if (o.type === 'number' || o.type === 'slider') return (o.error || !isNum(o.value)) ? '?' : fmt(o.value);
+  if (o.type === 'boolean') return o.value ? '真' : '假';
+  if (o.type === 'point') {
+    if (o.error || !o.value) return o.label || '';
+    return (o.def && o.def.complex) ? fmtComplexNum(o.value) : fmtVal(o.value);
+  }
+  return o.definition || o.label || '';
+}
 C('Text', 'Text("内容", x, y) 或 Text(对象, x, y)', '文本', (a, ctx) => {
   let content = '';
-  if (a.length && a[0].obj) content = a[0].obj.label;
+  let srcObj = null;
+  if (a.length && a[0].obj) {
+    /* GeoGebra 的 Text(对象) 显示的是它的取值（数值 / 坐标 / 定义），不是名字；
+       并且挂成父对象，数值一变标注跟着变 */
+    srcObj = a[0].obj;
+    content = textOfObject(srcObj);
+  }
   else if (a.length && typeof a[0].val === 'string') {
     content = a[0].val;
     /* 拼出来的数（"平均数 = " + m1）会带满屏小数位，按「小数位数」收一下；
@@ -11626,7 +11651,10 @@ C('Text', 'Text("内容", x, y) 或 Text(对象, x, y)', '文本', (a, ctx) => {
   let pos = { x: state.view.cx, y: state.view.cy };
   if (a.length >= 3) pos = { x: AN(a[1]), y: AN(a[2]) };
   else if (a.length === 2 && isPt(a[1].val)) pos = a[1].val;
-  const o = createObject('text', { kind: 'plain', label: ctx.label || '', value: content, def: { pos } });
+  const o = createObject('text', {
+    kind: srcObj ? 'objtext' : 'plain', label: ctx.label || '', value: content,
+    parents: srcObj ? [srcObj.id] : [], def: { pos, objId: srcObj ? srcObj.id : null },
+  });
   addObject(o, true); return [o];
 }, ['文本']);
 C('Image', 'Image("图片地址", 角点A[, 角点B[, 角点D]])', '插入图片：一个角点按原始像素尺寸（固定屏幕大小），两个角点按像素比例摆放，三个以上映射到平行四边形', (a, ctx) => {
