@@ -106,9 +106,9 @@ body.dark{
    文字与图标用的 --accent 仍保持亮蓝，两者分工不变。 */
 body.dark .btn-primary,body.dark .ps-share:hover,body.dark .enter-btn,body.dark .kb-key.accent,
 body.dark .kb-key:active,body.dark .cvs-restore .cr-ok,body.dark .ai-hist-cnt,
-body.dark .api-primary,body.dark .seg.blue button.on,
+body.dark .seg.blue button.on,
 body.dark .ai-send,body.dark .btn.primary,body.dark .bubble .md-task.done,body.dark .tool-hint.ask .th-ok{background:#0a6ed1}
-body.dark .btn-primary:hover,body.dark .api-primary:hover,body.dark .ai-send:hover,body.dark .tool-hint.ask .th-ok:hover{background:#095cb0}
+body.dark .btn-primary:hover,body.dark .ai-send:hover,body.dark .tool-hint.ask .th-ok:hover{background:#095cb0}
 
 html,body{height:100%;margin:0}
 body{
@@ -1207,16 +1207,20 @@ body.dark .eff-warn{color:#c39bff}
 .bank-face-foot{position:absolute;right:7%;bottom:13%;display:flex;flex-direction:column;align-items:flex-end;gap:2px;
   font-size:10px;color:rgba(255,255,255,.55)}
 .bank-face-foot .bank-cur{font-size:9px;letter-spacing:.12em;color:rgba(255,255,255,.4)}
-/* 卡套前片：波浪顶边的白色卡套，盖住卡面下半截；展开时向下翻开并淡出 */
-.bank-front{position:absolute;inset:50% 0 0;z-index:2;pointer-events:none;
+/* 卡套前片：波浪顶边的白色卡套，盖住卡面下半截；展开时向下翻开并淡出。
+   编辑态把卡套向上抬一截，给卡套上的输入框留出空间。 */
+.bank-front{position:absolute;left:0;right:0;top:50%;bottom:0;z-index:2;pointer-events:none;
   transform-origin:center bottom;
-  transition:transform .28s var(--ease-in-out),opacity .24s ease}
+  transition:top .24s ease,transform .28s var(--ease-in-out),opacity .24s ease}
+.bank-fold.editing .bank-front{top:38%}
 .bank-front-bg{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
 .bf-outer{fill:var(--modal-bg);stroke:var(--border);stroke-width:1}
 .bf-line{fill:none;stroke:var(--border-2);stroke-width:1;stroke-dasharray:5 5;stroke-linecap:round;stroke-opacity:.7}
 .bank-fold[aria-expanded="true"] .bank-front{transform:translateY(18%) rotateX(-72deg);opacity:0}
-.bf-content{position:absolute;inset:0 5.5%;display:flex;flex-direction:column;justify-content:space-between;
-  padding:13px 0 11px;pointer-events:none}
+.bf-content{position:absolute;inset:0 5.5%;pointer-events:none}
+.bf-view{position:absolute;inset:0;display:flex;flex-direction:column;justify-content:space-between;
+  padding:13px 0 11px}
+.bf-view[hidden]{display:none}
 .bf-row{display:flex;align-items:center;justify-content:space-between}
 .bf-bottom{align-items:baseline;gap:10px}
 /* 眼睛：切换金额是否打码；只有它还接收点击，点其他位置算「抽卡 / 收卡」 */
@@ -1248,33 +1252,16 @@ body.dark .eff-warn{color:#c39bff}
 /* 拖走卡片：跟手位移，松手要么回弹要么飞走 */
 .bank-fold.dragging .bank-card-btn{cursor:grabbing}
 .bank-fold.dragging .bank-front{pointer-events:none}
-/* 编辑态：一整块深色玻璃盖在卡上，输入 / 保存 / 换取 Key 都在卡里完成 */
-.api-editor{display:flex;flex-direction:column}
-.api-editor[hidden]{display:none}
-.bank-edit{position:absolute;inset:6% 6.5%;z-index:7;justify-content:center;gap:7px;
-  padding:11px 12px;border-radius:14px;background:rgba(14,15,17,.84);
-  -webkit-backdrop-filter:blur(18px) saturate(160%);backdrop-filter:blur(18px) saturate(160%);
-  box-shadow:0 10px 26px rgba(0,0,0,.34),inset 0 1px 0 rgba(255,255,255,.14)}
-.api-editor.bank-edit[hidden]{display:none}
-.bank-edit .api-field{margin:0;height:40px;background:rgba(255,255,255,.10);border-color:rgba(255,255,255,.16)}
-.bank-edit .api-field input{color:#fff}
-.bank-edit .api-field input::placeholder{color:rgba(255,255,255,.38)}
-.bank-edit .fl-label{background:#1a1b1f;color:rgba(255,255,255,.55)}
-.bank-edit .api-field:focus-within{border-color:#6fa8ff;box-shadow:0 0 0 3px rgba(90,150,255,.22)}
-.bank-edit .api-eye{color:rgba(255,255,255,.55)}
-.bank-edit .api-eye:hover{color:#fff}
-.bank-edit .api-seal{background:rgba(20,22,25,.96)}
-.bank-edit .api-seal-txt{font-size:var(--fs-xs)}
-.bank-edit-row{display:flex;align-items:center;gap:7px}
-.bank-edit .api-primary{margin:0;width:auto;flex:1;height:34px;border-radius:9px;font-size:var(--fs-xs)}
-.bank-cancel{flex:0 0 auto;height:34px;padding:0 12px;border-radius:9px;
-  font-size:var(--fs-xs);font-weight:600;color:rgba(255,255,255,.72);background:rgba(255,255,255,.12);transition:var(--t-ui)}
-.bank-cancel:hover{background:rgba(255,255,255,.2);color:#fff}
-.bank-edit-foot{display:flex;align-items:center;justify-content:space-between;gap:8px}
-.bank-edit .api-state{margin:0;min-height:0;font-size:var(--fs-3xs);line-height:15px;color:rgba(255,255,255,.5)}
-.bank-edit .api-state-txt{color:rgba(255,255,255,.5)}
-.bank-edit .api-link{margin:0;padding:0;font-size:var(--fs-3xs);color:#8fb6ff;justify-content:flex-end;white-space:nowrap}
-.bank-edit .api-link svg{width:10px;height:10px}
+/* 编辑态：输入框就在卡套上，回车 / 失焦自动保存验证 */
+.bf-edit{position:absolute;left:0;right:0;bottom:7px;display:flex;flex-direction:column;gap:5px;
+  pointer-events:auto}
+.bf-edit[hidden]{display:none}
+.bf-edit .api-field{margin:0;height:38px;background:var(--panel-2);border-color:var(--border)}
+.bf-edit .api-field:focus-within{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-dim)}
+.bf-edit-foot{display:flex;align-items:center;justify-content:space-between;gap:6px;padding:0 2px}
+.bf-edit .api-state{margin:0;min-height:13px;font-size:var(--fs-3xs);line-height:13px;min-width:0;overflow:hidden}
+.bf-edit .api-state-txt{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bf-edit-hint{font-size:var(--fs-3xs);color:var(--text-3);white-space:nowrap}
 /* 状态行：小圆点 + 一句话 */
 .api-state{margin:10px 18px 0;display:flex;align-items:center;gap:7px;min-height:18px;
   font-size:var(--fs-xs);line-height:17px;color:var(--text-3)}
@@ -1287,24 +1274,12 @@ body.dark .eff-warn{color:#c39bff}
 .api-state[data-state="session"] .api-dot{background:var(--warn)}
 .api-state[data-state="session"]{color:var(--warn-ink)}
 @keyframes apiPulse{0%,100%{opacity:.35;transform:scale(.85)}50%{opacity:1;transform:scale(1.15)}}
-/* 主按钮：唯一一个实心按钮；验证中转圈 */
-.api-primary{margin:14px 16px 0;width:calc(100% - 32px);height:46px;border-radius:12px;
-  display:flex;align-items:center;justify-content:center;gap:8px;
-  background:var(--accent);color:#fff;font-size:15px;font-weight:600;
-  box-shadow:0 4px 14px var(--accent-soft);transition:var(--t-ui)}
-.api-primary:hover{background:var(--accent-h)}
-.api-primary:active{transform:scale(.97)}
-.api-primary:disabled{opacity:.4;pointer-events:none;box-shadow:none}
-.api-primary.flash{background:var(--ok);box-shadow:0 4px 14px rgba(52,199,89,.3)}
-.api-spin{display:none;width:14px;height:14px;border-radius:50%;border:2px solid rgba(255,255,255,.35);
-  border-top-color:#fff;animation:apiSpin .7s linear infinite}
-.api-primary.busy .api-spin{display:block}
-@keyframes apiSpin{to{transform:rotate(360deg)}}
-/* 外链做成一行安静的蓝字，不再占一个按钮位 */
-.api-link{margin:12px 16px 0;padding:6px 0;display:flex;align-items:center;justify-content:center;gap:3px;
-  font-size:var(--fs-xs);font-weight:500;color:var(--accent);text-decoration:none;border-radius:8px}
-.api-link:hover{opacity:.72}
-.api-link svg{width:12px;height:12px}
+/* 「获取 API Key」挪到标题旁：一行小蓝字，不占按钮位 */
+.api-pop-link{margin-right:8px;display:flex;align-items:center;gap:2px;
+  font-size:var(--fs-3xs);font-weight:600;color:var(--accent);text-decoration:none;
+  white-space:nowrap;transition:opacity .18s ease}
+.api-pop-link:hover{opacity:.7}
+.api-pop-link svg{width:10px;height:10px}
 .ai-tool.needs-key{color:var(--warn-ink);border-color:var(--warn-ink)}
 @media (max-width:600px){
   .api-pop{left:-2px;width:calc(100vw - 24px)}
@@ -2755,6 +2730,7 @@ try {
           <div class="api-pop" id="apiPop" role="dialog" aria-label="API Key">
             <div class="api-pop-head">
               <div class="api-pop-ttl">DeepSeek API</div>
+              <a class="api-pop-link" href="https://platform.deepseek.com/api_keys" target="_blank" rel="noopener noreferrer">获取 API Key <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17 17 7M9 7h8v8"></path></svg></a>
               <button class="api-close" id="apiPopClose" title="关闭" aria-label="关闭"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6 6 18"></path></svg></button>
             </div>
             <!-- 余额、Key 与所有操作都在这张卡上完成 -->
@@ -2781,37 +2757,35 @@ try {
                 <div class="bank-front">
                   <svg class="bank-front-bg" viewBox="0 0 384 110" preserveAspectRatio="none"><path class="bf-outer" d="M0 17C15 7 31 4 49 4H87C110 4 126 17 144 32L158 44C176 59 206 59 225 43L240 30C257 16 271 4 295 4H335C354 4 370 8 384 18V94C384 103 377 110 368 110H16C7 110 0 103 0 94Z"></path><path class="bf-line" d="M10 21C22 13 35 11 51 11H85C105 11 120 23 137 37L153 50C175 68 208 68 231 49L246 36C262 23 275 11 297 11H333C350 11 363 14 374 22V89C374 97 369 101 360 101H24C15 101 10 96 10 89Z"></path></svg>
                   <div class="bf-content">
-                    <div class="bf-row">
-                      <button class="bf-eye" id="bankEye" type="button" aria-label="隐藏金额"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 12S6 5.8 12 5.8 21.5 12 21.5 12 18 18.2 12 18.2 2.5 12 2.5 12z"></path><circle cx="12" cy="12" r="2.6"></circle><path class="eye-slash" d="M4 20 20 4"></path></svg></button>
-                      <div class="bf-stats">
-                        <span class="bf-stat"><span class="bf-lbl">赠款</span><span class="bf-val" id="bankGrant">—</span></span>
-                        <span class="bf-stat"><span class="bf-lbl">充值</span><span class="bf-val" id="bankTopup">—</span></span>
+                    <div class="bf-view" id="bankView">
+                      <div class="bf-row">
+                        <button class="bf-eye" id="bankEye" type="button" aria-label="隐藏金额"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 12S6 5.8 12 5.8 21.5 12 21.5 12 18 18.2 12 18.2 2.5 12 2.5 12z"></path><circle cx="12" cy="12" r="2.6"></circle><path class="eye-slash" d="M4 20 20 4"></path></svg></button>
+                        <div class="bf-stats">
+                          <span class="bf-stat"><span class="bf-lbl">赠款</span><span class="bf-val" id="bankGrant">—</span></span>
+                          <span class="bf-stat"><span class="bf-lbl">充值</span><span class="bf-val" id="bankTopup">—</span></span>
+                        </div>
+                      </div>
+                      <div class="bf-row bf-bottom">
+                        <button class="bf-amt" id="bankAmtMini" type="button" title="点按刷新余额">—</button>
+                        <span class="bf-key" id="bankKeyMini">•••• •••• •••• ••••</span>
                       </div>
                     </div>
-                    <div class="bf-row bf-bottom">
-                      <button class="bf-amt" id="bankAmtMini" type="button" title="点按刷新余额">—</button>
-                      <span class="bf-key" id="bankKeyMini">•••• •••• •••• ••••</span>
+                    <!-- 输入态：直接在卡套上填，回车 / 失焦自动保存验证 -->
+                    <div class="bf-edit" id="apiEditor" hidden>
+                      <div class="api-field" id="apiField">
+                        <input type="password" id="dsKeyInput" placeholder=" " autocomplete="new-password" spellcheck="false" aria-label="API Key">
+                        <label class="fl-label" for="dsKeyInput">API Key</label>
+                        <button class="api-eye" id="dsKeyEye" title="显示 / 隐藏" aria-label="显示 Key"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 12S6 5.8 12 5.8 21.5 12 21.5 12 18 18.2 12 18.2 2.5 12 2.5 12z"></path><circle cx="12" cy="12" r="2.6"></circle></svg></button>
+                        <div class="api-seal" id="apiSeal" aria-hidden="true"><span class="api-seal-txt"></span></div>
+                      </div>
+                      <div class="bf-edit-foot">
+                        <div class="api-state" id="dsKeyState" data-state="empty" role="status" aria-live="polite">
+                          <span class="api-dot" aria-hidden="true"></span>
+                          <span class="api-state-txt" id="dsKeyStatus">未配置</span>
+                        </div>
+                        <span class="bf-edit-hint">回车保存</span>
+                      </div>
                     </div>
-                  </div>
-                </div>
-                <!-- 编辑态：输入框直接盖在卡上，保存 / 取消 / 获取 Key 都在卡里 -->
-                <div class="api-editor bank-edit" id="apiEditor" hidden>
-                  <div class="api-field" id="apiField">
-                    <input type="password" id="dsKeyInput" placeholder=" " autocomplete="new-password" spellcheck="false" aria-label="API Key">
-                    <label class="fl-label" for="dsKeyInput">API Key</label>
-                    <button class="api-eye" id="dsKeyEye" title="显示 / 隐藏" aria-label="显示 Key"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 12S6 5.8 12 5.8 21.5 12 21.5 12 18 18.2 12 18.2 2.5 12 2.5 12z"></path><circle cx="12" cy="12" r="2.6"></circle></svg></button>
-                    <div class="api-seal" id="apiSeal" aria-hidden="true"><span class="api-seal-txt"></span></div>
-                  </div>
-                  <div class="bank-edit-row">
-                    <button class="api-primary" id="dsKeySave" disabled><span class="api-spin" aria-hidden="true"></span><span id="dsKeySaveTxt">保存并验证</span></button>
-                    <button class="bank-cancel" id="bankEditCancel" type="button">取消</button>
-                  </div>
-                  <div class="bank-edit-foot">
-                    <div class="api-state" id="dsKeyState" data-state="empty" role="status" aria-live="polite">
-                      <span class="api-dot" aria-hidden="true"></span>
-                      <span class="api-state-txt" id="dsKeyStatus">未配置</span>
-                    </div>
-                    <a class="api-link" href="https://platform.deepseek.com/api_keys" target="_blank" rel="noopener noreferrer">获取 API Key <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17 17 7M9 7h8v8"></path></svg></a>
                   </div>
                 </div>
               </div>
@@ -3612,8 +3586,18 @@ const state = {
    版本号在左上角 GeoAI 打开的「更新与版本」弹窗里展示。改完版本号后，在
    APP_CHANGELOG 最上面补一条（版本、日期、类型、一句摘要、几条说明），
    新版本会自动出现在版本历史里。 */
-const APP_VERSION = '1.7.7';
+const APP_VERSION = '1.7.8';
 const APP_CHANGELOG = [
+  {
+    v: '1.7.8', date: '2026-11-14', tag: '交互优化', code: '约 2.96 万行 · 1.76 MB',
+    lead: 'API Key 直接在卡套上填，回车或失焦自动保存验证；只剩一张银行卡，获取入口挪到标题旁。',
+    notes: [
+      '输入框直接嵌在卡套上，卡套会向上抬一截给它让位；不再有盖在卡面上的深色编辑层',
+      '去掉「保存并验证」按钮：回车或离开输入框时自动验证并加密保存，旁边只留「回车保存」提示',
+      '「获取 API Key」挪到面板标题右侧，编辑区里不再有外链',
+      '有 Key 时关闭面板会丢掉未保存的临时输入，重新打开仍是干净的卡面',
+    ],
+  },
   {
     v: '1.7.7', date: '2026-11-14', tag: '交互优化', code: '约 2.96 万行 · 1.76 MB',
     lead: '余额自动刷新，换 Key 改成把卡片拖走：卡上不再有任何操作按钮。',
@@ -4031,22 +4015,9 @@ function apiSetState(tone, text, hint) {
     if (tone !== 'err') st.title = '';
   }
 }
-/* 主按钮文案随状态变化：有输入=保存并验证；已保存且没输入=测试连接 */
-function apiDefaultLabel() {
-  const typed = (($('#dsKeyInput') || {}).value || '').trim();
-  if (typed) return '保存并验证';
-  return AI_CONF.key ? '测试连接' : '保存并验证';
-}
-/* 验证中：主按钮转圈；同一时间只留这一个主操作 */
-function apiBusy(on, label) {
-  const save = $('#dsKeySave'), txt = $('#dsKeySaveTxt');
-  const typed = (($('#dsKeyInput') || {}).value || '').trim();
-  if (save) {
-    save.classList.toggle('busy', !!on);
-    save.disabled = !!on || (!AI_CONF.key && !typed);
-  }
-  if (txt) txt.textContent = on ? (label || '验证中…') : apiDefaultLabel();
-}
+/* 保存按钮已经去掉：验证进度只体现在卡套上的状态行与密文幕布。
+   保留空实现，调用点（开始 / 失败 / 结束）不用逐个改。 */
+function apiBusy() { }
 function aiSyncKeyUI() {
   const btn = $('#aiKeyBtn');
   const has = !!AI_CONF.key;
@@ -4062,17 +4033,18 @@ function aiSyncKeyUI() {
     ? groups.slice(0, -1).join(' ') + ' <b>' + groups[groups.length - 1] + '</b>'
     : '•••• •••• •••• ••••';
   ['#bankKey', '#bankKeyMini'].forEach(sel => { const e = $(sel); if (e) e.innerHTML = keyHtml; });
-  /* 两态：卡始终在场；有 Key 且没点「更换」展示余额，否则在卡上展开输入区 */
+  /* 两态：卡始终在场；有 Key 且没在编辑时展示余额，否则卡套上直接出输入框 */
   const editing = apiEditing || !has;
   const card = $('#apiKeyCard'), editor = $('#apiEditor'), fold = $('#bankFold');
   if (card) card.hidden = false;
   if (editor) editor.hidden = !editing;
+  const view = $('#bankView');
+  if (view) view.hidden = editing;
   if (fold) {
     fold.classList.toggle('editing', editing);
-    if (editing) fold.setAttribute('aria-expanded', 'true');
+    /* 编辑时把卡插回卡套，不浮起来，输入框就在卡套上 */
+    if (editing) fold.setAttribute('aria-expanded', 'false');
   }
-  const cancel = $('#bankEditCancel');
-  if (cancel) cancel.hidden = !has;
   const tag = $('#bankSavedTag');
   if (tag) tag.textContent = ({
     saved: '已加密保存', session: '仅本次会话', empty: '未配置', error: '密钥不可用', saving: '加密中…',
@@ -4087,8 +4059,6 @@ function aiSyncKeyUI() {
   };
   const m = map[aiKeyState] || map.empty;
   apiSetState(m[0], m[1]);
-  const save = $('#dsKeySave');
-  if (save && !save.classList.contains('busy')) apiBusy(false);
 }
 async function aiLoadKey() {
   /* 旧版本曾把 Key 明文写进 localStorage / 源码：先清掉遗留记录 */
@@ -4366,8 +4336,6 @@ async function aiSaveAndVerify() {
   apiBusy(false);
   const persist = aiKeyState === 'saved' ? '已加密保存' : '仅本次会话';
   apiSetState('ok', (typed ? persist + ' · ' : '连接正常 · ') + r.ms + ' ms');
-  const b = $('#dsKeySave');
-  if (b) { b.classList.add('flash'); setTimeout(() => b.classList.remove('flash'), 1000); }
   if (typed) { toast('API Key 已加密保存', 'ok', 2200); apiBalanceRefresh(); }
 }
 function setApiPop(open) {
@@ -4387,10 +4355,13 @@ function setApiPop(open) {
     if (!AI_CONF.key || apiEditing) setTimeout(() => { const i = $('#dsKeyInput'); if (i) i.focus(); }, 30);
     else apiBalanceRefresh();      /* 打开就是封存卡：顺手把余额带上 */
   } else {
-    /* 关面板时收回明文显示，避免下一次打开还停在“显示 Key”状态 */
+    /* 关面板时收回明文显示，避免下一次打开还停在“显示 Key”状态；
+       已经有 Key 就回到卡面视图（没保存的临时输入不算数） */
+    if (AI_CONF.key) apiEditing = false;
     const i = $('#dsKeyInput'), eye = $('#dsKeyEye');
-    if (i) i.type = 'password';
+    if (i) { i.type = 'password'; i.value = AI_CONF.key ? '' : i.value; }
     if (eye) { eye.classList.remove('on'); eye.setAttribute('aria-label', '显示 Key'); }
+    aiSyncKeyUI();
   }
 }
 aiKeyReady = aiLoadKey();
@@ -27966,6 +27937,7 @@ function bindAI() {
       bankCardBtn.addEventListener('pointercancel', endDrag);
       bankCardBtn.addEventListener('click', e => {
         if (moved) { moved = false; return; }
+        if (bankFold.classList.contains('editing')) return;   /* 正在输入 Key，别把输入框顶走 */
         e.stopPropagation();
         const willOpen = bankFold.getAttribute('aria-expanded') !== 'true';
         bankFold.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
@@ -27992,13 +27964,20 @@ function bindAI() {
     const inp = $('#dsKeyInput');
     if (inp) {
       inp.addEventListener('input', () => {
-        /* 输错后重新输入：把红色错误提示收回到中性状态；主按钮文案跟着切 */
+        /* 输错后重新输入：把红色错误提示收回到中性状态 */
         const box = $('#dsKeyState');
-        if (box && box.dataset.state === 'err') apiSetState('empty', '输入完成后点「保存并验证」');
+        if (box && box.dataset.state === 'err') apiSetState('empty', '继续输入，完成后回车保存');
         apiBusy(false);
       });
       inp.addEventListener('keydown', e => {
         if (e.key === 'Enter') { e.preventDefault(); aiSaveAndVerify(); }
+      });
+      /* 没有保存按钮：离开输入框时，只要是一把看起来完整的 Key 就自动验证保存 */
+      inp.addEventListener('blur', () => {
+        const v = inp.value.trim();
+        if (!v || !/^sk-[A-Za-z0-9._-]{8,}$/.test(v)) return;
+        if (aiKeyState === 'saving') return;
+        aiSaveAndVerify();
       });
     }
     const eye = $('#dsKeyEye');
@@ -28008,21 +27987,12 @@ function bindAI() {
       eye.classList.toggle('on', show);
       eye.setAttribute('aria-label', show ? '隐藏 Key' : '显示 Key');
     });
-    const save = $('#dsKeySave');
-    if (save) save.addEventListener('click', aiSaveAndVerify);
     /* 打开网页就把余额带上（失败静默，不弹提示） */
     aiKeyReady.then(() => { if (AI_CONF.key) apiBalanceRefresh(); });
     /* 点余额数字：随时重查一次；卡面那串金额也认 */
     [$('#bankAmtMini'), $('#apiBalanceAmt')].forEach(el => {
       if (!el) return;
       el.addEventListener('click', e => { e.stopPropagation(); apiBalanceRefresh(); });
-    });
-    /* 取消：回到卡面，不保存这次输入 */
-    const cancelEdit = $('#bankEditCancel');
-    if (cancelEdit) cancelEdit.addEventListener('click', () => {
-      apiEditing = false;
-      const i = $('#dsKeyInput'); if (i) i.value = '';
-      aiSyncKeyUI();
     });
     document.addEventListener('pointerdown', e => {
       if (!pop.classList.contains('on')) return;
