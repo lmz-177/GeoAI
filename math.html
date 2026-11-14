@@ -1118,8 +1118,9 @@ body.dark .eff-warn{color:#c39bff}
 .api-pop-head{display:flex;align-items:center;padding:16px 16px 10px}
 .api-pop-ttl{flex:1;min-width:0;font-size:16px;font-weight:700;letter-spacing:-.2px;line-height:22px;color:var(--text);
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;transition:color .18s ease}
-/* 配置失败：标题就地变成一句原因，不再在卡里多挂一行提示 */
+/* 配置失败：标题就地变成一句原因；空态时标题兼做一句配置帮助 */
 .api-pop-ttl.err{font-size:var(--fs-xs);font-weight:600;color:var(--danger-ink)}
+.api-pop-ttl.help{font-size:var(--fs-xs);font-weight:500;color:var(--text-3)}
 .api-close{flex:0 0 26px;width:26px;height:26px;border-radius:50%;display:grid;place-items:center;
   color:var(--text-3);background:var(--panel-3);transition:var(--t-ui)}
 .api-close:hover{background:var(--hover);color:var(--text)}
@@ -1269,23 +1270,6 @@ body.dark .eff-warn{color:#c39bff}
 .bf-ok:active{transform:scale(.9)}
 .bf-ok svg{width:16px;height:16px}
 .bf-edit .api-seal{background:var(--modal-bg)}
-.bf-edit-foot{display:flex;align-items:center;gap:6px;min-height:13px;padding:0 2px}
-.bf-edit .api-state{margin:0;min-height:13px;font-size:var(--fs-3xs);line-height:13px;min-width:0;overflow:hidden}
-.bf-edit .api-state[data-state="empty"]{display:none}
-.bf-edit .api-state[data-state="err"]{display:none}   /* 失败原因交给顶部标题 */
-.bf-edit .api-state-txt{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-/* 状态行：小圆点 + 一句话 */
-.api-state{margin:10px 18px 0;display:flex;align-items:center;gap:7px;min-height:18px;
-  font-size:var(--fs-xs);line-height:17px;color:var(--text-3)}
-.api-dot{flex:0 0 7px;width:7px;height:7px;border-radius:50%;background:var(--text-3);transition:background var(--t)}
-.api-state[data-state="ok"] .api-dot{background:var(--ok)}
-.api-state[data-state="ok"]{color:var(--text-2)}
-.api-state[data-state="err"] .api-dot{background:var(--danger)}
-.api-state[data-state="err"]{color:var(--danger-ink)}
-.api-state[data-state="testing"] .api-dot{background:var(--accent);animation:apiPulse 1s ease-in-out infinite}
-.api-state[data-state="session"] .api-dot{background:var(--warn)}
-.api-state[data-state="session"]{color:var(--warn-ink)}
-@keyframes apiPulse{0%,100%{opacity:.35;transform:scale(.85)}50%{opacity:1;transform:scale(1.15)}}
 /* 「获取 API Key」挪到标题旁：一行小蓝字，不占按钮位 */
 .api-pop-link{margin-right:8px;display:flex;align-items:center;gap:2px;
   font-size:var(--fs-3xs);font-weight:600;color:var(--accent);text-decoration:none;
@@ -2790,12 +2774,6 @@ try {
                         <button class="bf-ok" id="dsKeyOk" type="button" title="确认" aria-label="确认并保存"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5 10 17.5 19 6.5"></path></svg></button>
                         <div class="api-seal" id="apiSeal" aria-hidden="true"><span class="api-seal-txt"></span></div>
                       </div>
-                      <div class="bf-edit-foot">
-                        <div class="api-state" id="dsKeyState" data-state="empty" role="status" aria-live="polite">
-                          <span class="api-dot" aria-hidden="true"></span>
-                          <span class="api-state-txt" id="dsKeyStatus"></span>
-                        </div>
-                      </div>
                     </div>
                   </div>
                 </div>
@@ -3597,8 +3575,17 @@ const state = {
    版本号在左上角 GeoAI 打开的「更新与版本」弹窗里展示。改完版本号后，在
    APP_CHANGELOG 最上面补一条（版本、日期、类型、一句摘要、几条说明），
    新版本会自动出现在版本历史里。 */
-const APP_VERSION = '1.7.10';
+const APP_VERSION = '1.7.11';
 const APP_CHANGELOG = [
+  {
+    v: '1.7.11', date: '2026-11-14', tag: '界面调整', code: '约 2.96 万行 · 1.76 MB',
+    lead: '删掉输入框下的状态行与绿点，所有提示都交给顶部标题。',
+    notes: [
+      '空态时标题显示「粘贴 DeepSeek API Key」作为配置帮助',
+      '验证 / 保存失败时标题变成红色的失败原因，改字后自动恢复帮助文案',
+      '验证中、仅本次会话等状态也只在标题里说，卡面更干净',
+    ],
+  },
   {
     v: '1.7.10', date: '2026-11-14', tag: '交互优化', code: '约 2.96 万行 · 1.76 MB',
     lead: '配置失败用面板标题直接说明，输入区右侧加了一枚确认键。',
@@ -4034,30 +4021,29 @@ function apiCtFp(o) {
   const ct = String((o && o.ct) || '').replace(/=+$/, '');
   return ct ? ct.slice(0, 16) : '';    /* 密文前 16 位当卡号，不暴露 Key 本身 */
 }
-/* 状态行：tone = empty / ok / err / testing / session */
+/* 所有提示都交给顶部标题：失败=原因，空态=一句配置帮助，验证中=进度。
+   卡里不再挂状态行，也不再有绿点。 */
 function apiSetState(tone, text, hint) {
-  const box = $('#dsKeyState'), st = $('#dsKeyStatus');
-  if (box) box.dataset.state = tone;
-  if (st) {
-    /* 主行一句话 + 括号里的「怎么办」：错误态要能让用户直接照着做 */
-    st.textContent = text + (hint ? ' · ' + hint : '');
-    if (tone !== 'err') st.title = '';
-  }
-  /* 失败原因直接顶到面板标题上，卡里不再多一行字 */
   const title = $('#apiPopTitle');
-  if (title) {
-    if (tone === 'err') {
-      title.textContent = text + (hint ? ' · ' + hint : '');
-      title.title = text + (hint ? ' · ' + hint : '');
-      title.classList.add('err');
-    } else {
-      title.textContent = 'DeepSeek API';
-      title.title = '';
-      title.classList.remove('err');
-    }
+  if (!title) return;
+  const msg = text + (hint ? ' · ' + hint : '');
+  title.classList.remove('err', 'help');
+  if (tone === 'err') {
+    title.textContent = msg;
+    title.classList.add('err');
+  } else if (tone === 'empty') {
+    title.textContent = '粘贴 DeepSeek API Key';
+    title.classList.add('help');
+  } else if (tone === 'testing') {
+    title.textContent = text || '正在验证…';
+  } else if (tone === 'session') {
+    title.textContent = '仅本次会话有效';
+  } else {
+    title.textContent = 'DeepSeek API';
   }
+  title.title = title.classList.contains('help') ? '' : msg;
 }
-/* 保存按钮已经去掉：验证进度只体现在卡套上的状态行与密文幕布。
+/* 保存按钮已经去掉：验证进度只体现在顶部标题与密文幕布。
    保留空实现，调用点（开始 / 失败 / 结束）不用逐个改。 */
 function apiBusy() { }
 function aiSyncKeyUI() {
@@ -4231,7 +4217,7 @@ function aiFriendlyError(msg) {
 }
 function apiShowError(msg) {
   apiSetState('err', '连接失败：' + aiFriendlyError(msg), aiErrorHint(msg));
-  const st = $('#dsKeyStatus'); if (st) st.title = String(msg || '');
+  const title = $('#apiPopTitle'); if (title) title.title = String(msg || '');
 }
 /* 「封存」动画：明文先从输入框退场，密文幕布上逐位翻字符、从左到右锁成
    密文指纹（就是封存卡里显示的那串），整排由蓝转绿 —— 看得见「真的在加密」，
@@ -23050,7 +23036,7 @@ async function runUITest() {
     if (new Set(hints).size !== 3) throw new Error('不同错误的建议没有区分：' + hints.join(' / '));
     /* 状态行要真的把建议显示出来 */
     apiSetState('err', '连接失败', '去充值');
-    if (!$('#dsKeyStatus').textContent.includes('去充值')) throw new Error('状态行没有附上建议');
+    if (!$('#apiPopTitle').textContent.includes('去充值')) throw new Error('标题没有附上建议');
     apiSetState('empty', '');
   });
   await A('输入:注释 / 思考强度 / 区域截图指令', async () => {
@@ -28011,9 +27997,8 @@ function bindAI() {
     const keyLooksOk = v => /^sk-[A-Za-z0-9._-]{8,}$/.test(String(v || '').trim());
     if (inp) {
       inp.addEventListener('input', () => {
-        /* 输错后重新输入：把红色错误提示收回到中性状态 */
-        const box = $('#dsKeyState');
-        if (box && box.dataset.state === 'err') apiSetState('empty', '');
+        /* 输错后重新输入：标题上的错误提示收回成空态说明 */
+        if (aiKeyState === 'err') apiSetState('empty', '');
         if (okBtn) okBtn.classList.toggle('ready', keyLooksOk(inp.value));
       });
       inp.addEventListener('keydown', e => {
