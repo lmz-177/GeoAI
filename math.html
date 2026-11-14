@@ -1175,9 +1175,8 @@ body.dark .eff-warn{color:#c39bff}
 .bank-fold{position:relative;display:block;width:100%;aspect-ratio:1029/592;padding:0;
   text-align:left;border-radius:18px;perspective:1200px}
 .bank-card-btn{position:absolute;left:4.7%;right:4.7%;top:0;z-index:1;aspect-ratio:1.586/1;padding:0;
-  border-radius:14px;text-align:left;transform-origin:center bottom;
+  border-radius:14px;text-align:left;transform-origin:center bottom;touch-action:pan-y;
   transition:transform .3s var(--ease-out)}
-.bank-card-btn:active{transform:scale(.99)}
 .bank-fold[aria-expanded="true"] .bank-card-btn{transform:translateY(-8%) scale(1.01)}
 /* 卡套后片 */
 .bank-sleeve{position:absolute;inset:10% 0 0;border-radius:16px;background:var(--panel-2);
@@ -1238,21 +1237,17 @@ body.dark .eff-warn{color:#c39bff}
 .bank-key b,.bf-key b{font-weight:700}
 .bank-key b{color:#fff}
 .bf-key b{color:var(--text)}
-/* 卡面操作：刷新余额 / 更换 Key / 清除 Key，直接浮在卡上 */
-.bank-ops{position:absolute;right:6%;top:31%;z-index:6;display:flex;gap:5px}
-.bank-op{width:26px;height:26px;border-radius:50%;display:grid;place-items:center;
-  color:rgba(255,255,255,.92);background:rgba(255,255,255,.16);
-  border:.5px solid rgba(255,255,255,.22);
-  -webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);transition:var(--t-ui)}
-.bank-op:hover{background:rgba(255,255,255,.3)}
-.bank-op:active{transform:scale(.92)}
-.bank-op svg{width:13px;height:13px}
-.bank-op.danger{background:rgba(255,69,58,.92);border-color:transparent}
-.bank-op[hidden]{display:none}
-.bank-op[disabled]{opacity:.6;pointer-events:none}
-#apiBalanceRefresh[disabled] svg{animation:apiSpin .7s linear infinite}
-/* 编辑态下卡面操作先让位，避免和输入框叠在一起 */
-.bank-fold.editing .bank-ops{display:none}
+/* 余额数字就是刷新入口：点它重查；查询中轻轻呼吸 */
+.bf-amt{pointer-events:auto;background:none;text-align:left;cursor:pointer;white-space:nowrap;
+  transition:opacity .18s ease}
+.bf-amt:hover{opacity:.75}
+.bf-amt.refreshing{animation:amtPulse .8s ease-in-out infinite}
+@keyframes amtPulse{0%,100%{opacity:.35}50%{opacity:.9}}
+.bank-amt{cursor:pointer}
+.bank-amt.refreshing{opacity:.5}
+/* 拖走卡片：跟手位移，松手要么回弹要么飞走 */
+.bank-fold.dragging .bank-card-btn{cursor:grabbing}
+.bank-fold.dragging .bank-front{pointer-events:none}
 /* 编辑态：一整块深色玻璃盖在卡上，输入 / 保存 / 换取 Key 都在卡里完成 */
 .api-editor{display:flex;flex-direction:column}
 .api-editor[hidden]{display:none}
@@ -2766,7 +2761,7 @@ try {
             <div class="api-key-card" id="apiKeyCard">
               <div class="bank-fold" id="bankFold" aria-expanded="false">
                 <span class="bank-sleeve" aria-hidden="true"></span>
-                <button class="bank-card-btn" id="bankCardBtn" type="button" aria-label="抽出 / 收回银行卡">
+                <button class="bank-card-btn" id="bankCardBtn" type="button" title="点按抽出 / 收回；横向拖走可删除这张卡" aria-label="点按抽出或收回银行卡，横向拖走可删除">
                   <span class="bank-card">
                     <svg class="bank-rings" viewBox="0 0 640 404" preserveAspectRatio="none" aria-hidden="true"><circle cx="-20" cy="-28" r="72" fill="none" stroke="currentColor" stroke-opacity=".32" stroke-width="1.5"></circle><circle cx="-20" cy="-28" r="96" fill="none" stroke="currentColor" stroke-opacity=".311" stroke-width="1.5"></circle><circle cx="-20" cy="-28" r="120" fill="none" stroke="currentColor" stroke-opacity=".302" stroke-width="1.5"></circle><circle cx="-20" cy="-28" r="144" fill="none" stroke="currentColor" stroke-opacity=".293" stroke-width="1.5"></circle><circle cx="-20" cy="-28" r="168" fill="none" stroke="currentColor" stroke-opacity=".284" stroke-width="1.5"></circle><circle cx="-20" cy="-28" r="192" fill="none" stroke="currentColor" stroke-opacity=".275" stroke-width="1.5"></circle><circle cx="-20" cy="-28" r="216" fill="none" stroke="currentColor" stroke-opacity=".266" stroke-width="1.5"></circle><circle cx="-20" cy="-28" r="240" fill="none" stroke="currentColor" stroke-opacity=".257" stroke-width="1.5"></circle><circle cx="-20" cy="-28" r="264" fill="none" stroke="currentColor" stroke-opacity=".248" stroke-width="1.5"></circle><circle cx="-20" cy="-28" r="288" fill="none" stroke="currentColor" stroke-opacity=".239" stroke-width="1.5"></circle><circle cx="-20" cy="-28" r="312" fill="none" stroke="currentColor" stroke-opacity=".230" stroke-width="1.5"></circle><circle cx="-20" cy="-28" r="336" fill="none" stroke="currentColor" stroke-opacity=".221" stroke-width="1.5"></circle><circle cx="-20" cy="-28" r="360" fill="none" stroke="currentColor" stroke-opacity=".212" stroke-width="1.5"></circle><circle cx="-20" cy="-28" r="384" fill="none" stroke="currentColor" stroke-opacity=".203" stroke-width="1.5"></circle><circle cx="-20" cy="-28" r="408" fill="none" stroke="currentColor" stroke-opacity=".194" stroke-width="1.5"></circle><circle cx="-20" cy="-28" r="432" fill="none" stroke="currentColor" stroke-opacity=".185" stroke-width="1.5"></circle><circle cx="-20" cy="-28" r="456" fill="none" stroke="currentColor" stroke-opacity=".176" stroke-width="1.5"></circle><circle cx="-20" cy="-28" r="480" fill="none" stroke="currentColor" stroke-opacity=".167" stroke-width="1.5"></circle></svg>
                     <span class="bank-glow" aria-hidden="true"></span>
@@ -2794,16 +2789,10 @@ try {
                       </div>
                     </div>
                     <div class="bf-row bf-bottom">
-                      <span class="bf-amt" id="bankAmtMini">—</span>
+                      <button class="bf-amt" id="bankAmtMini" type="button" title="点按刷新余额">—</button>
                       <span class="bf-key" id="bankKeyMini">•••• •••• •••• ••••</span>
                     </div>
                   </div>
-                </div>
-                <!-- 卡面操作：刷新余额 / 更换 Key / 清除 Key -->
-                <div class="bank-ops" id="bankOps">
-                  <button class="bank-op" id="apiBalanceRefresh" type="button" title="刷新余额" aria-label="刷新余额"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 1 1-2.34-5.66"></path><path d="M20 4v4.4h-4.4"></path></svg></button>
-                  <button class="bank-op" id="apiKeyChange" type="button" title="更换 Key" aria-label="更换 Key"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="12" r="4"></circle><path d="M12 12h9M17.5 12v3M20.5 12v2"></path></svg></button>
-                  <button class="bank-op danger" id="dsKeyClear" type="button" title="清除 Key" aria-label="清除 Key" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9 7V5h6v2M6.6 7l.8 12.1A2 2 0 0 0 9.4 21h5.2a2 2 0 0 0 2-1.9L17.4 7"></path></svg></button>
                 </div>
                 <!-- 编辑态：输入框直接盖在卡上，保存 / 取消 / 获取 Key 都在卡里 -->
                 <div class="api-editor bank-edit" id="apiEditor" hidden>
@@ -3623,8 +3612,18 @@ const state = {
    版本号在左上角 GeoAI 打开的「更新与版本」弹窗里展示。改完版本号后，在
    APP_CHANGELOG 最上面补一条（版本、日期、类型、一句摘要、几条说明），
    新版本会自动出现在版本历史里。 */
-const APP_VERSION = '1.7.6';
+const APP_VERSION = '1.7.7';
 const APP_CHANGELOG = [
+  {
+    v: '1.7.7', date: '2026-11-14', tag: '交互优化', code: '约 2.96 万行 · 1.76 MB',
+    lead: '余额自动刷新，换 Key 改成把卡片拖走：卡上不再有任何操作按钮。',
+    notes: [
+      '去掉刷新、更换、清除三枚按钮；卡片本身就是唯一的操作界面',
+      '余额自动更新：打开面板、点按卡片抽出、每轮对话结束，以及点余额数字时各查一次',
+      '横向拖走卡片 84px 即删除本机 Key，卡片飞出后回到输入态，填入新 Key 即可更换',
+      '查询中余额数字轻轻呼吸，作为加载反馈',
+    ],
+  },
   {
     v: '1.7.6', date: '2026-11-14', tag: '界面调整', code: '约 2.96 万行 · 1.76 MB',
     lead: 'API 配置全部收进银行卡：卡号用加密后的 Key 指纹，刷新 / 更换 / 清除 / 保存都在卡上完成。',
@@ -3906,7 +3905,6 @@ let aiKeyReady = null;
 let aiKeySeq = 0;
 let aiKeyPersisted = true;
 let aiKeyErr = '';
-let aiClearTimer = 0;
 /* API 卡片的两态：false = 已保存（显示封存的密钥卡），true = 编辑（显示输入框）。
    没有 Key 时永远是编辑态。 */
 let apiEditing = true;
@@ -4050,7 +4048,7 @@ function apiBusy(on, label) {
   if (txt) txt.textContent = on ? (label || '验证中…') : apiDefaultLabel();
 }
 function aiSyncKeyUI() {
-  const btn = $('#aiKeyBtn'), clr = $('#dsKeyClear');
+  const btn = $('#aiKeyBtn');
   const has = !!AI_CONF.key;
   if (btn) {
     btn.classList.toggle('on', has);
@@ -4079,15 +4077,6 @@ function aiSyncKeyUI() {
   if (tag) tag.textContent = ({
     saved: '已加密保存', session: '仅本次会话', empty: '未配置', error: '密钥不可用', saving: '加密中…',
   })[aiKeyState] || '已加密保存';
-  if (clr) {
-    clr.hidden = !has;
-    if (!has) {
-      delete clr.dataset.confirm;
-      clr.classList.remove('danger');
-      clr.title = '清除 Key';
-      clr.setAttribute('aria-label', '清除 Key');
-    }
-  }
   /* 已保存时结论已经写在封存卡上，状态行只剩一枚绿点，不再复读一遍 */
   const map = {
     empty: ['empty', '未配置'],
@@ -4314,8 +4303,9 @@ async function apiBalanceRefresh() {
   if (!AI_CONF.key || apiBalBusy) return;
   apiBalBusy = true;
   apiBalanceSet('loading', '查询中…', '');
-  const rf = $('#apiBalanceRefresh');
-  if (rf) rf.disabled = true;
+  /* 数字本身当加载指示：查询期间轻轻呼吸 */
+  const amts = [$('#bankAmtMini'), $('#apiBalanceAmt')].filter(Boolean);
+  amts.forEach(a => a.classList.add('refreshing'));
   try {
     const res = await fetch('https://api.deepseek.com/user/balance',
       { headers: { Authorization: 'Bearer ' + AI_CONF.key } });
@@ -4347,7 +4337,7 @@ async function apiBalanceRefresh() {
     apiBalanceSet('err', '获取失败', (e && e.message) || '网络错误');
   } finally {
     apiBalBusy = false;
-    if (rf) rf.disabled = false;
+    amts.forEach(a => a.classList.remove('refreshing'));
   }
 }
 /* 保存并验证：先测通再加密保存，避免把错误 Key 存下来 */
@@ -27917,12 +27907,71 @@ function bindAI() {
     const btn = $('#aiKeyBtn'), pop = $('#apiPop');
     if (!btn || !pop) return;
     btn.addEventListener('click', e => { e.stopPropagation(); setApiPop(!pop.classList.contains('on')); });
-    /* 点卡面：从卡套里抽出 / 收回 */
+    /* 点卡面：抽出 / 收回；横向拖走 84px 以上＝删除这张卡（本机 Key），随后回到输入态 */
     const bankCardBtn = $('#bankCardBtn'), bankFold = $('#bankFold');
-    if (bankCardBtn && bankFold) bankCardBtn.addEventListener('click', e => {
-      e.stopPropagation();
-      bankFold.setAttribute('aria-expanded', bankFold.getAttribute('aria-expanded') === 'true' ? 'false' : 'true');
-    });
+    if (bankCardBtn && bankFold) {
+      let sx = 0, sy = 0, dx = 0, dy = 0, pid = null, dragging = false, moved = false;
+      const clearStyle = () => {
+        bankCardBtn.style.transform = '';
+        bankCardBtn.style.opacity = '';
+        bankCardBtn.style.transition = '';
+        bankCardBtn.style.zIndex = '';
+      };
+      bankCardBtn.addEventListener('pointerdown', e => {
+        if (e.button != null && e.button !== 0) return;
+        sx = e.clientX; sy = e.clientY; dx = dy = 0;
+        pid = e.pointerId; dragging = false; moved = false;
+        try { bankCardBtn.setPointerCapture(pid); } catch (err) { }
+      });
+      bankCardBtn.addEventListener('pointermove', e => {
+        if (pid === null) return;
+        dx = e.clientX - sx; dy = e.clientY - sy;
+        if (!dragging && Math.abs(dx) + Math.abs(dy) > 6) {
+          dragging = true;
+          bankFold.classList.add('dragging');
+          bankCardBtn.style.transition = 'none';
+          bankCardBtn.style.zIndex = '8';
+        }
+        if (!dragging) return;
+        const rot = Math.max(-14, Math.min(14, dx * .06));
+        bankCardBtn.style.transform = 'translate(' + dx + 'px,' + (dy * .3) + 'px) rotate(' + rot + 'deg)';
+        bankCardBtn.style.opacity = String(Math.max(.35, 1 - Math.abs(dx) / 280));
+      });
+      const endDrag = () => {
+        if (pid === null) return;
+        try { bankCardBtn.releasePointerCapture(pid); } catch (err) { }
+        pid = null;
+        bankFold.classList.remove('dragging');
+        bankCardBtn.style.zIndex = '';
+        if (!dragging) { clearStyle(); return; }
+        moved = true;
+        if (Math.abs(dx) > 84) {
+          const dir = dx < 0 ? -1 : 1;
+          bankCardBtn.style.transition = 'transform .22s ease, opacity .22s ease';
+          bankCardBtn.style.transform = 'translate(' + (dir * 150) + '%,' + (dy * .2) + 'px) rotate(' + (dir * 16) + 'deg)';
+          bankCardBtn.style.opacity = '0';
+          setTimeout(() => {
+            aiClearKey();
+            clearStyle();
+            toast('API Key 已删除，填入新 Key 即可更换', 'ok');
+          }, 210);
+        } else {
+          bankCardBtn.style.transition = 'transform .28s var(--spring), opacity .2s ease';
+          bankCardBtn.style.opacity = '';
+          bankCardBtn.style.transform = '';
+          setTimeout(clearStyle, 320);
+        }
+      };
+      bankCardBtn.addEventListener('pointerup', endDrag);
+      bankCardBtn.addEventListener('pointercancel', endDrag);
+      bankCardBtn.addEventListener('click', e => {
+        if (moved) { moved = false; return; }
+        e.stopPropagation();
+        const willOpen = bankFold.getAttribute('aria-expanded') !== 'true';
+        bankFold.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
+        if (willOpen) apiBalanceRefresh();   /* 抽卡时顺便把余额刷一次 */
+      });
+    }
     /* 眼睛：把卡面金额打码 / 显示，点它不要触发抽卡 */
     const bankEye = $('#bankEye');
     if (bankEye) {
@@ -27961,48 +28010,19 @@ function bindAI() {
     });
     const save = $('#dsKeySave');
     if (save) save.addEventListener('click', aiSaveAndVerify);
-    /* 「更换」：从封存卡切回编辑态，自动聚焦输入框，状态行说明会覆盖旧 Key */
-    const change = $('#apiKeyChange');
-    if (change) change.addEventListener('click', () => {
-      apiEditing = true;
-      aiSyncKeyUI();
-      apiSetState('empty', '粘贴新的 Key 后会覆盖当前的');
-      setTimeout(() => { const i = $('#dsKeyInput'); if (i) { i.value = ''; i.focus(); } }, 30);
-    });
-    /* 余额行尾的刷新键：手动重查 */
-    const balRef = $('#apiBalanceRefresh');
-    if (balRef) balRef.addEventListener('click', () => apiBalanceRefresh());
-    /* 打开网页就把余额带上：收起态的钥匙键直接显示剩余金额（失败静默，不弹提示） */
+    /* 打开网页就把余额带上（失败静默，不弹提示） */
     aiKeyReady.then(() => { if (AI_CONF.key) apiBalanceRefresh(); });
+    /* 点余额数字：随时重查一次；卡面那串金额也认 */
+    [$('#bankAmtMini'), $('#apiBalanceAmt')].forEach(el => {
+      if (!el) return;
+      el.addEventListener('click', e => { e.stopPropagation(); apiBalanceRefresh(); });
+    });
     /* 取消：回到卡面，不保存这次输入 */
     const cancelEdit = $('#bankEditCancel');
     if (cancelEdit) cancelEdit.addEventListener('click', () => {
       apiEditing = false;
       const i = $('#dsKeyInput'); if (i) i.value = '';
       aiSyncKeyUI();
-    });
-    const clr = $('#dsKeyClear');
-    if (clr) clr.addEventListener('click', () => {
-      /* 清除是破坏性操作：第一次点变成红色确认态，2.5 秒内再点才执行 */
-      if (clr.dataset.confirm !== '1') {
-        clr.dataset.confirm = '1';
-        clr.classList.add('danger');
-        clr.title = '再点一次确认清除';
-        clr.setAttribute('aria-label', '再点一次确认清除');
-        clearTimeout(aiClearTimer);
-        aiClearTimer = setTimeout(() => {
-          delete clr.dataset.confirm;
-          clr.classList.remove('danger');
-          clr.title = '清除 Key';
-          clr.setAttribute('aria-label', '清除 Key');
-        }, 2500);
-        return;
-      }
-      clearTimeout(aiClearTimer);
-      delete clr.dataset.confirm;
-      clr.classList.remove('danger');
-      clr.title = '清除 Key';
-      aiClearKey();
     });
     document.addEventListener('pointerdown', e => {
       if (!pop.classList.contains('on')) return;
@@ -29564,6 +29584,8 @@ async function aiSend() {
     /* 收尾时只有仍然贴着底部才跟到底；用户正在上面读，就别把人拽回来 */
     if (aiChatDist(chat) <= AI_FOLLOW_PX) aiChatBottom(chat);
     syncAiJump();
+    /* 每轮对话结束顺手更新一次余额，卡面数字始终是新的（失败静默） */
+    if (AI_CONF.key) apiBalanceRefresh();
   }
 }
 
