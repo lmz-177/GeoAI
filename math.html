@@ -1698,6 +1698,13 @@ body:has(.aii-eff.on) .ai-dock{z-index:230}
 .ai-thumb img{width:100%;height:100%;object-fit:cover;display:block}
 .ai-thumb .rm{position:absolute;top:3px;right:3px;width:18px;height:18px;border-radius:50%;background:rgba(0,0,0,.55);color:#fff;display:flex;align-items:center;justify-content:center;-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px)}
 .ai-thumb .rm svg{width:10px;height:10px}
+/* 文档附件：文件名 + 类型角标，和图片缩略图同一行排 */
+.ai-doc{position:relative;flex:0 0 auto;width:132px;height:62px;border-radius:12px;border:.5px solid var(--border);
+  background:var(--panel-2);box-shadow:var(--shadow);display:flex;flex-direction:column;justify-content:center;gap:3px;padding:0 26px 0 11px;overflow:hidden}
+.ai-doc b{font-size:var(--fs-3xs);font-weight:700;color:var(--accent);letter-spacing:.04em}
+.ai-doc .ad-nm{font-size:var(--fs-2xs);color:var(--text-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ai-doc .rm{position:absolute;top:3px;right:3px;width:18px;height:18px;border-radius:50%;background:rgba(0,0,0,.55);color:#fff;display:flex;align-items:center;justify-content:center;-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px)}
+.ai-doc .rm svg{width:10px;height:10px}
 .ai-thumb .sz{position:absolute;left:0;right:0;bottom:0;font-size:var(--fs-3xs);text-align:center;color:#fff;background:linear-gradient(transparent,rgba(0,0,0,.62));padding:7px 0 2px;font-family:var(--mono)}
 .ai-img-btn{display:flex;align-items:center;gap:5px;padding:6px 10px;border-radius:99px;font-size:var(--fs-xs);color:var(--text-2);background:var(--panel-2);transition:var(--t-ui)}
 .ai-img-btn:hover{color:var(--accent);background:var(--accent-dim)}
@@ -2753,6 +2760,7 @@ try {
             </div>
             <button class="ai-tool" id="aiWeb" title="联网检索：需要最新资料或网址内容时开启" aria-label="联网检索：需要最新资料或网址内容时开启"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.6"></circle><path d="M3.4 12h17.2M12 3.4c2.4 2.4 3.6 5.3 3.6 8.6s-1.2 6.2-3.6 8.6c-2.4-2.4-3.6-5.3-3.6-8.6s1.2-6.2 3.6-8.6z"></path></svg></button>
             <button class="ai-tool" id="aiPickImg" title="添加图片（也可直接粘贴或拖入）" aria-label="添加图片（也可直接粘贴或拖入）"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="4.5" width="17" height="15" rx="2.6"></rect><circle cx="9" cy="10" r="1.6"></circle><path d="M4.5 17.8l4.3-4.3 3 3 3.4-3.4 4.3 4.3"></path></svg></button>
+            <button class="ai-tool" id="aiPickDoc" title="添加文档：PDF / Word / PPT / 表格 / 文本" aria-label="添加文档"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3.5H7a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8.5z"></path><path d="M14 3.5v5h5"></path><path d="M9 13h6M9 16.5h4"></path></svg></button>
             <button class="effort" id="effortBox" title="思考强度：Low · 默认档，响应快，适合日常作图与简单计算" aria-haspopup="true" aria-expanded="false" style="--eff-col: #3a83f7; --pn: 0.3333;">
               <span class="eff-mini" aria-hidden="true"><i id="effMiniFill" style="width: 33.3%;"></i></span>
               <span class="effort-name" id="effortName" style="color: rgb(47, 111, 208);">Low</span>
@@ -2765,6 +2773,7 @@ try {
             </div>
           </div>
           <input type="file" id="aiImgFile" accept="image/png,image/jpeg,image/webp,image/gif" multiple="" style="display:none">
+          <input type="file" id="aiDocFile" accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.txt,.md,.csv,.json,.epub,.mobi" multiple="" style="display:none">
           <!-- 画布图片：选择本地文件后，放进「图片」工具待放的位置，或替换右键选中的那张图片 -->
           <input type="file" id="imgFile" accept="image/*" style="display:none">
         </div>
@@ -3453,13 +3462,15 @@ const SET = {
   showGridNumbers: true, boldGrid: false, darkCanvas: false, canvasBg: null,
   /* 计算精度分三项：π 位数、e 位数、除法（算到循环节 / 固定位数） */
   piDigits: 60, eDigits: 60, divMode: 'cycle', divDigits: 20,
+  /* AI：开启后请求带 safety_check（DeepSeek 内容安全校验） */
+  safetyCheck: false,
 };
 /* 设置持久化：小数位、角度单位、网格 / 坐标轴开关这些是「下次打开还想保持」的偏好。
    主题不在这里 —— 它有自己的 ggai_theme（要在首屏前应用，避免闪一下白底）。 */
 const SET_STORE = 'ggai_settings_v1';
 const SET_KEYS = ['round', 'grid', 'axes', 'labels', 'snap', 'snapToObjects',
   'pointSize', 'lineWidth', 'fontSize', 'showMinor', 'boldGrid', 'showGridNumbers', 'angleUnit',
-  'piDigits', 'eDigits', 'divMode', 'divDigits'];
+  'piDigits', 'eDigits', 'divMode', 'divDigits', 'safetyCheck'];
 function saveSET() {
   if (TEST_MODE) return;                 /* 自测模式不写本地存储，保证用例之间确定性 */
   try {
@@ -3509,6 +3520,7 @@ const state = {
   aiIslandTick: 0,       // 灵动岛「已思考 Ns」计时器
   aiIslandT0: 0,
   aiImages: [],          // 待发送的图片附件 [{id,data,url,w,h,bytes}]
+  aiDocs: [],            // 待发送的文档附件 [{id,file_id,name,bytes,purpose}]（DeepSeek Files API）
   aiWeb: false,          // 联网检索开关（开启后每条消息先查实时网页）
   sheet: { cells: {}, sel: 'A1' },   // 表格视图：单元格原始内容（A1 形式标识符 → 文本/公式）
 };
@@ -3516,8 +3528,19 @@ const state = {
    版本号在左上角 GeoAI 打开的「更新与版本」弹窗里展示。改完版本号后，在
    APP_CHANGELOG 最上面补一条（版本、日期、类型、一句摘要、几条说明），
    新版本会自动出现在版本历史里。 */
-const APP_VERSION = '1.6.1';
+const APP_VERSION = '1.7.0';
 const APP_CHANGELOG = [
+  {
+    v: '1.7.0', date: '2026-11-14', tag: '新功能', code: '约 2.93 万行 · 1.81 MB',
+    lead: '接入 DeepSeek 全家桶 API：联网搜索与阅读链接改由服务端执行并带引用，支持上传 PDF / Word / PPT / 表格等文档解析后提问，可选内容安全校验。',
+    notes: [
+      '联网开关改为声明 deepseek_web_search 与 deepseek_read_url 两个服务端工具：模型自己决定搜什么、读哪一页，回答带引用',
+      '新增文档附件：PDF / Word / PPT 走 rich_layout_recognition（连图表一起交给模型），txt / csv / xlsx / epub 等走 user_data',
+      '文档在 DeepSeek Files API 上传解析后用 file_id 引用，一次最多 5 个；拖入文件会按类型自动分流到图片或文档',
+      '设置新增「AI 内容安全校验」：开启后请求带 safety_check=high，拒答会以提示文案呈现',
+      'AI 主动补搜（```search）仍走客户端的 Search / Fetch 接口，作为深度作答的补充',
+    ],
+  },
   {
     v: '1.6.1', date: '2026-11-13', tag: '体验优化', code: '约 2.92 万行 · 1.81 MB',
     lead: 'π / e 的逐位计算改用 Web Worker 多线程并行，并取消每秒步数限制：算完一步立刻接下一步，能算多快算多快，界面也不再卡。',
@@ -17365,6 +17388,7 @@ function settingsHtml() {
     '<div class="set-row"><label>主题</label><select data-sel="theme"><option value="light"' + (SET.theme === 'light' ? ' selected' : '') + '>浅色</option><option value="dark"' + (SET.theme === 'dark' ? ' selected' : '') + '>深色</option></select></div>' +
     '<div class="set-row"><label>小数位数</label><select data-sel="round">' + [0, 1, 2, 3, 4, 5, 6].map(n => '<option value="' + n + '"' + (SET.round === n ? ' selected' : '') + '>' + n + ' 位</option>').join('') + '</select></div>' +
     '<div class="set-row"><label>角度单位</label><select data-sel="angleUnit"><option value="deg"' + (SET.angleUnit === 'deg' ? ' selected' : '') + '>度 (°)</option><option value="rad"' + (SET.angleUnit === 'rad' ? ' selected' : '') + '>弧度</option></select></div>' +
+    sw('safetyCheck', 'AI 内容安全校验') +
     '</div>' +
     '<div class="set-group"><h3>绘图区</h3>' +
     sw('grid', '显示网格') + sw('axes', '显示坐标轴') + sw('showGridNumbers', '坐标轴刻度数字') + sw('showMinor', '次要网格线') + sw('boldGrid', '加粗网格线') +
@@ -20933,7 +20957,7 @@ function init() {
   $('#setReset').onclick = () => {
     /* 同一个模态两种用途：全局设置 / 单个对象设置 */
     if (objSetTarget && getObj(objSetTarget.id)) { resetObjectStyle(objSetTarget); return; }
-    Object.assign(SET, { round: 2, grid: true, axes: true, labels: true, snap: false, snapToObjects: true, pointSize: 4, lineWidth: 3.2, fontSize: 12, showMinor: false, boldGrid: false, showGridNumbers: true, angleUnit: 'deg', piDigits: 60, eDigits: 60, divMode: 'cycle', divDigits: 20 });
+    Object.assign(SET, { round: 2, grid: true, axes: true, labels: true, snap: false, snapToObjects: true, pointSize: 4, lineWidth: 3.2, fontSize: 12, showMinor: false, boldGrid: false, showGridNumbers: true, angleUnit: 'deg', piDigits: 60, eDigits: 60, divMode: 'cycle', divDigits: 20, safetyCheck: false });
     casSyncScale();
     bindSettingsRefresh(); recomputeAll(); syncMenuChecks(); saveSET(); toast('已恢复默认设置');
   };
@@ -26883,6 +26907,7 @@ const AI_SYSTEM = `你是「GeoAI」的数学助手。GeoAI 是一个对标 GeoG
    · 顺序通常是由点 → 线 → 圆 / 多边形 → 标注与度量；先把几何关系画对，再考虑配色与美化。
    · 需要一条精确经过多个点的曲线时用 Lagrange({A,B,C,…})（最多 32 个点，次数 = 点数 − 1）；点多于 6 个时优先用低次 FitPoly，避免插值曲线剧烈振荡。
    · 遇到大整数幂、阶乘、π 任意位数、除法循环节这类精确计算，直接调用 CAS("算式") 或 计算("算式")，由前端算好放到画布上；普通的纯作图对话不要输出 CAS 命令，也不要自己心算长数字。
+   · 用户可能附上 PDF / Word / PPT / 表格 / 图片：直接基于文档内容作答，不要让用户再贴原文；看不清的地方明确说看不清，不要编造。
    · 命令失败就换构造或换名字，不要原样重发；画布上已有的对象直接用标签引用，绝不重复定义。
    · 整幅图确实完整后，单独输出一个 \`\`\`done 代码块，写一句结论。
 4. 用户要求清空画布时，第一步直接用 DeleteAll()。
@@ -27263,22 +27288,96 @@ async function aiAddImages(files) {
   if (ok) renderAiAttach();
 }
 function aiRemoveImage(id) { state.aiImages = state.aiImages.filter(x => x.id !== id); renderAiAttach(); }
+/* ── 文档附件：走 DeepSeek Files API 上传 + 解析，对话里用 file_id 引用 ──
+   PDF / Word / PPT 用 rich_layout_recognition（连图一起交给模型），
+   纯文本 / 表格 / 电子书用 user_data（不计解析费）。 */
+const AI_DOC_MAX = 5;
+const AI_DOC_MAXBYTES = 100 * 1024 * 1024;
+const AI_DOC_RICH = /\.(pdf|docx?|pptx?)$/i;
+const AI_DOC_TEXT = /\.(txt|md|markdown|csv|json|xlsx?|epub|mobi|js|ts|jsx|tsx|py|java|c|cc|cpp|h|hpp|css|html?|xml|yml|yaml)$/i;
+function aiDocPurpose(name) {
+  if (AI_DOC_RICH.test(name)) return 'rich_layout_recognition';
+  if (AI_DOC_TEXT.test(name)) return 'user_data';
+  return null;
+}
+async function aiUploadDoc(f) {
+  const purpose = aiDocPurpose(f.name || '');
+  if (!purpose) throw new Error('不支持这种文件类型');
+  if (f.size > AI_DOC_MAXBYTES) throw new Error('文件超过 100 MiB');
+  await aiKeyReady;
+  if (!AI_CONF.key) throw new Error('还没填 API Key：点输入区工具排上的钥匙图标填入 DeepSeek Key');
+  const fd = new FormData();
+  fd.append('purpose', purpose);          /* purpose 必须排在 file 前面 */
+  fd.append('file', f, f.name);
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 150000);   /* 上传 + 解析最长 120s，留点余量 */
+  try {
+    const res = await fetch('https://api.deepseek.com/files', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + AI_CONF.key },
+      body: fd,
+      signal: ctrl.signal,
+    });
+    if (!res.ok) throw await aiHttpError(res, '上传文档');
+    const j = await res.json();
+    if (!j || !j.id) throw new Error('上传成功但没有返回 file_id');
+    return { file_id: j.id, name: f.name, bytes: f.size, purpose };
+  } catch (e) {
+    if (e && e.name === 'AbortError') throw new Error('解析超时（超过 150 秒）');
+    throw e;
+  } finally { clearTimeout(timer); }
+}
+async function aiAddDocs(files) {
+  const list = Array.from(files || []);
+  let ok = 0;
+  for (const f of list) {
+    if (aiImgTypeOK(f)) { await aiAddImages([f]); continue; }   /* 图片仍走视觉通道 */
+    if (state.aiDocs.length >= AI_DOC_MAX) { toast('一次最多 ' + AI_DOC_MAX + ' 个文档', 'err'); break; }
+    try {
+      toast('正在上传并解析「' + (f.name || '文档') + '」…', 'ok', 2400);
+      const d = await aiUploadDoc(f);
+      state.aiDocs.push(Object.assign({ id: 'doc' + Date.now() + Math.random().toString(36).slice(2, 6) }, d));
+      ok++;
+    } catch (e) { toast('「' + (f.name || '文档') + '」' + (e.message || e), 'err', 3600); }
+  }
+  if (ok) renderAiAttach();
+}
+function aiRemoveDoc(id) { state.aiDocs = state.aiDocs.filter(x => x.id !== id); renderAiAttach(); }
+/* 拖入 / 选择文件：图片进视觉附件，其余进文档附件 */
+function aiAddFiles(files) {
+  const arr = Array.from(files || []);
+  const imgs = arr.filter(aiImgTypeOK), docs = arr.filter(f => !aiImgTypeOK(f));
+  if (imgs.length) aiAddImages(imgs);
+  if (docs.length) aiAddDocs(docs);
+}
 function renderAiAttach() {
   const host = $('#aiAttach'); if (!host) return;
-  const list = state.aiImages || [];
-  host.classList.toggle('has', list.length > 0);
-  host.innerHTML = list.map(im =>
-    '<div class="ai-thumb" title="' + im.w + '×' + im.h + ' · ' + aiBytesTxt(im.bytes) + '">' +
-    '<img src="' + im.data + '" alt="">' +
-    '<button class="rm" data-rm="' + im.id + '" title="移除">' + ICON.close + '</button>' +
-    '<div class="sz">' + aiBytesTxt(im.bytes) + '</div></div>').join('');
-  const btn = $('#aiPickImg'); if (btn) btn.classList.toggle('on', list.length > 0);
+  const imgs = state.aiImages || [], docs = state.aiDocs || [];
+  host.classList.toggle('has', imgs.length + docs.length > 0);
+  host.innerHTML =
+    docs.map(d =>
+      '<div class="ai-doc" title="' + esc(d.name) + ' · ' + aiBytesTxt(d.bytes) + '">' +
+      '<b>' + esc(String(d.name || 'FILE').split('.').pop().toUpperCase().slice(0, 4)) + '</b>' +
+      '<span class="ad-nm">' + esc(d.name) + '</span>' +
+      '<button class="rm" data-rm="' + d.id + '" title="移除">' + ICON.close + '</button></div>').join('') +
+    imgs.map(im =>
+      '<div class="ai-thumb" title="' + im.w + '×' + im.h + ' · ' + aiBytesTxt(im.bytes) + '">' +
+      '<img src="' + im.data + '" alt="">' +
+      '<button class="rm" data-rm="' + im.id + '" title="移除">' + ICON.close + '</button>' +
+      '<div class="sz">' + aiBytesTxt(im.bytes) + '</div></div>').join('');
+  const btn = $('#aiPickImg'); if (btn) btn.classList.toggle('on', imgs.length > 0);
+  const db = $('#aiPickDoc'); if (db) db.classList.toggle('on', docs.length > 0);
 }
 function bindAiImages() {
   const pick = $('#aiPickImg');
   if (pick) { pick.innerHTML = ICON.image; pick.onclick = () => $('#aiImgFile').click(); }
   const fi = $('#aiImgFile');
   if (fi) fi.onchange = () => { aiAddImages(fi.files); fi.value = ''; };
+  /* 文档入口：PDF / Word / PPT / 表格 / 文本 */
+  const dpick = $('#aiPickDoc');
+  if (dpick) dpick.onclick = () => $('#aiDocFile').click();
+  const dfi = $('#aiDocFile');
+  if (dfi) dfi.onchange = () => { aiAddDocs(dfi.files); dfi.value = ''; };
   /* 画布图片：右键「更换图片…」时替换那张图，否则把文件备给「图片」工具下一次放置 */
   const cf = $('#imgFile');
   if (cf) cf.onchange = () => {
@@ -27291,7 +27390,11 @@ function bindAiImages() {
     }).catch(() => toast('图片读取失败', 'err'));
   };
   const host = $('#aiAttach');
-  if (host) host.onclick = e => { const b = e.target.closest('[data-rm]'); if (b) aiRemoveImage(b.dataset.rm); };
+  if (host) host.onclick = e => {
+    const b = e.target.closest('[data-rm]'); if (!b) return;
+    const id = b.dataset.rm;
+    if (String(id).indexOf('doc') === 0) aiRemoveDoc(id); else aiRemoveImage(id);
+  };
   const zone = $('#aiDropZone');
   if (zone) {
     ['dragenter', 'dragover'].forEach(t => zone.addEventListener(t, e => {
@@ -27302,7 +27405,7 @@ function bindAiImages() {
     zone.addEventListener('drop', e => {
       const fs = e.dataTransfer && e.dataTransfer.files;
       if (!fs || !fs.length) return;
-      e.preventDefault(); zone.classList.remove('dragging'); aiAddImages(fs);
+      e.preventDefault(); zone.classList.remove('dragging'); aiAddFiles(fs);
     });
   }
   const inp = $('#aiInput');
@@ -27771,7 +27874,7 @@ function bindAI() {
     const sync = () => {
       b.classList.toggle('on', !!state.aiWeb);
       b.title = state.aiWeb
-        ? '联网已开启：每条消息会先检索实时网页（检索成功即计费）'
+        ? '联网已开启：模型按需搜索、读链接（服务端执行，回答带引用）'
         : '联网检索：需要最新资料或网址内容时开启';
     };
     sync();
@@ -27779,7 +27882,7 @@ function bindAI() {
       state.aiWeb = !state.aiWeb;
       try { localStorage.setItem('ggai_web', state.aiWeb ? '1' : '0'); } catch (e) { }
       sync();
-      toast(state.aiWeb ? '联网已开启，下一条消息会先检索网页' : '联网已关闭');
+      toast(state.aiWeb ? '联网已开启：搜索与阅读链接交给 DeepSeek 服务端' : '联网已关闭');
     });
   })();
 
@@ -28011,7 +28114,7 @@ function aiWelcome() {
 function aiRegenerate(btn) {
   if (state.aiBusy) { toast('正在生成，先停止再重做', 'err'); return; }
   const lu = state.aiLastUser;
-  if (!lu || (!lu.text && !(lu.imgs || []).length)) { toast('还没有可以重做的提问', 'err'); return; }
+  if (!lu || (!lu.text && !(lu.imgs || []).length && !(lu.docs || []).length)) { toast('还没有可以重做的提问', 'err'); return; }
   const chat = $('#aiChat');
   const msgs = Array.from(chat.children);
   const lastAi = [...msgs].reverse().find(m => m.classList.contains('ai'));
@@ -28027,7 +28130,9 @@ function aiRegenerate(btn) {
   ['#aiMsgCount', '#aiHistCnt', '#aiHistCntOpen'].forEach(sel => { const el = $(sel); if (el) el.textContent = n; });
   const pill = $('#aiHistFold'); if (pill) pill.classList.toggle('empty', chat.children.length === 0);
   aiNavBuild();
-  state.aiImages = (lu.imgs || []).slice(); renderAiAttach();
+  state.aiImages = (lu.imgs || []).slice();
+  state.aiDocs = (lu.docs || []).slice();
+  renderAiAttach();
   const inp = $('#aiInput');
   inp.value = lu.text || '';
   inp.dispatchEvent(new Event('input', { bubbles: true }));
@@ -28530,6 +28635,10 @@ async function callAI(messages, eff, onDelta) {
   const body = { model: AI_MODEL, messages, stream: true };
   if (eff.api) { body.thinking = { type: 'enabled' }; body.reasoning_effort = eff.effort; }
   else { body.thinking = { type: 'disabled' }; }
+  /* 全家桶：联网搜索与阅读链接由服务端执行，客户端只需声明工具；
+     内容安全校验按设置开启（level=high 时会额外审核输入输出） */
+  if (state.aiWeb) body.tools = [{ type: 'deepseek_web_search' }, { type: 'deepseek_read_url' }];
+  if (SET.safetyCheck) body.safety_check = { level: 'high' };
   try {
     const res = await fetch(AI_URL, {
       method: 'POST',
@@ -28544,7 +28653,7 @@ async function callAI(messages, eff, onDelta) {
     }
     const reader = res.body.getReader();
     const dec = new TextDecoder('utf-8');
-    let buf = '', reasoning = '', content = '';
+    let buf = '', reasoning = '', content = '', refused = false;
     for (;;) {
       bumpIdle();
       const { done, value } = await reader.read();
@@ -28559,14 +28668,19 @@ async function callAI(messages, eff, onDelta) {
         if (payload === '[DONE]') continue;
         try {
           const j = JSON.parse(payload);
-          const d = j.choices && j.choices[0] && j.choices[0].delta;
+          const ch = j.choices && j.choices[0];
+          const d = ch && ch.delta;
           if (!d) continue;
+          if (ch.finish_reason === 'content_filter') refused = true;
+          if (d.refusal) refused = true;
           if (d.reasoning_content) reasoning += d.reasoning_content;
           if (d.content) content += d.content;
           onDelta && onDelta(reasoning, content);
         } catch (e) { }
       }
     }
+    /* 开启安全校验（或声明联网工具）后，服务端可能以拒答结束：清掉已流出的内容 */
+    if (refused) return { reasoning, content: '（本次回答未通过 DeepSeek 内容安全审核，已停止生成）' };
     return { reasoning, content };
   } catch (e) {
     if (timedOut) throw new Error('AI 响应超时（60 秒没有收到数据），已停止；可以重试或换个问法');
@@ -28580,16 +28694,17 @@ async function aiSend() {
   const inp = $('#aiInput');
   let text = inp.value.trim();
   const imgs = (state.aiImages || []).slice();
-  if ((!text && !imgs.length) || state.aiBusy) return;
+  const docs = (state.aiDocs || []).slice();
+  if ((!text && !imgs.length && !docs.length) || state.aiBusy) return;
   inp.value = ''; inp.dispatchEvent(new Event('input', { bubbles: true }));
   const box0 = inp.closest('.ai-box'); if (box0) box0.classList.remove('grow');
   /* 历史记录折叠着就保持折叠：只发消息，不替用户展开对话 */
   const dock0 = $('#aiPanel');
   if (!(dock0 && dock0.classList.contains('hist-fold'))) toggleAISheet(true);
-  aiPush('user', text || '（图片）', imgs.length ? { images: imgs } : undefined);
+  aiPush('user', text || (imgs.length ? '（图片）' : '（文档）'), imgs.length ? { images: imgs } : undefined);
   /* 记下原始提问，供消息头上的「重做」按钮原样重发（DOM 里是转义过的文本，还原不可靠） */
-  state.aiLastUser = { text, imgs };
-  state.aiImages = []; renderAiAttach();
+  state.aiLastUser = { text, imgs, docs };
+  state.aiImages = []; state.aiDocs = []; renderAiAttach();
   const eff = aiEffort();
   state.aiBusy = true;
   const sendBtn = $('#aiSend');
@@ -28611,67 +28726,20 @@ async function aiSend() {
   const bubble = wrap.querySelector('.bubble');
   chat.scrollTop = chat.scrollHeight;
 
-  /* 整块对话区收进灵动岛：先进入「检索」或「思考」，后面按流式事件继续切换 */
+  /* 整块对话区收进灵动岛：先进入「联网」或「思考」，后面按流式事件继续切换 */
   aiMini(true);
   const startKind = (state.aiWeb && text) ? 'search' : (eff.api ? 'think' : 'write');
   aiIsland(
     startKind,
-    startKind === 'search' ? '正在联网检索' : startKind === 'think' ? '思考中' : '正在生成',
-    '画布内容已附带 · ' + eff.label,
+    startKind === 'search' ? '联网作答' : startKind === 'think' ? '思考中' : '正在生成',
+    startKind === 'search' ? '由 DeepSeek 服务端按需搜索 · ' + eff.label : '画布内容已附带 · ' + eff.label,
     { busy: true }
   );
 
-  /* ── 联网：先检索实时网页，把结果作为资料拼进用户消息 ──
-     检索失败不影响正常问答：提示一下，继续按普通对话回答。 */
-  let webCtx = '', webHits = 0, webPages = 0;
-  if (state.aiWeb && text) {
-    const note = document.createElement('div');
-    note.className = 'exec-note';
-    note.innerHTML = '<span class="spin"></span>正在联网检索…';
-    body.appendChild(note);
-    chat.scrollTop = chat.scrollHeight;
-    const webCtrl = new AbortController();
-    state.aiAbort = webCtrl;
-    try {
-      const results = await aiWebSearch(text, WEB_MAX_RESULTS, webCtrl.signal);
-      const pages = [];
-      for (const u of extractUrls(text).slice(0, WEB_MAX_FETCH)) {
-        try {
-          const pg = await aiWebFetchPage(u, webCtrl.signal);
-          pages.push({ url: u, title: pg.title, content: String(pg.content).slice(0, WEB_FETCH_CHARS) });
-        } catch (e) { if (webCtrl.signal.aborted) throw e; }
-      }
-      webHits = results.length; webPages = pages.length;
-      webCtx = webContextBlock(results, pages);
-      if (!results.length && !pages.length) {
-        note.innerHTML = ICON.warn + '联网检索没有找到可用结果，本次按普通对话回答';
-        aiIsland('think', '思考中', '未找到可用来源 · 直接作答', { busy: true });
-      } else {
-        const box = makeThinkPanel('联网检索：' + results.length + ' 条来源' +
-          (pages.length ? '，已抓取 ' + pages.length + ' 个网页' : ''));
-        box.querySelector('.body').textContent = webSourcesText(results, pages);
-        thinkPanelSetOpen(box, false);   /* 来源明细默认收起，摘要行留着 */
-        body.replaceChild(box, note);
-        aiIsland('think', '思考中', '已联网 · ' + results.length + ' 条来源 · ' + eff.label, { busy: true });
-      }
-    } catch (e) {
-      if (webCtrl.signal.aborted) {
-        note.innerHTML = '<span style="color:var(--text-3)">已停止联网检索</span>';
-        bubble.innerHTML = '<i style="color:var(--text-3)">已停止</i>';
-        state.aiAbort = null;
-        state.aiBusy = false;
-        sendBtn.classList.remove('ai-stop');
-        sendBtn.innerHTML = ICON.send;
-        sendBtn.title = '';
-        aiIslandSettle('stopped', '已停止', '联网检索已中断', 600);
-        return;
-      }
-      note.innerHTML = ICON.warn + '联网检索失败：' + esc(e.message || String(e)) + '，本次按普通对话回答';
-      aiIsland('think', '思考中', '检索失败 · 按普通对话作答', { busy: true });
-    }
-    state.aiAbort = null;
-    chat.scrollTop = chat.scrollHeight;
-  }
+  /* 联网交给服务端的 deepseek_web_search / deepseek_read_url：
+     客户端不再预检索、也不预抓链接，模型自己决定搜什么、读哪一页，回答里带引用。
+     客户端只保留 AI 主动发起「再搜一轮」（```search）时使用的独立 Search / Fetch 接口。 */
+  let webCtx = '';
 
   let thinkEl = null, thinkBody = null, thinkText = null, thinkFollow = true;
   const ensureThink = () => {
@@ -28908,13 +28976,16 @@ async function aiSend() {
 
   const msgs = [{ role: 'system', content: aiSystemPrompt() }];
   state.aiHistory.forEach(h => msgs.push(h));
-  /* 有图片时用 OpenAI 兼容的 content 块数组；纯文本仍用字符串（更省 token） */
-  const promptText = text || '请识别这张图片中的数学内容。';
+  /* 有文档 / 图片时用 content 块数组；纯文本仍用字符串（更省 token）。
+     文档按官方格式先引用 file_id，再给文字与图片。 */
+  const promptText = text || (docs.length ? '请阅读这份文档并回答。' : '请识别这张图片中的数学内容。');
   /* 画布内容永远附带：模型能直接引用现成的点 / 线 / 圆，不必让用户再开一次开关 */
   const ctxNote = '\n\n' + buildCanvasContext() + (webCtx ? '\n\n' + webCtx : '');
   let userContent;
-  if (imgs.length) {
-    userContent = [{ type: 'text', text: promptText + ctxNote }];
+  if (imgs.length || docs.length) {
+    userContent = [];
+    docs.forEach(d => userContent.push({ type: 'file', file_id: d.file_id }));
+    userContent.push({ type: 'text', text: promptText + ctxNote });
     imgs.forEach(im => userContent.push({ type: 'image_url', image_url: { url: im.data, detail: 'high' } }));
   } else {
     userContent = promptText + ctxNote;
@@ -29181,7 +29252,7 @@ async function aiSend() {
       if (badN) toast('有 ' + badN + ' 条命令未执行成功' + (rounds ? '（已自动重试 ' + rounds + ' 次）' : ''), 'err', 3200);
     }
     /* 终态：历史记录保持用户自己的折叠状态；等待确认则单独弹澄清卡 */
-    const webNote = (webHits + extraHits) ? ' · 联网 ' + (webHits + extraHits) + ' 条' : '';
+    const webNote = extraHits ? ' · 联网补充 ' + extraHits + ' 条' : '';
     if (stepAborted) {
       aiIslandSettle('stopped', '已停止', '已完成 ' + stepOk + ' 条命令' + webNote, 700);
     } else if (asked && !badTotal) {
@@ -29209,6 +29280,7 @@ async function aiSend() {
         '<div class="ai-err-hint">点输入区工具排上的钥匙图标填入并保存，保存时会自动验证连接。</div>';
       setApiPop(true);
       if (imgs.length && !state.aiImages.length) { state.aiImages = imgs; renderAiAttach(); }
+      if (docs.length && !state.aiDocs.length) { state.aiDocs = docs; renderAiAttach(); }
       aiIslandSettle('error', '需要 API Key', '填入 Key 后再发送 · 点按查看', 2000);
     } else {
       const msg = String(e.message || '请求失败');
@@ -29216,6 +29288,7 @@ async function aiSend() {
         '<div class="ai-err-hint">' + esc(aiErrorHint(msg)) + '</div>';
       /* 失败时把图片还回输入区，避免用户重新选一遍 */
       if (imgs.length && !state.aiImages.length) { state.aiImages = imgs; renderAiAttach(); }
+      if (docs.length && !state.aiDocs.length) { state.aiDocs = docs; renderAiAttach(); }
       /* 标题直接说出病根：欠费 / Key / 限流 / 服务故障，用户不看正文也知道该干嘛 */
       const label = /欠费|余额不足|账户余额|402/.test(msg) ? 'API 欠费'
         : /Key 无效|已被删除|401|API Key/.test(msg) ? 'Key 需要更新'
