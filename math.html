@@ -1252,16 +1252,18 @@ body.dark .eff-warn{color:#c39bff}
 /* 拖走卡片：跟手位移，松手要么回弹要么飞走 */
 .bank-fold.dragging .bank-card-btn{cursor:grabbing}
 .bank-fold.dragging .bank-front{pointer-events:none}
-/* 编辑态：输入框就在卡套上，回车 / 失焦自动保存验证 */
-.bf-edit{position:absolute;left:0;right:0;bottom:7px;display:flex;flex-direction:column;gap:5px;
+/* 编辑态：输入框就在卡套上。没有边框与占位字，只留光标和眼睛，让卡面本身说明一切 */
+.bf-edit{position:absolute;left:0;right:0;bottom:10px;display:flex;flex-direction:column;gap:2px;
   pointer-events:auto}
 .bf-edit[hidden]{display:none}
-.bf-edit .api-field{margin:0;height:38px;background:var(--panel-2);border-color:var(--border)}
-.bf-edit .api-field:focus-within{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-dim)}
-.bf-edit-foot{display:flex;align-items:center;justify-content:space-between;gap:6px;padding:0 2px}
+.bf-edit .api-field{margin:0;height:34px;background:transparent;border:0;border-radius:0;padding:0 2px}
+.bf-edit .api-field:focus-within{border-color:transparent;box-shadow:none}
+.bf-edit .api-field input{font-size:16px;letter-spacing:.01em;color:var(--text);padding:0 4px 0 2px}
+.bf-edit .api-seal{background:var(--modal-bg)}
+.bf-edit-foot{display:flex;align-items:center;gap:6px;min-height:13px;padding:0 2px}
 .bf-edit .api-state{margin:0;min-height:13px;font-size:var(--fs-3xs);line-height:13px;min-width:0;overflow:hidden}
+.bf-edit .api-state[data-state="empty"]{display:none}
 .bf-edit .api-state-txt{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.bf-edit-hint{font-size:var(--fs-3xs);color:var(--text-3);white-space:nowrap}
 /* 状态行：小圆点 + 一句话 */
 .api-state{margin:10px 18px 0;display:flex;align-items:center;gap:7px;min-height:18px;
   font-size:var(--fs-xs);line-height:17px;color:var(--text-3)}
@@ -2773,17 +2775,15 @@ try {
                     <!-- 输入态：直接在卡套上填，回车 / 失焦自动保存验证 -->
                     <div class="bf-edit" id="apiEditor" hidden>
                       <div class="api-field" id="apiField">
-                        <input type="password" id="dsKeyInput" placeholder=" " autocomplete="new-password" spellcheck="false" aria-label="API Key">
-                        <label class="fl-label" for="dsKeyInput">API Key</label>
+                        <input type="password" id="dsKeyInput" autocomplete="new-password" spellcheck="false" aria-label="API Key">
                         <button class="api-eye" id="dsKeyEye" title="显示 / 隐藏" aria-label="显示 Key"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 12S6 5.8 12 5.8 21.5 12 21.5 12 18 18.2 12 18.2 2.5 12 2.5 12z"></path><circle cx="12" cy="12" r="2.6"></circle></svg></button>
                         <div class="api-seal" id="apiSeal" aria-hidden="true"><span class="api-seal-txt"></span></div>
                       </div>
                       <div class="bf-edit-foot">
                         <div class="api-state" id="dsKeyState" data-state="empty" role="status" aria-live="polite">
                           <span class="api-dot" aria-hidden="true"></span>
-                          <span class="api-state-txt" id="dsKeyStatus">未配置</span>
+                          <span class="api-state-txt" id="dsKeyStatus"></span>
                         </div>
-                        <span class="bf-edit-hint">回车保存</span>
                       </div>
                     </div>
                   </div>
@@ -3586,8 +3586,17 @@ const state = {
    版本号在左上角 GeoAI 打开的「更新与版本」弹窗里展示。改完版本号后，在
    APP_CHANGELOG 最上面补一条（版本、日期、类型、一句摘要、几条说明），
    新版本会自动出现在版本历史里。 */
-const APP_VERSION = '1.7.8';
+const APP_VERSION = '1.7.9';
 const APP_CHANGELOG = [
+  {
+    v: '1.7.9', date: '2026-11-14', tag: '界面调整', code: '约 2.96 万行 · 1.76 MB',
+    lead: '让 UI 说话：删掉「未配置」「回车保存」这类辅助文字，输入框也去掉边框与占位提示。',
+    notes: [
+      '空态和正常态不再显示状态行，只有出错 / 验证中 / 仅本次会话时才出现一句提示',
+      '卡面右下角在未配置时不再写「未配置」，留空',
+      'Key 输入框去掉边框、底色、占位字与浮动标签，只剩光标、文字和右侧的眼睛',
+    ],
+  },
   {
     v: '1.7.8', date: '2026-11-14', tag: '交互优化', code: '约 2.96 万行 · 1.76 MB',
     lead: 'API Key 直接在卡套上填，回车或失焦自动保存验证；只剩一张银行卡，获取入口挪到标题旁。',
@@ -4047,11 +4056,11 @@ function aiSyncKeyUI() {
   }
   const tag = $('#bankSavedTag');
   if (tag) tag.textContent = ({
-    saved: '已加密保存', session: '仅本次会话', empty: '未配置', error: '密钥不可用', saving: '加密中…',
-  })[aiKeyState] || '已加密保存';
+    saved: '已加密保存', session: '仅本次会话', empty: '', error: '密钥不可用', saving: '加密中…',
+  })[aiKeyState] || '';
   /* 已保存时结论已经写在封存卡上，状态行只剩一枚绿点，不再复读一遍 */
   const map = {
-    empty: ['empty', '未配置'],
+    empty: ['empty', ''],
     saving: ['testing', '正在加密保存…'],
     saved: ['ok', ''],
     session: ['session', '仅本次会话有效' + (aiKeyErr ? '：' + aiKeyErr : '')],
