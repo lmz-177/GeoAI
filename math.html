@@ -106,7 +106,7 @@ body.dark{
    文字与图标用的 --accent 仍保持亮蓝，两者分工不变。 */
 body.dark .btn-primary,body.dark .ps-share:hover,body.dark .enter-btn,body.dark .kb-key.accent,
 body.dark .kb-key:active,body.dark .cvs-restore .cr-ok,body.dark .ai-hist-cnt,
-body.dark .api-key-change:hover,body.dark .api-primary,body.dark .seg.blue button.on,
+body.dark .api-primary,body.dark .seg.blue button.on,
 body.dark .ai-send,body.dark .btn.primary,body.dark .bubble .md-task.done,body.dark .tool-hint.ask .th-ok{background:#0a6ed1}
 body.dark .btn-primary:hover,body.dark .api-primary:hover,body.dark .ai-send:hover,body.dark .tool-hint.ask .th-ok:hover{background:#095cb0}
 
@@ -1174,19 +1174,20 @@ body.dark .eff-warn{color:#c39bff}
 .api-key-card[hidden]{display:none}
 .bank-fold{position:relative;display:block;width:100%;aspect-ratio:1029/592;padding:0;
   text-align:left;border-radius:18px;perspective:1200px}
-.bank-fold:active{transform:scale(.99)}
+.bank-card-btn{position:absolute;left:4.7%;right:4.7%;top:0;z-index:1;aspect-ratio:1.586/1;padding:0;
+  border-radius:14px;text-align:left;transform-origin:center bottom;
+  transition:transform .3s var(--ease-out)}
+.bank-card-btn:active{transform:scale(.99)}
+.bank-fold[aria-expanded="true"] .bank-card-btn{transform:translateY(-8%) scale(1.01)}
 /* 卡套后片 */
 .bank-sleeve{position:absolute;inset:10% 0 0;border-radius:16px;background:var(--panel-2);
   border:.5px solid var(--border);box-shadow:inset 0 1px 0 rgba(255,255,255,.35);
   transform-origin:center bottom;transition:transform .28s var(--ease-in-out),opacity .24s ease}
 .bank-fold[aria-expanded="true"] .bank-sleeve{transform:translateY(18%) scaleY(.18)}
 /* 卡面 */
-.bank-card{position:absolute;left:4.7%;right:4.7%;top:0;z-index:1;aspect-ratio:1.586/1;
-  border-radius:14px;overflow:hidden;color:#fff;text-align:left;
+.bank-card{position:absolute;inset:0;border-radius:14px;overflow:hidden;color:#fff;text-align:left;
   background:linear-gradient(135deg,#383a38 0%,#202120 48%,#111211 100%);
-  box-shadow:0 10px 26px rgba(0,0,0,.30);
-  transform-origin:center bottom;transition:transform .3s var(--ease-out)}
-.bank-fold[aria-expanded="true"] .bank-card{transform:translateY(-8%) scale(1.01)}
+  box-shadow:0 10px 26px rgba(0,0,0,.30)}
 /* 左上角向外扩散的等高线（照参考的 18 条圆） */
 .bank-rings{position:absolute;inset:0;width:100%;height:100%;color:#fff;pointer-events:none}
 .bank-glow{position:absolute;inset:0;pointer-events:none;
@@ -1234,25 +1235,52 @@ body.dark .eff-warn{color:#c39bff}
   font-variant-numeric:tabular-nums;line-height:1.2;white-space:nowrap}
 .bf-key{font-family:var(--mono);font-size:10px;letter-spacing:.1em;color:var(--text-3);white-space:nowrap;
   font-variant-numeric:tabular-nums}
-/* 卡下面的一行操作 */
-.bank-actions{display:flex;align-items:center;gap:8px;margin-top:10px}
-.akc-refresh{display:flex;align-items:center;gap:5px;height:32px;padding:0 12px;border-radius:9px;
-  font-size:var(--fs-xs);font-weight:600;color:var(--text-2);background:var(--panel-2);transition:var(--t-ui)}
-.akc-refresh:hover{color:var(--text);background:var(--hover)}
-.akc-refresh:active{transform:scale(.96)}
-.akc-refresh svg{width:13px;height:13px}
-.akc-refresh[disabled]{opacity:.5}
-.api-key-card[data-bal="loading"] .akc-refresh svg{animation:apiSpin .7s linear infinite}
-.api-key-change{flex:0 0 auto;height:32px;padding:0 12px;border-radius:9px;
-  font-size:var(--fs-xs);font-weight:600;color:var(--accent);background:var(--accent-dim);transition:var(--t-ui)}
-.api-key-change:hover{background:var(--accent);color:#fff}
-.api-key-change:active{transform:scale(.95)}
-/* 两态切换：编辑区展开 / 收起，display 切换 + 各自的进场动画 */
-.api-editor{display:block}
+.bank-key b,.bf-key b{font-weight:700}
+.bank-key b{color:#fff}
+.bf-key b{color:var(--text)}
+/* 卡面操作：刷新余额 / 更换 Key / 清除 Key，直接浮在卡上 */
+.bank-ops{position:absolute;right:6%;top:31%;z-index:6;display:flex;gap:5px}
+.bank-op{width:26px;height:26px;border-radius:50%;display:grid;place-items:center;
+  color:rgba(255,255,255,.92);background:rgba(255,255,255,.16);
+  border:.5px solid rgba(255,255,255,.22);
+  -webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);transition:var(--t-ui)}
+.bank-op:hover{background:rgba(255,255,255,.3)}
+.bank-op:active{transform:scale(.92)}
+.bank-op svg{width:13px;height:13px}
+.bank-op.danger{background:rgba(255,69,58,.92);border-color:transparent}
+.bank-op[hidden]{display:none}
+.bank-op[disabled]{opacity:.6;pointer-events:none}
+#apiBalanceRefresh[disabled] svg{animation:apiSpin .7s linear infinite}
+/* 编辑态下卡面操作先让位，避免和输入框叠在一起 */
+.bank-fold.editing .bank-ops{display:none}
+/* 编辑态：一整块深色玻璃盖在卡上，输入 / 保存 / 换取 Key 都在卡里完成 */
+.api-editor{display:flex;flex-direction:column}
 .api-editor[hidden]{display:none}
-/* 主按钮在编辑态里才出现，避免「已保存」时还挂着一个大蓝块 */
-.api-editor .api-primary{margin-top:12px}
-/* 状态行：小圆点 + 一句话；清除只是行尾的一行小字 */
+.bank-edit{position:absolute;inset:6% 6.5%;z-index:7;justify-content:center;gap:7px;
+  padding:11px 12px;border-radius:14px;background:rgba(14,15,17,.84);
+  -webkit-backdrop-filter:blur(18px) saturate(160%);backdrop-filter:blur(18px) saturate(160%);
+  box-shadow:0 10px 26px rgba(0,0,0,.34),inset 0 1px 0 rgba(255,255,255,.14)}
+.api-editor.bank-edit[hidden]{display:none}
+.bank-edit .api-field{margin:0;height:40px;background:rgba(255,255,255,.10);border-color:rgba(255,255,255,.16)}
+.bank-edit .api-field input{color:#fff}
+.bank-edit .api-field input::placeholder{color:rgba(255,255,255,.38)}
+.bank-edit .fl-label{background:#1a1b1f;color:rgba(255,255,255,.55)}
+.bank-edit .api-field:focus-within{border-color:#6fa8ff;box-shadow:0 0 0 3px rgba(90,150,255,.22)}
+.bank-edit .api-eye{color:rgba(255,255,255,.55)}
+.bank-edit .api-eye:hover{color:#fff}
+.bank-edit .api-seal{background:rgba(20,22,25,.96)}
+.bank-edit .api-seal-txt{font-size:var(--fs-xs)}
+.bank-edit-row{display:flex;align-items:center;gap:7px}
+.bank-edit .api-primary{margin:0;width:auto;flex:1;height:34px;border-radius:9px;font-size:var(--fs-xs)}
+.bank-cancel{flex:0 0 auto;height:34px;padding:0 12px;border-radius:9px;
+  font-size:var(--fs-xs);font-weight:600;color:rgba(255,255,255,.72);background:rgba(255,255,255,.12);transition:var(--t-ui)}
+.bank-cancel:hover{background:rgba(255,255,255,.2);color:#fff}
+.bank-edit-foot{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.bank-edit .api-state{margin:0;min-height:0;font-size:var(--fs-3xs);line-height:15px;color:rgba(255,255,255,.5)}
+.bank-edit .api-state-txt{color:rgba(255,255,255,.5)}
+.bank-edit .api-link{margin:0;padding:0;font-size:var(--fs-3xs);color:#8fb6ff;justify-content:flex-end;white-space:nowrap}
+.bank-edit .api-link svg{width:10px;height:10px}
+/* 状态行：小圆点 + 一句话 */
 .api-state{margin:10px 18px 0;display:flex;align-items:center;gap:7px;min-height:18px;
   font-size:var(--fs-xs);line-height:17px;color:var(--text-3)}
 .api-dot{flex:0 0 7px;width:7px;height:7px;border-radius:50%;background:var(--text-3);transition:background var(--t)}
@@ -1264,8 +1292,6 @@ body.dark .eff-warn{color:#c39bff}
 .api-state[data-state="session"] .api-dot{background:var(--warn)}
 .api-state[data-state="session"]{color:var(--warn-ink)}
 @keyframes apiPulse{0%,100%{opacity:.35;transform:scale(.85)}50%{opacity:1;transform:scale(1.15)}}
-.api-clear-link{margin-left:auto;padding:2px 0;font-size:var(--fs-xs);color:var(--danger-ink);background:none}
-.api-clear-link[hidden]{display:none}
 /* 主按钮：唯一一个实心按钮；验证中转圈 */
 .api-primary{margin:14px 16px 0;width:calc(100% - 32px);height:46px;border-radius:12px;
   display:flex;align-items:center;justify-content:center;gap:8px;
@@ -2736,63 +2762,70 @@ try {
               <div class="api-pop-ttl">DeepSeek API</div>
               <button class="api-close" id="apiPopClose" title="关闭" aria-label="关闭"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6 6 18"></path></svg></button>
             </div>
-            <!-- 已保存态：银行卡从卡套里抽出（照 card-folder 组件移植） -->
-            <div class="api-key-card" id="apiKeyCard" hidden>
-              <button class="bank-fold" id="bankFold" type="button" aria-expanded="false" aria-label="账户余额卡片">
+            <!-- 余额、Key 与所有操作都在这张卡上完成 -->
+            <div class="api-key-card" id="apiKeyCard">
+              <div class="bank-fold" id="bankFold" aria-expanded="false">
                 <span class="bank-sleeve" aria-hidden="true"></span>
-                <span class="bank-card">
-                  <svg class="bank-rings" viewBox="0 0 640 404" preserveAspectRatio="none" aria-hidden="true"><circle cx="-20" cy="-28" r="72" fill="none" stroke="currentColor" stroke-opacity=".32" stroke-width="1.5"></circle><circle cx="-20" cy="-28" r="96" fill="none" stroke="currentColor" stroke-opacity=".311" stroke-width="1.5"></circle><circle cx="-20" cy="-28" r="120" fill="none" stroke="currentColor" stroke-opacity=".302" stroke-width="1.5"></circle><circle cx="-20" cy="-28" r="144" fill="none" stroke="currentColor" stroke-opacity=".293" stroke-width="1.5"></circle><circle cx="-20" cy="-28" r="168" fill="none" stroke="currentColor" stroke-opacity=".284" stroke-width="1.5"></circle><circle cx="-20" cy="-28" r="192" fill="none" stroke="currentColor" stroke-opacity=".275" stroke-width="1.5"></circle><circle cx="-20" cy="-28" r="216" fill="none" stroke="currentColor" stroke-opacity=".266" stroke-width="1.5"></circle><circle cx="-20" cy="-28" r="240" fill="none" stroke="currentColor" stroke-opacity=".257" stroke-width="1.5"></circle><circle cx="-20" cy="-28" r="264" fill="none" stroke="currentColor" stroke-opacity=".248" stroke-width="1.5"></circle><circle cx="-20" cy="-28" r="288" fill="none" stroke="currentColor" stroke-opacity=".239" stroke-width="1.5"></circle><circle cx="-20" cy="-28" r="312" fill="none" stroke="currentColor" stroke-opacity=".230" stroke-width="1.5"></circle><circle cx="-20" cy="-28" r="336" fill="none" stroke="currentColor" stroke-opacity=".221" stroke-width="1.5"></circle><circle cx="-20" cy="-28" r="360" fill="none" stroke="currentColor" stroke-opacity=".212" stroke-width="1.5"></circle><circle cx="-20" cy="-28" r="384" fill="none" stroke="currentColor" stroke-opacity=".203" stroke-width="1.5"></circle><circle cx="-20" cy="-28" r="408" fill="none" stroke="currentColor" stroke-opacity=".194" stroke-width="1.5"></circle><circle cx="-20" cy="-28" r="432" fill="none" stroke="currentColor" stroke-opacity=".185" stroke-width="1.5"></circle><circle cx="-20" cy="-28" r="456" fill="none" stroke="currentColor" stroke-opacity=".176" stroke-width="1.5"></circle><circle cx="-20" cy="-28" r="480" fill="none" stroke="currentColor" stroke-opacity=".167" stroke-width="1.5"></circle></svg>
-                  <span class="bank-glow" aria-hidden="true"></span>
-                  <span class="bank-brand">DEEPSEEK</span>
-                  <span class="bank-key" id="bankKey">•••• •••• •••• ••••</span>
-                  <svg class="bank-chip" viewBox="0 0 40 30" aria-hidden="true"><defs><linearGradient id="chipGrad" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f2f0ea"></stop><stop offset=".45" stop-color="#b9b7b1"></stop><stop offset="1" stop-color="#e4e1d9"></stop></linearGradient></defs><rect x=".6" y=".6" width="38.8" height="28.8" rx="5" fill="url(#chipGrad)" stroke="rgba(0,0,0,.32)" stroke-width="1"></rect><path d="M20 1v28M1 10.5h38M1 19.5h38" stroke="rgba(0,0,0,.28)" stroke-width=".8"></path><path d="M1 10.5c6.5 0 6.5 9 0 9M39 10.5c-6.5 0-6.5 9 0 9" fill="none" stroke="rgba(0,0,0,.28)" stroke-width=".8"></path></svg>
-                  <span class="bank-face-bal">
-                    <span class="bank-bal-lbl">账户余额</span>
-                    <span class="bank-amt" id="apiBalanceAmt" title="账户余额">—</span>
+                <button class="bank-card-btn" id="bankCardBtn" type="button" aria-label="抽出 / 收回银行卡">
+                  <span class="bank-card">
+                    <svg class="bank-rings" viewBox="0 0 640 404" preserveAspectRatio="none" aria-hidden="true"><circle cx="-20" cy="-28" r="72" fill="none" stroke="currentColor" stroke-opacity=".32" stroke-width="1.5"></circle><circle cx="-20" cy="-28" r="96" fill="none" stroke="currentColor" stroke-opacity=".311" stroke-width="1.5"></circle><circle cx="-20" cy="-28" r="120" fill="none" stroke="currentColor" stroke-opacity=".302" stroke-width="1.5"></circle><circle cx="-20" cy="-28" r="144" fill="none" stroke="currentColor" stroke-opacity=".293" stroke-width="1.5"></circle><circle cx="-20" cy="-28" r="168" fill="none" stroke="currentColor" stroke-opacity=".284" stroke-width="1.5"></circle><circle cx="-20" cy="-28" r="192" fill="none" stroke="currentColor" stroke-opacity=".275" stroke-width="1.5"></circle><circle cx="-20" cy="-28" r="216" fill="none" stroke="currentColor" stroke-opacity=".266" stroke-width="1.5"></circle><circle cx="-20" cy="-28" r="240" fill="none" stroke="currentColor" stroke-opacity=".257" stroke-width="1.5"></circle><circle cx="-20" cy="-28" r="264" fill="none" stroke="currentColor" stroke-opacity=".248" stroke-width="1.5"></circle><circle cx="-20" cy="-28" r="288" fill="none" stroke="currentColor" stroke-opacity=".239" stroke-width="1.5"></circle><circle cx="-20" cy="-28" r="312" fill="none" stroke="currentColor" stroke-opacity=".230" stroke-width="1.5"></circle><circle cx="-20" cy="-28" r="336" fill="none" stroke="currentColor" stroke-opacity=".221" stroke-width="1.5"></circle><circle cx="-20" cy="-28" r="360" fill="none" stroke="currentColor" stroke-opacity=".212" stroke-width="1.5"></circle><circle cx="-20" cy="-28" r="384" fill="none" stroke="currentColor" stroke-opacity=".203" stroke-width="1.5"></circle><circle cx="-20" cy="-28" r="408" fill="none" stroke="currentColor" stroke-opacity=".194" stroke-width="1.5"></circle><circle cx="-20" cy="-28" r="432" fill="none" stroke="currentColor" stroke-opacity=".185" stroke-width="1.5"></circle><circle cx="-20" cy="-28" r="456" fill="none" stroke="currentColor" stroke-opacity=".176" stroke-width="1.5"></circle><circle cx="-20" cy="-28" r="480" fill="none" stroke="currentColor" stroke-opacity=".167" stroke-width="1.5"></circle></svg>
+                    <span class="bank-glow" aria-hidden="true"></span>
+                    <span class="bank-brand">DEEPSEEK</span>
+                    <span class="bank-key" id="bankKey">•••• •••• •••• ••••</span>
+                    <svg class="bank-chip" viewBox="0 0 40 30" aria-hidden="true"><defs><linearGradient id="chipGrad" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f2f0ea"></stop><stop offset=".45" stop-color="#b9b7b1"></stop><stop offset="1" stop-color="#e4e1d9"></stop></linearGradient></defs><rect x=".6" y=".6" width="38.8" height="28.8" rx="5" fill="url(#chipGrad)" stroke="rgba(0,0,0,.32)" stroke-width="1"></rect><path d="M20 1v28M1 10.5h38M1 19.5h38" stroke="rgba(0,0,0,.28)" stroke-width=".8"></path><path d="M1 10.5c6.5 0 6.5 9 0 9M39 10.5c-6.5 0-6.5 9 0 9" fill="none" stroke="rgba(0,0,0,.28)" stroke-width=".8"></path></svg>
+                    <span class="bank-face-bal">
+                      <span class="bank-bal-lbl">账户余额</span>
+                      <span class="bank-amt" id="apiBalanceAmt" title="账户余额">—</span>
+                    </span>
+                    <span class="bank-face-foot">
+                      <span class="bank-cur" id="bankCur"></span>
+                      <span id="bankSavedTag">已加密保存</span>
+                    </span>
                   </span>
-                  <span class="bank-face-foot">
-                    <span class="bank-cur" id="bankCur"></span>
-                    <span>已加密保存</span>
-                  </span>
-                </span>
-                <span class="bank-front">
+                </button>
+                <div class="bank-front">
                   <svg class="bank-front-bg" viewBox="0 0 384 110" preserveAspectRatio="none"><path class="bf-outer" d="M0 17C15 7 31 4 49 4H87C110 4 126 17 144 32L158 44C176 59 206 59 225 43L240 30C257 16 271 4 295 4H335C354 4 370 8 384 18V94C384 103 377 110 368 110H16C7 110 0 103 0 94Z"></path><path class="bf-line" d="M10 21C22 13 35 11 51 11H85C105 11 120 23 137 37L153 50C175 68 208 68 231 49L246 36C262 23 275 11 297 11H333C350 11 363 14 374 22V89C374 97 369 101 360 101H24C15 101 10 96 10 89Z"></path></svg>
-                  <span class="bf-content">
-                    <span class="bf-row">
-                      <span class="bf-eye" id="bankEye" role="button" tabindex="0" aria-label="隐藏金额"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 12S6 5.8 12 5.8 21.5 12 21.5 12 18 18.2 12 18.2 2.5 12 2.5 12z"></path><circle cx="12" cy="12" r="2.6"></circle><path class="eye-slash" d="M4 20 20 4"></path></svg></span>
-                      <span class="bf-stats">
+                  <div class="bf-content">
+                    <div class="bf-row">
+                      <button class="bf-eye" id="bankEye" type="button" aria-label="隐藏金额"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 12S6 5.8 12 5.8 21.5 12 21.5 12 18 18.2 12 18.2 2.5 12 2.5 12z"></path><circle cx="12" cy="12" r="2.6"></circle><path class="eye-slash" d="M4 20 20 4"></path></svg></button>
+                      <div class="bf-stats">
                         <span class="bf-stat"><span class="bf-lbl">赠款</span><span class="bf-val" id="bankGrant">—</span></span>
                         <span class="bf-stat"><span class="bf-lbl">充值</span><span class="bf-val" id="bankTopup">—</span></span>
-                      </span>
-                    </span>
-                    <span class="bf-row bf-bottom">
+                      </div>
+                    </div>
+                    <div class="bf-row bf-bottom">
                       <span class="bf-amt" id="bankAmtMini">—</span>
                       <span class="bf-key" id="bankKeyMini">•••• •••• •••• ••••</span>
-                    </span>
-                  </span>
-                </span>
-              </button>
-              <div class="bank-actions">
-                <button class="akc-refresh" id="apiBalanceRefresh" title="刷新余额" aria-label="刷新余额"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 1 1-2.34-5.66"></path><path d="M20 4v4.4h-4.4"></path></svg><span>刷新余额</span></button>
-                <button class="api-key-change" id="apiKeyChange" type="button">更换 Key</button>
+                    </div>
+                  </div>
+                </div>
+                <!-- 卡面操作：刷新余额 / 更换 Key / 清除 Key -->
+                <div class="bank-ops" id="bankOps">
+                  <button class="bank-op" id="apiBalanceRefresh" type="button" title="刷新余额" aria-label="刷新余额"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 1 1-2.34-5.66"></path><path d="M20 4v4.4h-4.4"></path></svg></button>
+                  <button class="bank-op" id="apiKeyChange" type="button" title="更换 Key" aria-label="更换 Key"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="12" r="4"></circle><path d="M12 12h9M17.5 12v3M20.5 12v2"></path></svg></button>
+                  <button class="bank-op danger" id="dsKeyClear" type="button" title="清除 Key" aria-label="清除 Key" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9 7V5h6v2M6.6 7l.8 12.1A2 2 0 0 0 9.4 21h5.2a2 2 0 0 0 2-1.9L17.4 7"></path></svg></button>
+                </div>
+                <!-- 编辑态：输入框直接盖在卡上，保存 / 取消 / 获取 Key 都在卡里 -->
+                <div class="api-editor bank-edit" id="apiEditor" hidden>
+                  <div class="api-field" id="apiField">
+                    <input type="password" id="dsKeyInput" placeholder=" " autocomplete="new-password" spellcheck="false" aria-label="API Key">
+                    <label class="fl-label" for="dsKeyInput">API Key</label>
+                    <button class="api-eye" id="dsKeyEye" title="显示 / 隐藏" aria-label="显示 Key"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 12S6 5.8 12 5.8 21.5 12 21.5 12 18 18.2 12 18.2 2.5 12 2.5 12z"></path><circle cx="12" cy="12" r="2.6"></circle></svg></button>
+                    <div class="api-seal" id="apiSeal" aria-hidden="true"><span class="api-seal-txt"></span></div>
+                  </div>
+                  <div class="bank-edit-row">
+                    <button class="api-primary" id="dsKeySave" disabled><span class="api-spin" aria-hidden="true"></span><span id="dsKeySaveTxt">保存并验证</span></button>
+                    <button class="bank-cancel" id="bankEditCancel" type="button">取消</button>
+                  </div>
+                  <div class="bank-edit-foot">
+                    <div class="api-state" id="dsKeyState" data-state="empty" role="status" aria-live="polite">
+                      <span class="api-dot" aria-hidden="true"></span>
+                      <span class="api-state-txt" id="dsKeyStatus">未配置</span>
+                    </div>
+                    <a class="api-link" href="https://platform.deepseek.com/api_keys" target="_blank" rel="noopener noreferrer">获取 API Key <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17 17 7M9 7h8v8"></path></svg></a>
+                  </div>
+                </div>
               </div>
-            </div>
-            <!-- 编辑态：输入框 + 主按钮 + 获取入口 -->
-            <div class="api-editor" id="apiEditor">
-              <div class="api-field" id="apiField">
-                <input type="password" id="dsKeyInput" placeholder=" " autocomplete="new-password" spellcheck="false" aria-label="API Key">
-                <label class="fl-label" for="dsKeyInput">API Key</label>
-                <button class="api-eye" id="dsKeyEye" title="显示 / 隐藏" aria-label="显示 Key"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 12S6 5.8 12 5.8 21.5 12 21.5 12 18 18.2 12 18.2 2.5 12 2.5 12z"></path><circle cx="12" cy="12" r="2.6"></circle></svg></button>
-                <!-- 封存动画的「密文幕布」：盖在输入行上，字符逐位翻成密文再锁定 -->
-                <div class="api-seal" id="apiSeal" aria-hidden="true"><span class="api-seal-txt"></span></div>
-              </div>
-              <button class="api-primary" id="dsKeySave" disabled><span class="api-spin" aria-hidden="true"></span><span id="dsKeySaveTxt">保存并验证</span></button>
-              <a class="api-link" href="https://platform.deepseek.com/api_keys" target="_blank" rel="noopener noreferrer">获取 API Key <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17 17 7M9 7h8v8"></path></svg></a>
-            </div>
-            <div class="api-state" id="dsKeyState" data-state="empty" role="status" aria-live="polite">
-              <span class="api-dot" aria-hidden="true"></span>
-              <span class="api-state-txt" id="dsKeyStatus">未配置</span>
-              <button class="api-clear-link" id="dsKeyClear" hidden>清除</button>
             </div>
           </div>
           <!-- 等待确认：单独一张澄清卡，浮在输入条上方，不展开历史对话 -->
@@ -3590,8 +3623,18 @@ const state = {
    版本号在左上角 GeoAI 打开的「更新与版本」弹窗里展示。改完版本号后，在
    APP_CHANGELOG 最上面补一条（版本、日期、类型、一句摘要、几条说明），
    新版本会自动出现在版本历史里。 */
-const APP_VERSION = '1.7.5';
+const APP_VERSION = '1.7.6';
 const APP_CHANGELOG = [
+  {
+    v: '1.7.6', date: '2026-11-14', tag: '界面调整', code: '约 2.96 万行 · 1.76 MB',
+    lead: 'API 配置全部收进银行卡：卡号用加密后的 Key 指纹，刷新 / 更换 / 清除 / 保存都在卡上完成。',
+    notes: [
+      '卡号改成加密后 Key 的指纹（16 位、4 位一组，末组加粗），不出现任何真实 Key 字符',
+      '刷新余额、更换 Key、清除 Key 收成卡面右上角三枚操作键',
+      '输入新 Key、保存验证、取消与「获取 API Key」都直接盖在卡面上完成，不再有卡外的编辑区',
+      '状态行并入卡内编辑层；清除改为两点确认的红色按键',
+    ],
+  },
   {
     v: '1.7.5', date: '2026-11-14', tag: '界面调整', code: '约 2.95 万行 · 1.76 MB',
     lead: '银行卡完整照 card-folder 组件重做：卡套、波浪边、虚线内框与抽卡动画都对齐参考。',
@@ -3978,7 +4021,7 @@ function aiSetState(s) { aiKeyState = s; aiSyncKeyUI(); }
    露出开头几位既证明「真的加密了」，也不可能反推出 Key。 */
 function apiCtFp(o) {
   const ct = String((o && o.ct) || '').replace(/=+$/, '');
-  return ct ? ct.slice(0, 10) : '';
+  return ct ? ct.slice(0, 16) : '';    /* 密文前 16 位当卡号，不暴露 Key 本身 */
 }
 /* 状态行：tone = empty / ok / err / testing / session */
 function apiSetState(tone, text, hint) {
@@ -4014,17 +4057,36 @@ function aiSyncKeyUI() {
     btn.classList.toggle('needs-key', !has);
   }
   apiKeyBalSync();   /* 工具排钥匙键上的余额跟着 Key 状态一起更新 */
-  /* 银行卡上只露 Key 指纹的后 4 位，永远不出现真实 Key */
-  const suf = AI_CONF.fp ? AI_CONF.fp.slice(-4).toUpperCase() : '••••';
-  ['#bankKey', '#bankKeyMini'].forEach(sel => { const e = $(sel); if (e) e.textContent = '•••• •••• •••• ' + suf; });
-  /* 两态：有 Key 且没点「更换」→ 显示封存卡；否则显示输入区 */
+  /* 卡号就是加密后的 Key 指纹（4 位一组，末组加粗），永远不出现真实 Key */
+  const fp = AI_CONF.fp || '';
+  const groups = fp ? fp.toUpperCase().match(/.{1,4}/g) : [];
+  const keyHtml = groups.length
+    ? groups.slice(0, -1).join(' ') + ' <b>' + groups[groups.length - 1] + '</b>'
+    : '•••• •••• •••• ••••';
+  ['#bankKey', '#bankKeyMini'].forEach(sel => { const e = $(sel); if (e) e.innerHTML = keyHtml; });
+  /* 两态：卡始终在场；有 Key 且没点「更换」展示余额，否则在卡上展开输入区 */
   const editing = apiEditing || !has;
-  const card = $('#apiKeyCard'), editor = $('#apiEditor');
-  if (card) card.hidden = editing;
+  const card = $('#apiKeyCard'), editor = $('#apiEditor'), fold = $('#bankFold');
+  if (card) card.hidden = false;
   if (editor) editor.hidden = !editing;
+  if (fold) {
+    fold.classList.toggle('editing', editing);
+    if (editing) fold.setAttribute('aria-expanded', 'true');
+  }
+  const cancel = $('#bankEditCancel');
+  if (cancel) cancel.hidden = !has;
+  const tag = $('#bankSavedTag');
+  if (tag) tag.textContent = ({
+    saved: '已加密保存', session: '仅本次会话', empty: '未配置', error: '密钥不可用', saving: '加密中…',
+  })[aiKeyState] || '已加密保存';
   if (clr) {
     clr.hidden = !has;
-    if (!has) { delete clr.dataset.confirm; clr.textContent = '清除'; }
+    if (!has) {
+      delete clr.dataset.confirm;
+      clr.classList.remove('danger');
+      clr.title = '清除 Key';
+      clr.setAttribute('aria-label', '清除 Key');
+    }
   }
   /* 已保存时结论已经写在封存卡上，状态行只剩一枚绿点，不再复读一遍 */
   const map = {
@@ -27855,9 +27917,9 @@ function bindAI() {
     const btn = $('#aiKeyBtn'), pop = $('#apiPop');
     if (!btn || !pop) return;
     btn.addEventListener('click', e => { e.stopPropagation(); setApiPop(!pop.classList.contains('on')); });
-    /* 点银行卡：从卡套里抽出 / 收回 */
-    const bankFold = $('#bankFold');
-    if (bankFold) bankFold.addEventListener('click', e => {
+    /* 点卡面：从卡套里抽出 / 收回 */
+    const bankCardBtn = $('#bankCardBtn'), bankFold = $('#bankFold');
+    if (bankCardBtn && bankFold) bankCardBtn.addEventListener('click', e => {
       e.stopPropagation();
       bankFold.setAttribute('aria-expanded', bankFold.getAttribute('aria-expanded') === 'true' ? 'false' : 'true');
     });
@@ -27912,19 +27974,34 @@ function bindAI() {
     if (balRef) balRef.addEventListener('click', () => apiBalanceRefresh());
     /* 打开网页就把余额带上：收起态的钥匙键直接显示剩余金额（失败静默，不弹提示） */
     aiKeyReady.then(() => { if (AI_CONF.key) apiBalanceRefresh(); });
+    /* 取消：回到卡面，不保存这次输入 */
+    const cancelEdit = $('#bankEditCancel');
+    if (cancelEdit) cancelEdit.addEventListener('click', () => {
+      apiEditing = false;
+      const i = $('#dsKeyInput'); if (i) i.value = '';
+      aiSyncKeyUI();
+    });
     const clr = $('#dsKeyClear');
     if (clr) clr.addEventListener('click', () => {
-      /* 清除是破坏性操作：第一次点变成“确认清除”，2.5 秒内再点才执行 */
+      /* 清除是破坏性操作：第一次点变成红色确认态，2.5 秒内再点才执行 */
       if (clr.dataset.confirm !== '1') {
         clr.dataset.confirm = '1';
-        clr.textContent = '确认清除';
+        clr.classList.add('danger');
+        clr.title = '再点一次确认清除';
+        clr.setAttribute('aria-label', '再点一次确认清除');
         clearTimeout(aiClearTimer);
-        aiClearTimer = setTimeout(() => { delete clr.dataset.confirm; clr.textContent = '清除'; }, 2500);
+        aiClearTimer = setTimeout(() => {
+          delete clr.dataset.confirm;
+          clr.classList.remove('danger');
+          clr.title = '清除 Key';
+          clr.setAttribute('aria-label', '清除 Key');
+        }, 2500);
         return;
       }
       clearTimeout(aiClearTimer);
       delete clr.dataset.confirm;
-      clr.textContent = '清除';
+      clr.classList.remove('danger');
+      clr.title = '清除 Key';
       aiClearKey();
     });
     document.addEventListener('pointerdown', e => {
