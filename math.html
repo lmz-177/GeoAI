@@ -28177,42 +28177,120 @@ function bindAI() {
     });
   })();
 
-  /* 语音输入：浏览器支持 Web Speech 时出现麦克风；点一下说话，再点结束。
-     识别结果实时追加到输入框，已有的文字会保留在前面。 */
+  /* 语音输入：用 DeepSeek 语音识别（POST /v1/tools/asr，16 位 PCM WAV）。
+     点一下开始录音、再点结束；录音上限 115 秒，识别结果追加到输入框。 */
   (function initVoice() {
     const btn = $('#aiMic'), inp = $('#aiInput');
     if (!btn) return;
-    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SR) { btn.hidden = true; return; }
+    const canRec = !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia &&
+      (window.AudioContext || window.webkitAudioContext));
+    if (!canRec) { btn.hidden = true; return; }   /* 不支持录音的环境直接藏起来 */
     let rec = null;
-    const reset = () => {
-      rec = null;
-      btn.classList.remove('on');
-      btn.setAttribute('aria-pressed', 'false');
-      btn.title = '语音输入';
+
+    /* 把录到的浮点采样合成 16kHz / 单声道 / 16 位 PCM 的 WAV */
+    const encodeWav = (chunks, srcRate) => {
+      const TARGET = 16000;
+      let n = 0; chunks.forEach(c => { n += c.length; });
+      const all = new Float32Array(n);
+      let off = 0; chunks.forEach(c => { all.set(c, off); off += c.length; });
+      const ratio = srcRate / TARGET;
+      const len = Math.max(1, Math.floor(all.length / ratio));
+      const pcm = new Int16Array(len);
+      for (let i = 0; i < len; i++) {
+        const s = Math.floor(i * ratio), e = Math.min(all.length, Math.max(s + 1, Math.floor((i + 1) * ratio)));
+        let sum = 0;
+        for (let j = s; j < e; j++) sum += all[j];
+        let v = sum / (e - s);
+        v = v < -1 ? -1 : v > 1 ? 1 : v;
+        pcm[i] = v < 0 ? v * 0x8000 : v * 0x7FFF;
+      }
+      const buf = new ArrayBuffer(44 + pcm.length * 2);
+      const dv = new DataView(buf);
+      const str = (o, s) => { for (let i = 0; i < s.length; i++) dv.setUint8(o + i, s.charCodeAt(i)); };
+      str(0, 'RIFF'); dv.setUint32(4, 36 + pcm.length * 2, true); str(8, 'WAVE');
+      str(12, 'fmt '); dv.setUint32(16, 16, true); dv.setUint16(20, 1, true); dv.setUint16(22, 1, true);
+      dv.setUint32(24, TARGET, true); dv.setUint32(28, TARGET * 2, true); dv.setUint16(32, 2, true); dv.setUint16(34, 16, true);
+      str(36, 'data'); dv.setUint32(40, pcm.length * 2, true);
+      for (let i = 0; i < pcm.length; i++) dv.setInt16(44 + i * 2, pcm[i], true);
+      return new Blob([buf], { type: 'audio/wav' });
     };
-    btn.addEventListener('click', () => {
-      if (rec) { try { rec.stop(); } catch (e) { } return; }
-      rec = new SR();
-      rec.lang = 'zh-CN';
-      rec.interimResults = true;
-      rec.continuous = false;
-      const base = inp.value.trim() ? inp.value.replace(/\s+$/, '') + ' ' : '';
-      btn.classList.add('on');
-      btn.setAttribute('aria-pressed', 'true');
-      btn.title = '正在听…（再点结束）';
-      rec.onresult = e => {
-        let txt = '';
-        for (let i = e.resultIndex; i < e.results.length; i++) txt += e.results[i][0].transcript;
-        inp.value = base + txt;
+
+    const release = r => {
+      if (!r) return;
+      try { r.stream.getTracks().forEach(t => t.stop()); } catch (e) { }
+      try { r.proc.disconnect(); r.src.disconnect(); r.ctx.close(); } catch (e) { }
+    };
+    const setRec = on => {
+      btn.classList.toggle('on', on);
+      btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+      btn.title = on ? '正在听…（再点结束）' : '语音输入';
+    };
+
+    const transcribe = async blob => {
+      btn.classList.add('busy');
+      btn.title = '识别中…';
+      try {
+        const fd = new FormData();
+        fd.append('file', blob, 'speech.wav');
+        const res = await fetch('https://api.deepseek.com/v1/tools/asr', {
+          method: 'POST',
+          headers: { Authorization: 'Bearer ' + AI_CONF.key },
+          body: fd
+        });
+        if (!res.ok) {
+          const msg = res.status === 401 || res.status === 403 ? 'API Key 无效或已失效'
+            : res.status === 413 ? '录音太长，请短一点'
+            : res.status === 429 ? '语音请求太频繁，稍后再试'
+            : res.status === 503 || res.status === 504 ? '语音服务繁忙，稍后再试'
+            : '语音识别失败（HTTP ' + res.status + '）';
+          toast(msg, 'err');
+          return;
+        }
+        const j = await res.json().catch(() => null);
+        const text = ((j && j.text) || '').trim();
+        if (!text) { toast('没有识别出文字'); return; }
+        const base = inp.value.trim() ? inp.value.replace(/\s+$/, '') + ' ' : '';
+        inp.value = base + text;
         inp.dispatchEvent(new Event('input', { bubbles: true }));
-      };
-      rec.onerror = e => {
-        if (e.error === 'not-allowed' || e.error === 'service-not-allowed') toast('麦克风没有权限，请在浏览器里允许后重试', 'err');
-        else if (e.error === 'no-speech') toast('没有听到声音');
-      };
-      rec.onend = () => { reset(); inp.focus(); };
-      try { rec.start(); } catch (e) { reset(); }
+        inp.focus();
+      } catch (e) {
+        toast('语音识别失败：网络错误', 'err');
+      } finally {
+        btn.classList.remove('busy');
+        btn.title = '语音输入';
+      }
+    };
+
+    const stopRec = () => {
+      const r = rec; if (!r) return;
+      rec = null;
+      clearTimeout(r.timer);
+      setRec(false);
+      release(r);
+      transcribe(encodeWav(r.chunks, r.srcRate));
+    };
+
+    btn.addEventListener('click', async () => {
+      if (rec) { stopRec(); return; }
+      if (!AI_CONF.key) { toast('先点余额卡填入 DeepSeek API Key', 'err'); return; }
+      let stream;
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({ audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true } });
+      } catch (e) {
+        toast('麦克风没有权限，请在浏览器里允许后重试', 'err');
+        return;
+      }
+      const AC = window.AudioContext || window.webkitAudioContext;
+      const ctx = new AC();
+      if (ctx.state === 'suspended') { try { await ctx.resume(); } catch (e) { } }
+      const src = ctx.createMediaStreamSource(stream);
+      const proc = ctx.createScriptProcessor(4096, 1, 1);
+      const chunks = [];
+      proc.onaudioprocess = e => { if (rec) chunks.push(new Float32Array(e.inputBuffer.getChannelData(0))); };
+      src.connect(proc); proc.connect(ctx.destination);
+      rec = { ctx, stream, src, proc, chunks, srcRate: ctx.sampleRate, timer: 0 };
+      rec.timer = setTimeout(stopRec, 115000);   /* 接口上限 120 秒，留一点余量 */
+      setRec(true);
     });
   })();
 
