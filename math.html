@@ -1163,29 +1163,72 @@ body.dark .eff-warn{color:#c39bff}
 .api-seal-txt{flex:1;min-width:0;font-family:var(--mono);font-size:var(--fs-sm);letter-spacing:.08em;
   color:var(--accent);white-space:nowrap;overflow:hidden;transition:color .28s ease}
 .api-seal.sealed .api-seal-txt{color:var(--ok-ink)}
-/* 已保存态：一行封存卡 —— 盾牌 + 已加密保存 + 余额 + 刷新 + 更换。
-   不放任何一段真实的 Key，也不堆加密方式说明。 */
+/* ── 已保存态：银行卡从卡套里抽出（仿 card-folder 交互）──
+   收起：卡面下半截被卡套前片盖住；展开：前片向下翻开、卡片上浮。
+   卡面信息：品牌、Key 指纹后 4 位、芯片、余额、加密状态。 */
 .api-key-card{
-  margin:0 16px;display:flex;align-items:center;gap:8px;min-height:46px;padding:8px 5px 8px 0;
-  border-radius:0;background:transparent;border:0;border-top:.5px solid var(--border);border-bottom:.5px solid var(--border);
+  margin:0 16px;padding:6px 0 0;background:transparent;border:0;
   animation:apiKeyIn .3s var(--ease-out) both;
 }
 @keyframes apiKeyIn{from{opacity:0;transform:translateY(-5px) scale(.985)}to{opacity:1;transform:none}}
 .api-key-card[hidden]{display:none}
-.akc-ic{flex:0 0 30px;width:30px;height:30px;border-radius:9px;display:grid;place-items:center;
-  background:var(--accent-dim);color:var(--accent)}
-.akc-ic svg{width:16px;height:16px}
-.akc-ttl{flex:0 0 auto;font-size:var(--fs-sm);font-weight:600;letter-spacing:-.2px;color:var(--text);white-space:nowrap}
-.akc-bal-amt{margin-left:auto;font-family:var(--mono);font-size:var(--fs-sm);font-weight:600;
-  letter-spacing:-.01em;color:var(--text-3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.api-key-card[data-bal="ok"] .akc-bal-amt{color:var(--text)}
-.api-key-card[data-bal="warn"] .akc-bal-amt{color:var(--warn-ink)}
-.api-key-card[data-bal="err"] .akc-bal-amt{color:var(--danger-ink)}
-.akc-refresh{flex:0 0 28px;width:28px;height:28px;border-radius:50%;display:grid;place-items:center;
-  color:var(--text-3);background:var(--panel-3);transition:var(--t-ui)}
-.akc-refresh:hover{background:var(--hover);color:var(--text)}
-.akc-refresh:active{transform:scale(.92)}
-.akc-refresh svg{width:14px;height:14px}
+.bank-fold{position:relative;display:block;width:100%;aspect-ratio:1029/592;padding:0;
+  text-align:left;border-radius:18px;perspective:1200px}
+.bank-fold:active{transform:scale(.99)}
+/* 卡套后片 */
+.bank-sleeve{position:absolute;inset:10% 0 0;border-radius:16px;background:var(--panel-2);
+  border:.5px solid var(--border);box-shadow:inset 0 1px 0 rgba(255,255,255,.35)}
+/* 卡面 */
+.bank-card{position:absolute;left:4.7%;right:4.7%;top:0;z-index:1;aspect-ratio:1.586/1;
+  border-radius:14px;overflow:hidden;color:#fff;text-align:left;
+  background:linear-gradient(135deg,#3a3c3a 0%,#202120 48%,#111211 100%);
+  box-shadow:0 10px 26px rgba(0,0,0,.30);
+  transform-origin:center bottom;transition:transform .3s var(--ease-out)}
+.bank-fold[aria-expanded="true"] .bank-card{transform:translateY(-8%) scale(1.01)}
+/* 左上角向外扩散的等高线 */
+.bank-card::before{content:'';position:absolute;left:-24%;top:-78%;width:118%;aspect-ratio:1;
+  border-radius:50%;pointer-events:none;
+  background:repeating-radial-gradient(circle at center,transparent 0 17px,rgba(255,255,255,.12) 17px 18px);
+  -webkit-mask-image:radial-gradient(circle,#000 26%,transparent 70%);
+  mask-image:radial-gradient(circle,#000 26%,transparent 70%)}
+.bank-glow{position:absolute;inset:0;pointer-events:none;
+  background:radial-gradient(circle at 78% 8%,rgba(255,255,255,.13),transparent 36%)}
+.bank-brand{position:absolute;left:7%;top:9%;font-size:9px;font-weight:600;letter-spacing:.22em;
+  color:rgba(255,255,255,.55)}
+.bank-key{position:absolute;left:7%;top:calc(9% + 15px);font-family:var(--mono);font-size:10.5px;
+  letter-spacing:.12em;color:rgba(255,255,255,.78);font-variant-numeric:tabular-nums}
+/* 芯片 */
+.bank-chip{position:absolute;right:7%;top:9%;width:13%;height:21%;border-radius:18%;
+  border:.5px solid rgba(0,0,0,.35);
+  background:linear-gradient(135deg,#f2f0ea 0%,#b9b7b1 45%,#e4e1d9 100%)}
+.bank-chip i{position:absolute;left:22%;right:22%;top:50%;height:.5px;background:rgba(0,0,0,.28)}
+.bank-chip::before,.bank-chip::after{content:'';position:absolute;top:26%;bottom:26%;left:50%;width:.5px;background:rgba(0,0,0,.28)}
+.bank-chip::after{left:22%;width:28%;border-radius:2px;background:none;border:.5px solid rgba(0,0,0,.28);border-left:0;top:33%;bottom:33%}
+.bank-bal{position:absolute;left:7%;bottom:9%;display:flex;flex-direction:column;gap:1px}
+.bank-bal-lbl{font-size:9px;letter-spacing:.14em;color:rgba(255,255,255,.45)}
+.bank-amt{font-size:22px;font-weight:700;letter-spacing:-.03em;line-height:1.15;
+  color:#fff;font-variant-numeric:tabular-nums}
+.api-key-card[data-bal="warn"] .bank-amt{color:#ffd479}
+.api-key-card[data-bal="err"] .bank-amt{color:#ff9a90}
+.bank-foot{position:absolute;right:7%;bottom:10%;display:flex;flex-direction:column;align-items:flex-end;gap:2px;
+  font-size:10px;color:rgba(255,255,255,.55)}
+.bank-foot .bank-cur{font-size:9px;letter-spacing:.1em;color:rgba(255,255,255,.4)}
+/* 卡套前片：盖住卡面下半截；展开时绕底边向下翻开 */
+.bank-front{position:absolute;inset:50% 0 0;z-index:2;border-radius:0 0 16px 16px;
+  background:var(--panel-2);border:.5px solid var(--border);border-top:0;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.4);
+  transform-origin:center bottom;
+  transition:transform .28s var(--ease-in-out),opacity .24s ease}
+.bank-front::before{content:'';position:absolute;left:50%;top:9px;width:46px;height:4px;
+  margin-left:-23px;border-radius:99px;background:var(--border-2)}
+.bank-fold[aria-expanded="true"] .bank-front{transform:rotateX(-72deg);opacity:0}
+/* 卡下面的一行操作 */
+.bank-actions{display:flex;align-items:center;gap:8px;margin-top:10px}
+.akc-refresh{display:flex;align-items:center;gap:5px;height:32px;padding:0 12px;border-radius:9px;
+  font-size:var(--fs-xs);font-weight:600;color:var(--text-2);background:var(--panel-2);transition:var(--t-ui)}
+.akc-refresh:hover{color:var(--text);background:var(--hover)}
+.akc-refresh:active{transform:scale(.96)}
+.akc-refresh svg{width:13px;height:13px}
 .akc-refresh[disabled]{opacity:.5}
 .api-key-card[data-bal="loading"] .akc-refresh svg{animation:apiSpin .7s linear infinite}
 .api-key-change{flex:0 0 auto;height:32px;padding:0 12px;border-radius:9px;
@@ -1499,10 +1542,10 @@ body.booted .ai-dock.sheet-open .ai-hello .p4{animation:hkDot .12s linear 2.38s 
 /* 添加入口：比普通工具键大一号 */
 #aiAddBtn{width:34px;height:34px;flex:0 0 34px;border-radius:11px}
 #aiAddBtn svg{width:19px;height:19px}
-/* 钥匙键：配好 Key 后把余额带在收起态上，不用打开面板也知道还剩多少钱 */
-#aiKeyBtn.has-bal{width:auto;flex:0 0 auto;padding:0 8px 0 5px;gap:3px;border-radius:9px;background:var(--panel-2)}
-#aiKeyBtn.has-bal svg{width:14px;height:14px}
-#aiKeyBtn .ai-key-bal{display:none;font-size:var(--fs-3xs);font-weight:700;color:var(--ok-ink);
+/* 钥匙键：配好 Key 后只显示余额（不再带钥匙图标），点开是一张银行卡 */
+#aiKeyBtn.has-bal{width:auto;flex:0 0 auto;padding:0 9px;gap:0;border-radius:9px;background:var(--panel-2)}
+#aiKeyBtn.has-bal svg{display:none}
+#aiKeyBtn .ai-key-bal{display:none;font-size:var(--fs-2xs);font-weight:700;color:var(--ok-ink);
   letter-spacing:-.01em;white-space:nowrap;font-variant-numeric:tabular-nums}
 #aiKeyBtn.has-bal .ai-key-bal{display:block}
 /* 思考强度：收起态只留一个仪表盘图案，档位文字放在展开面板里。
@@ -1513,10 +1556,14 @@ body.booted .ai-dock.sheet-open .ai-hello .p4{animation:hkDot .12s linear 2.38s 
   border:.5px solid var(--border);transition:border-color var(--t),background var(--t);
 }
 .effort:hover,.effort:focus-within{border-color:var(--accent-dim);background:var(--accent-dim)}
-.eff-gauge{width:17px;height:17px;color:var(--eff-col,var(--text-2));transition:color .18s ease}
-.eff-needle{transform-box:view-box;transform-origin:12px 16.9px;
-  transform:rotate(calc(-58deg + var(--pn,.3333) * 116deg));
+.eff-gauge{width:17px;height:17px;color:var(--text-3);transition:color .18s ease}
+/* 仪表盘：270° 轨道 + 按档位生长的进度弧 + 会转的指针与中央圆环（仿 60fps 参考图） */
+.eff-prog{stroke-dasharray:100;stroke-dashoffset:calc(100 - var(--pn,.3333) * 100);
+  transition:stroke-dashoffset .22s var(--ease-out)}
+.eff-needle{transform-box:view-box;transform-origin:12px 12px;
+  transform:rotate(calc(var(--pn,.3333) * 270deg));
   transition:transform .22s var(--ease-out)}
+.eff-hub{transform-box:view-box;transition:stroke .18s ease}
 #aiInput{
   flex:1;min-width:0;width:100%;resize:none;height:34px;max-height:140px;padding:5px 2px;
   font-size:13.5px;line-height:1.6;background:transparent;
@@ -2677,14 +2724,30 @@ try {
               <div class="api-pop-ttl">DeepSeek API</div>
               <button class="api-close" id="apiPopClose" title="关闭" aria-label="关闭"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6 6 18"></path></svg></button>
             </div>
-            <!-- 已保存态：一行搞定 —— 盾牌 + 已加密保存 + 余额 + 刷新 + 更换。
-                 不放 Key 的任何真实字符，也不堆加密方式的说明文字。 -->
+            <!-- 已保存态：一张从卡套里抽出的银行卡，余额写在卡面；下面是刷新 / 更换 -->
             <div class="api-key-card" id="apiKeyCard" hidden>
-              <span class="akc-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 2.6v5.1c0 4.6-3 8.1-7 10.3-4-2.2-7-5.7-7-10.3V5.6z"></path><path d="M9.2 12.1l2 2 3.6-3.9"></path></svg></span>
-              <span class="akc-ttl">已加密保存</span>
-              <span class="akc-bal-amt" id="apiBalanceAmt" title="账户余额">—</span>
-              <button class="akc-refresh" id="apiBalanceRefresh" title="刷新余额" aria-label="刷新余额"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 1 1-2.34-5.66"></path><path d="M20 4v4.4h-4.4"></path></svg></button>
-              <button class="api-key-change" id="apiKeyChange" type="button">更换</button>
+              <button class="bank-fold" id="bankFold" type="button" aria-expanded="false" aria-label="账户余额卡片">
+                <span class="bank-sleeve" aria-hidden="true"></span>
+                <span class="bank-card">
+                  <span class="bank-glow" aria-hidden="true"></span>
+                  <span class="bank-brand">DEEPSEEK</span>
+                  <span class="bank-key" id="bankKey">•••• •••• •••• ••••</span>
+                  <span class="bank-chip" aria-hidden="true"><i></i></span>
+                  <span class="bank-bal">
+                    <span class="bank-bal-lbl">账户余额</span>
+                    <span class="bank-amt" id="apiBalanceAmt" title="账户余额">—</span>
+                  </span>
+                  <span class="bank-foot">
+                    <span class="bank-saved">已加密保存</span>
+                    <span class="bank-cur" id="bankCur"></span>
+                  </span>
+                </span>
+                <span class="bank-front" aria-hidden="true"></span>
+              </button>
+              <div class="bank-actions">
+                <button class="akc-refresh" id="apiBalanceRefresh" title="刷新余额" aria-label="刷新余额"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 1 1-2.34-5.66"></path><path d="M20 4v4.4h-4.4"></path></svg><span>刷新余额</span></button>
+                <button class="api-key-change" id="apiKeyChange" type="button">更换 Key</button>
+              </div>
             </div>
             <!-- 编辑态：输入框 + 主按钮 + 获取入口 -->
             <div class="api-editor" id="apiEditor">
@@ -2735,7 +2798,7 @@ try {
             <button class="ai-tool" id="aiWeb" title="联网检索：需要最新资料或网址内容时开启" aria-label="联网检索：需要最新资料或网址内容时开启"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.6"></circle><path d="M3.4 12h17.2M12 3.4c2.4 2.4 3.6 5.3 3.6 8.6s-1.2 6.2-3.6 8.6c-2.4-2.4-3.6-5.3-3.6-8.6s1.2-6.2 3.6-8.6z"></path></svg></button>
             <button class="ai-tool" id="aiAddBtn" title="添加图片或文档（也可拖入）" aria-label="添加图片或文档"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"></path></svg></button>
             <button class="effort" id="effortBox" title="思考强度：Low · 默认档，响应快，适合日常作图与简单计算" aria-haspopup="true" aria-expanded="false" style="--eff-col: #3a83f7;">
-              <svg class="eff-gauge" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5.2 12.9A8 8 0 0 1 18.8 12.9"></path><path class="eff-needle" d="M12 16.9V11"></path><circle cx="12" cy="16.9" r="1.15" fill="currentColor" stroke="none"></circle></svg>
+              <svg class="eff-gauge" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path class="eff-arc" d="M6.34 17.66A8 8 0 1 1 17.66 17.66" stroke="currentColor" stroke-opacity=".3" stroke-width="1.8" stroke-linecap="round"></path><path class="eff-prog" pathLength="100" d="M6.34 17.66A8 8 0 1 1 17.66 17.66" stroke="var(--eff-col)" stroke-width="1.8" stroke-linecap="round"></path><path class="eff-needle" d="M12 12 7.76 16.24" stroke="var(--eff-col)" stroke-width="1.7" stroke-linecap="round"></path><circle class="eff-hub" cx="12" cy="12" r="2.5" stroke="var(--eff-col)" stroke-width="1.6"></circle></svg>
             </button>
             </div>
             <span class="spacer"></span>
@@ -3499,8 +3562,18 @@ const state = {
    版本号在左上角 GeoAI 打开的「更新与版本」弹窗里展示。改完版本号后，在
    APP_CHANGELOG 最上面补一条（版本、日期、类型、一句摘要、几条说明），
    新版本会自动出现在版本历史里。 */
-const APP_VERSION = '1.7.3';
+const APP_VERSION = '1.7.4';
 const APP_CHANGELOG = [
+  {
+    v: '1.7.4', date: '2026-11-14', tag: '界面调整', code: '约 2.94 万行 · 1.75 MB',
+    lead: '仪表盘按参考图重画，余额点开是一张从卡套里抽出的银行卡。',
+    notes: [
+      '思考强度仪表盘重画：270° 轨道 + 随档位生长的进度弧 + 会转的指针与中央圆环',
+      '工具排的余额键去掉钥匙图标，只留金额',
+      '点余额打开银行卡：卡套前片向下翻开、卡片上浮；卡面显示余额、Key 指纹后 4 位、芯片与加密状态',
+      '卡下保留「刷新余额」「更换 Key」，点卡片可反复抽出 / 收回',
+    ],
+  },
   {
     v: '1.7.3', date: '2026-11-14', tag: '交互优化', code: '约 2.93 万行 · 1.75 MB',
     lead: '思考强度滑条对齐 ChatGPT 的手感，钥匙键直接显示余额，首屏更快，折叠入口收敛为一枚键。',
@@ -3903,6 +3976,9 @@ function aiSyncKeyUI() {
     btn.classList.toggle('needs-key', !has);
   }
   apiKeyBalSync();   /* 工具排钥匙键上的余额跟着 Key 状态一起更新 */
+  /* 银行卡上只露 Key 指纹的后 4 位，永远不出现真实 Key */
+  const bk = $('#bankKey');
+  if (bk) bk.textContent = '•••• •••• •••• ' + (AI_CONF.fp ? AI_CONF.fp.slice(-4).toUpperCase() : '••••');
   /* 两态：有 Key 且没点「更换」→ 显示封存卡；否则显示输入区 */
   const editing = apiEditing || !has;
   const card = $('#apiKeyCard'), editor = $('#apiEditor');
@@ -4133,6 +4209,8 @@ async function apiBalanceRefresh() {
     }
     const j = await res.json().catch(() => null);
     const info = ((j && j.balance_infos) || [])[0] || {};
+    const curEl = $('#bankCur');
+    if (curEl) curEl.textContent = info.currency || '';
     const cur = info.currency === 'CNY' ? '¥' : (info.currency ? info.currency + ' ' : '');
     const amt = Number(info.total_balance);
     const tip = [];
@@ -4188,6 +4266,9 @@ function setApiPop(open) {
   open = !!open;
   p.classList.toggle('on', open);
   if (b) b.setAttribute('aria-expanded', open ? 'true' : 'false');
+  /* 打开就把卡片从卡套里抽出来，余额一眼可见；再点卡片可收回 */
+  const bf = $('#bankFold');
+  if (bf) bf.setAttribute('aria-expanded', open && AI_CONF.key ? 'true' : 'false');
   if (open) {
     /* 有 Key 就先展示封存态；没有才直接进编辑态 */
     if (AI_CONF.key) apiEditing = false;
@@ -27716,6 +27797,12 @@ function bindAI() {
     const btn = $('#aiKeyBtn'), pop = $('#apiPop');
     if (!btn || !pop) return;
     btn.addEventListener('click', e => { e.stopPropagation(); setApiPop(!pop.classList.contains('on')); });
+    /* 点银行卡：从卡套里抽出 / 收回 */
+    const bankFold = $('#bankFold');
+    if (bankFold) bankFold.addEventListener('click', e => {
+      e.stopPropagation();
+      bankFold.setAttribute('aria-expanded', bankFold.getAttribute('aria-expanded') === 'true' ? 'false' : 'true');
+    });
     const close = $('#apiPopClose');
     if (close) close.addEventListener('click', () => setApiPop(false));
     const inp = $('#dsKeyInput');
