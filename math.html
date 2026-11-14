@@ -1499,6 +1499,12 @@ body.booted .ai-dock.sheet-open .ai-hello .p4{animation:hkDot .12s linear 2.38s 
 /* 添加入口：比普通工具键大一号 */
 #aiAddBtn{width:34px;height:34px;flex:0 0 34px;border-radius:11px}
 #aiAddBtn svg{width:19px;height:19px}
+/* 钥匙键：配好 Key 后把余额带在收起态上，不用打开面板也知道还剩多少钱 */
+#aiKeyBtn.has-bal{width:auto;flex:0 0 auto;padding:0 8px 0 5px;gap:3px;border-radius:9px;background:var(--panel-2)}
+#aiKeyBtn.has-bal svg{width:14px;height:14px}
+#aiKeyBtn .ai-key-bal{display:none;font-size:var(--fs-3xs);font-weight:700;color:var(--ok-ink);
+  letter-spacing:-.01em;white-space:nowrap;font-variant-numeric:tabular-nums}
+#aiKeyBtn.has-bal .ai-key-bal{display:block}
 /* 思考强度：收起态只留一个仪表盘图案，档位文字放在展开面板里。
    指针角度跟着档位走（--pn 0~1），扫过左侧灰 → 右侧紫；--eff-col 由脚本给。 */
 .effort{
@@ -1508,8 +1514,8 @@ body.booted .ai-dock.sheet-open .ai-hello .p4{animation:hkDot .12s linear 2.38s 
 }
 .effort:hover,.effort:focus-within{border-color:var(--accent-dim);background:var(--accent-dim)}
 .eff-gauge{width:17px;height:17px;color:var(--eff-col,var(--text-2));transition:color .18s ease}
-.eff-needle{transform-box:view-box;transform-origin:12px 17px;
-  transform:rotate(calc(-52deg + var(--pn,.3333) * 104deg));
+.eff-needle{transform-box:view-box;transform-origin:12px 16.9px;
+  transform:rotate(calc(-58deg + var(--pn,.3333) * 116deg));
   transition:transform .22s var(--ease-out)}
 #aiInput{
   flex:1;min-width:0;width:100%;resize:none;height:34px;max-height:140px;padding:5px 2px;
@@ -2706,7 +2712,7 @@ try {
             <textarea id="aiInput" placeholder="描述你要画的图形、要解的题，或拖入图片 / 文档" spellcheck="false" style="height: 34px;"></textarea>
             <div class="ai-row">
             <div class="ai-tools" id="aiTools">
-            <button class="ai-tool" id="aiKeyBtn" title="API Key：未配置，点此填入" aria-label="API Key" aria-haspopup="dialog" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="12" r="4"></circle><path d="M12 12h9M17.5 12v3M20.5 12v2"></path></svg></button>
+            <button class="ai-tool" id="aiKeyBtn" title="API Key：未配置，点此填入" aria-label="API Key" aria-haspopup="dialog" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="12" r="4"></circle><path d="M12 12h9M17.5 12v3M20.5 12v2"></path></svg><span class="ai-key-bal" id="aiKeyBal" hidden></span></button>
             <!-- 点思考强度按钮后展开面板：标题 / 重置 + 一条滑条 -->
             <div class="eff-pop" id="effPop" role="dialog" aria-label="思考强度">
               <div class="eff-pop-head">
@@ -2729,7 +2735,7 @@ try {
             <button class="ai-tool" id="aiWeb" title="联网检索：需要最新资料或网址内容时开启" aria-label="联网检索：需要最新资料或网址内容时开启"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.6"></circle><path d="M3.4 12h17.2M12 3.4c2.4 2.4 3.6 5.3 3.6 8.6s-1.2 6.2-3.6 8.6c-2.4-2.4-3.6-5.3-3.6-8.6s1.2-6.2 3.6-8.6z"></path></svg></button>
             <button class="ai-tool" id="aiAddBtn" title="添加图片或文档（也可拖入）" aria-label="添加图片或文档"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"></path></svg></button>
             <button class="effort" id="effortBox" title="思考强度：Low · 默认档，响应快，适合日常作图与简单计算" aria-haspopup="true" aria-expanded="false" style="--eff-col: #3a83f7;">
-              <svg class="eff-gauge" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4.5 17a8 8 0 1 1 15 0"></path><path class="eff-needle" d="M12 17V11.3"></path><circle cx="12" cy="17" r="1.1" fill="currentColor" stroke="none"></circle></svg>
+              <svg class="eff-gauge" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5.2 12.9A8 8 0 0 1 18.8 12.9"></path><path class="eff-needle" d="M12 16.9V11"></path><circle cx="12" cy="16.9" r="1.15" fill="currentColor" stroke="none"></circle></svg>
             </button>
             </div>
             <span class="spacer"></span>
@@ -3496,11 +3502,13 @@ const state = {
 const APP_VERSION = '1.7.3';
 const APP_CHANGELOG = [
   {
-    v: '1.7.3', date: '2026-11-14', tag: '交互优化', code: '约 2.93 万行 · 1.74 MB',
-    lead: '思考强度滑条对齐 ChatGPT 的手感，首屏更快，折叠入口收敛为一枚键。',
+    v: '1.7.3', date: '2026-11-14', tag: '交互优化', code: '约 2.93 万行 · 1.75 MB',
+    lead: '思考强度滑条对齐 ChatGPT 的手感，钥匙键直接显示余额，首屏更快，折叠入口收敛为一枚键。',
     notes: [
+      '思考强度不再跨会话记忆：每次打开都回到 Low，避免上次调高后下次被静默多扣额度',
       '思考强度面板改成毛玻璃浮层：旋钮拖动跟手、松手吸附到档位，换档时标题与说明淡入，选完 0.9 秒自动收起',
-      '收起态的仪表盘指针跟着档位转动，颜色也从灰经蓝推进到紫罗兰',
+      '收起态的仪表盘图标重画：半圆刻度 + 指针，指针跟着档位转动，颜色从灰经蓝推进到紫罗兰',
+      '钥匙键配好 Key 后展开成一枚小胶囊，直接显示账户剩余余额；打开网页就查一次，点刷新可重查',
       '首屏启动画面缩短到 0.6–1.2 秒（更新弹窗的装载时长不变）',
       '上下文用量键只在有对话后出现，hello 空态不再显示',
       '折叠入口只留输入条右下角一枚：点它开合对话；点按画布等别处把整条输入框收进底部角色，生成完成也不再擅自弹回',
@@ -3893,8 +3901,8 @@ function aiSyncKeyUI() {
   if (btn) {
     btn.classList.toggle('on', has);
     btn.classList.toggle('needs-key', !has);
-    btn.title = has ? 'API Key：已加密保存' : 'API Key：未配置，点此填入';
   }
+  apiKeyBalSync();   /* 工具排钥匙键上的余额跟着 Key 状态一起更新 */
   /* 两态：有 Key 且没点「更换」→ 显示封存卡；否则显示输入区 */
   const editing = apiEditing || !has;
   const card = $('#apiKeyCard'), editor = $('#apiEditor');
@@ -3970,6 +3978,7 @@ function aiClearKey() {
   AI_CONF.key = '';
   AI_CONF.fp = '';
   apiEditing = true;
+  apiBalText = '';                       /* 没有 Key 就不该再挂着上一把 Key 的余额 */
   apiBalanceSet('idle', '—', '');
   try { localStorage.removeItem(AI_STORE); } catch (e) { }
   const inp = $('#dsKeyInput'); if (inp) inp.value = '';
@@ -4086,10 +4095,26 @@ function apiSealKey() {
 }
 /* ── 账户余额：DeepSeek 官方接口，只在封存卡里展示 ── */
 let apiBalBusy = false;
+let apiBalText = '';        /* 最近一次查到的余额文本（如 ¥12.34），收起态的钥匙键也用它 */
+/* 把余额同步到工具排的钥匙键：有余额时从圆形图标展开成「钥匙 + 金额」的小胶囊 */
+function apiKeyBalSync() {
+  const btn = $('#aiKeyBtn'), badge = $('#aiKeyBal');
+  const txt = AI_CONF.key ? apiBalText : '';
+  if (badge) { badge.textContent = txt; badge.hidden = !txt; }
+  if (btn) {
+    btn.classList.toggle('has-bal', !!txt);
+    btn.title = AI_CONF.key
+      ? 'API Key：已加密保存' + (txt ? ' · 余额 ' + txt : ' · 点按查看余额') + '（点按管理）'
+      : 'API Key：未配置，点此填入';
+  }
+}
 function apiBalanceSet(state, amt, tip) {
   const card = $('#apiKeyCard'), el = $('#apiBalanceAmt');
   if (card) card.dataset.bal = state;
   if (el) { el.textContent = amt; el.title = tip || '账户余额'; }
+  /* 只有查到的金额才带到收起态；查询中 / 失败时保持上一次的数字，不闪成「—」 */
+  if (state === 'ok' || state === 'warn') apiBalText = String(amt || '').replace(/\s*·\s*已停用$/, '');
+  apiKeyBalSync();
 }
 async function apiBalanceRefresh() {
   if (!AI_CONF.key || apiBalBusy) return;
@@ -20861,15 +20886,11 @@ function init() {
   loadSET();
   /* 读回设置后再定 CAS 的定点刻度（π / e 位数） */
   casSyncScale();
-  /* 侧栏宽度与思考强度也记上次的：拖窄 / 调高之后重开网页不用再来一遍 */
+  /* 侧栏宽度记上次的：拖窄之后重开网页不用再来一遍（思考强度不记忆，每次回到 Low） */
   if (!TEST_MODE) {
     try {
       const w = parseFloat(localStorage.getItem('ggai_sbw') || '');
       if (isFinite(w) && w >= 190) document.documentElement.style.setProperty('--sb-w', clamp(w, 190, Math.min(720, innerWidth * .6)) + 'px');
-    } catch (e) { }
-    try {
-      const ef = localStorage.getItem('ggai_effort');
-      if (ef && EFFORTS.some(x => x.id === ef)) state.aiEffort = ef;
     } catch (e) { }
   }
   SET.theme = inferTheme();
@@ -22119,6 +22140,15 @@ async function runUITest() {
     if ($('#effortBox').textContent.trim() || $('#effortBox').querySelector('.eff-gauge') === null) throw new Error('折叠态思考强度应只留仪表盘图案');
     if ($('#effPopName').textContent !== 'Low') throw new Error('默认档文案不是 Low');
     if (!$('#effPopDesc').textContent.includes('默认档')) throw new Error('轻度档的描述没有写「默认档」');
+    /* 收起态钥匙键：查到余额后展开成「钥匙 + 金额」，没 Key 时不挂数字 */
+    const key0 = AI_CONF.key;
+    AI_CONF.key = 'sk-test';
+    apiBalanceSet('ok', '¥12.34', '');
+    if (!$('#aiKeyBtn').classList.contains('has-bal') || $('#aiKeyBal').textContent !== '¥12.34') {
+      throw new Error('钥匙键没有把余额显示在收起态');
+    }
+    AI_CONF.key = key0; apiBalText = ''; apiKeyBalSync();
+    if ($('#aiKeyBtn').classList.contains('has-bal') || !$('#aiKeyBal').hidden) throw new Error('没有 Key 时不该挂着余额');
   });
   await A('AI:再次联网与澄清指令', async () => {
     /* search / ask 是「对控件说的话」，不能被当成作图命令执行 */
@@ -27522,8 +27552,7 @@ function aiEffortPick(i) {
   const ef = EFFORTS[i]; if (!ef) return;
   const prev = state.aiEffort;
   state.aiEffort = ef.id;
-  /* 记住档位：下次打开还是这一档（Off / Low / Medium / High） */
-  if (prev !== ef.id && !TEST_MODE) { try { localStorage.setItem('ggai_effort', ef.id); } catch (e) { } }
+  /* 不跨会话记忆：每次打开都回到 Low，避免上次调到 High 的人下次被静默多扣额度 */
   const fill = effFillColor(i), ink = effInkColor(i);
   const title = '思考强度：' + ef.label + ' · ' + ef.desc;
   const big = $('#effortRangeBig');
@@ -27721,6 +27750,8 @@ function bindAI() {
     /* 余额行尾的刷新键：手动重查 */
     const balRef = $('#apiBalanceRefresh');
     if (balRef) balRef.addEventListener('click', () => apiBalanceRefresh());
+    /* 打开网页就把余额带上：收起态的钥匙键直接显示剩余金额（失败静默，不弹提示） */
+    aiKeyReady.then(() => { if (AI_CONF.key) apiBalanceRefresh(); });
     const clr = $('#dsKeyClear');
     if (clr) clr.addEventListener('click', () => {
       /* 清除是破坏性操作：第一次点变成“确认清除”，2.5 秒内再点才执行 */
