@@ -267,7 +267,6 @@ body.dark .app::before{
    7s 一轮，末尾 0.25s 缩小淡出后重开。画布由脚本按 DPR 绘制。 */
 .gml-cv{display:block;width:22px;height:22px;flex:0 0 auto;pointer-events:none}
 .fmenu-head .brand .gml-cv{width:22px;height:22px}
-.ai-ttl .gml-cv{width:20px;height:20px}
 
 /* ---------- 左侧菜单抽屉 ---------- */
 .fmenu-scrim{position:fixed;inset:0;z-index:200;background:rgba(10,12,16,.22);opacity:0;pointer-events:none;transition:opacity var(--t)}
@@ -619,7 +618,8 @@ body.tool-folded .tool-head{padding-bottom:0}
    暂停后已算出的位数保留，继续时接着往下算。 */
 .cas-live{margin:0 0 10px;padding:11px 12px;border-radius:12px;background:var(--panel-2);border:.5px solid var(--border)}
 /* 标题栏右侧的计算精度入口：只放一个设置键，不显示位数 */
-.cas-set{width:24px;height:24px;color:var(--text-3)}
+.cas-set{width:26px;height:26px;border-radius:8px;color:var(--text-3)}
+.cas-set svg{width:15px;height:15px}
 .cas-set:hover{color:var(--accent)}
 .cas-live-row{display:flex;align-items:center;gap:8px}
 .cas-live-name{font-weight:700;font-size:var(--fs-sm);color:var(--text)}
@@ -933,9 +933,9 @@ body.tool-folded .tool-head{padding-bottom:0}
   padding:0 6px;border-radius:99px;line-height:1.7;min-width:16px;text-align:center;font-variant-numeric:tabular-nums}
 .ai-dock.hist-fold .ai-chat{display:none}
 .ai-dock.hist-fold .ai-chat-wrap{display:none}
-/* 有消息时给顶部让出胶囊的高度：右上角「条数 + 收起」是浮层，不留位置的话
-   第一条消息的时间戳会从它底下钻出来，两行字叠在一起 */
-.ai-chat-wrap:has(.ai-hist-pill:not(.empty)) .ai-chat{padding-top:38px}
+/* 历史区右上角常驻上下文用量键 + 历史条数：消息列表让出顶部一行，
+   第一条消息的时间戳不会从它们底下钻出来 */
+.ai-chat-wrap .ai-chat{padding-top:38px}
 /* 折叠态：整条历史头收掉，只留工具排里的一枚小键，不再占一整行 */
 .ai-dock.hist-fold .ai-sheet{display:none}
 /* 工具排里的历史键跟着「历史是否真的可见」走（hist-on），不再只看折叠标记：
@@ -968,6 +968,10 @@ body.tool-folded .tool-head{padding-bottom:0}
 }
 .ai-ctx:hover{color:var(--accent);border-color:var(--accent);background:var(--accent-dim)}
 .ai-ctx:active{transform:scale(.96)}
+/* 挪进历史对话区后：固定在右上角，排在历史条数按钮左侧 */
+.ai-ctx.in-hist{position:absolute;top:8px;right:78px;z-index:6;height:26px;padding:0 9px;
+  background:var(--glass);border-color:var(--glass-brd);box-shadow:var(--shadow),var(--hi);
+  -webkit-backdrop-filter:var(--glass-blur);backdrop-filter:var(--glass-blur)}
 .ai-ctx-bar{position:relative;flex:0 0 26px;width:26px;height:5px;border-radius:99px;background:var(--panel-3);overflow:hidden}
 .ai-ctx-bar i{position:absolute;left:0;top:0;bottom:0;width:0;border-radius:99px;background:var(--accent);transition:width .3s var(--ease)}
 .ai-ctx-txt{font-size:var(--fs-3xs);font-weight:700;letter-spacing:.1px;font-variant-numeric:tabular-nums}
@@ -1030,8 +1034,6 @@ body.tool-folded .tool-head{padding-bottom:0}
    不再随对话区开合翻转，免得和「展开 / 折叠历史」混成同一个手势。 */
 .ai-fold-in{width:30px;height:30px;flex:0 0 30px;padding:0;border-radius:9px;justify-content:center;background:transparent}
 .ai-fold-in svg{width:15px;height:15px}
-.ai-ttl{flex:0 0 22px;width:22px;height:22px;align-self:center;display:flex;align-items:center;justify-content:center;color:var(--accent)}
-.ai-ttl svg{width:16px;height:16px}
 /* ── Codex 滑条几何（逐像素规格）──
    轨道 26px、旋钮 30px（上下各悬出 2px）、填充止于旋钮圆心；
    旋钮 / 填充 / 刻度点共用同一套 15px 内缩，端点处的圆不会被裁成半圆。 */
@@ -1092,8 +1094,6 @@ body.dark .eff-slider{
 }
 .eff-slider input[type=range]::-moz-range-track{height:26px;background:transparent;border:none}
 .eff-slider input[type=range]::-moz-range-thumb{box-sizing:border-box;width:30px;height:30px;border:none;background:transparent}
-.effort-name{flex:0 0 auto;font-size:var(--fs-2xs);font-weight:700;color:var(--accent);letter-spacing:.2px;
-  transition:color var(--t)}
 /* ── 展开面板（Codex 推理强度卡片）：272×104，r=14
    header 56 + 轨道上沿 65 + 轨道 26 + 底部 13 = 104 ── */
 .eff-pop{
@@ -1512,20 +1512,17 @@ body.booted .ai-dock.sheet-open .ai-hello .p4{animation:hkDot .12s linear 2.38s 
 .ai-tool:hover{color:var(--accent);background:var(--hover)}
 .ai-tool:active{transform:scale(.94)}
 .ai-tool.on{color:var(--accent);background:var(--accent-dim)}
-/* 思考强度：档位色迷你轨道 + 档位名 + 箭头，展开面板从这里向上弹出 */
+/* 添加入口：比普通工具键大一号 */
+#aiAddBtn{width:34px;height:34px;flex:0 0 34px;border-radius:11px}
+#aiAddBtn svg{width:19px;height:19px}
+/* 思考强度：收起态只留一个仪表盘图案，档位文字放在展开面板里 */
 .effort{
-  position:relative;flex:0 0 auto;display:flex;align-items:center;gap:6px;height:26px;
-  padding:0 9px 0 8px;border-radius:99px;background:transparent;color:var(--text-2);
+  position:relative;flex:0 0 auto;display:flex;align-items:center;justify-content:center;width:32px;height:32px;
+  padding:0;border-radius:99px;background:transparent;color:var(--text-2);
   border:.5px solid var(--border);transition:border-color var(--t),background var(--t);
 }
 .effort:hover,.effort:focus-within{border-color:var(--accent-dim);background:var(--accent-dim)}
-/* 收起态：一条 22px 迷你轨道显示当前档位，比一颗圆点更容易看出强弱 */
-.eff-mini{flex:0 0 22px;width:22px;height:5px;border-radius:99px;background:var(--panel-3);
-  position:relative;overflow:hidden}
-.eff-mini i{position:absolute;left:0;top:0;bottom:0;width:33%;border-radius:99px;
-  background:var(--eff-col,var(--text-3));transition:width .18s var(--ease-out),background-color .18s ease}
-.eff-caret{flex:0 0 11px;width:11px;height:11px;color:var(--text-3);transition:transform var(--t)}
-.effort[aria-expanded="true"] .eff-caret{transform:rotate(180deg)}
+.eff-gauge{width:17px;height:17px;color:var(--eff-col,var(--text-2));transition:color .18s ease}
 #aiInput{
   flex:1;min-width:0;width:100%;resize:none;height:34px;max-height:140px;padding:5px 2px;
   font-size:13.5px;line-height:1.6;background:transparent;
@@ -1856,6 +1853,8 @@ body:has(.aii-eff.on) .ai-dock{z-index:230}
    靠字色 + 字号拉开层级，不再画线。 */
 .set-group{margin-bottom:22px}
 .set-group>h3{font-size:var(--fs-xs);font-weight:700;color:var(--text-2);letter-spacing:.3px;margin:0 0 8px;padding:0}
+/* 从 CAS 精度按钮跳进来时，分组标题闪一下品牌色，指明落点 */
+.set-group.flash>h3{color:var(--accent);transition:color .45s ease}
 /* 更新与版本弹窗（点左上角 GeoAI 打开）：版本号做成页首的大数字；版本历史
    每条先给一句摘要，点标题才展开逐条改动，默认只展开当前版本。 */
 .upd-hero{
@@ -2639,6 +2638,11 @@ try {
       <div class="ai-dock mini" id="aiPanel">
         <div class="ai-sheet" id="aiSheet">
           <div class="ai-chat-wrap">
+            <!-- 上下文用量：挪到历史对话右上角，和历史条数按钮并排 -->
+            <button class="ai-ctx in-hist" id="aiCtx" title="上下文用量：点按清空上下文（保留对话历史）" aria-label="上下文用量">
+              <span class="ai-ctx-bar" aria-hidden="true"><i id="aiCtxFill"></i></span>
+              <span class="ai-ctx-txt" id="aiCtxTxt">0%</span>
+            </button>
             <!-- 历史记录：右上角数量小药丸，点按只收历史（输入框不动），整块随面板一起收起 -->
             <button class="ai-hist-pill empty" id="aiHistFold" aria-expanded="true" aria-controls="aiChat" title="收起历史记录（输入框不受影响）" aria-label="收起历史记录">
               <span class="ai-sh-chev" id="aiHistChev" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9.5 12 15.5l6-6"></path></svg></span>
@@ -2718,7 +2722,6 @@ try {
             <div class="ai-attach" id="aiAttach"></div>
             <textarea id="aiInput" placeholder="描述你要画的图形、要解的题，或拖入图片 / 文档" spellcheck="false" style="height: 34px;"></textarea>
             <div class="ai-row">
-              <span class="ai-ttl" id="aiHeadIcon" title="AI 助手"><canvas aria-hidden="true" style="width: 20px; height: 20px; display: block;"></canvas></span>
             <div class="ai-tools" id="aiTools">
             <div class="ai-hist-mini" id="aiHistMini">
               <button class="ai-tool" id="aiHistBtn" title="展开历史记录" aria-label="展开历史记录" aria-expanded="false" aria-controls="aiChat">
@@ -2734,11 +2737,7 @@ try {
               </button>
             </div>
             <button class="ai-tool" id="aiKeyBtn" title="API Key：未配置，点此填入" aria-label="API Key" aria-haspopup="dialog" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="12" r="4"></circle><path d="M12 12h9M17.5 12v3M20.5 12v2"></path></svg></button>
-            <!-- 上下文用量：与联网 / 图片并排，显示已用多少（上限 100 万） -->
-            <button class="ai-ctx" id="aiCtx" title="上下文用量：点按清空上下文（保留对话历史）" aria-label="上下文用量">
-              <span class="ai-ctx-bar" aria-hidden="true"><i id="aiCtxFill"></i></span>
-              <span class="ai-ctx-txt" id="aiCtxTxt">0%</span>
-            </button>
+            <!-- 上下文用量已挪到历史对话区（右上角，历史条数按钮旁） -->
             <!-- 点思考强度按钮后展开的 Codex 风格面板：标题 / 重置 + 一条滑条 -->
             <div class="eff-pop" id="effPop" role="dialog" aria-label="思考强度">
               <div class="eff-pop-head">
@@ -2760,10 +2759,8 @@ try {
             </div>
             <button class="ai-tool" id="aiWeb" title="联网检索：需要最新资料或网址内容时开启" aria-label="联网检索：需要最新资料或网址内容时开启"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.6"></circle><path d="M3.4 12h17.2M12 3.4c2.4 2.4 3.6 5.3 3.6 8.6s-1.2 6.2-3.6 8.6c-2.4-2.4-3.6-5.3-3.6-8.6s1.2-6.2 3.6-8.6z"></path></svg></button>
             <button class="ai-tool" id="aiAddBtn" title="添加图片或文档（也可拖入）" aria-label="添加图片或文档"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"></path></svg></button>
-            <button class="effort" id="effortBox" title="思考强度：Low · 默认档，响应快，适合日常作图与简单计算" aria-haspopup="true" aria-expanded="false" style="--eff-col: #3a83f7; --pn: 0.3333;">
-              <span class="eff-mini" aria-hidden="true"><i id="effMiniFill" style="width: 33.3%;"></i></span>
-              <span class="effort-name" id="effortName" style="color: rgb(47, 111, 208);">Low</span>
-              <svg class="eff-caret" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M7 10l5 5 5-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+            <button class="effort" id="effortBox" title="思考强度：Low · 默认档，响应快，适合日常作图与简单计算" aria-haspopup="true" aria-expanded="false" style="--eff-col: #3a83f7;">
+              <svg class="eff-gauge" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4.5 17a8 8 0 1 1 15 0"></path><path d="M12 17l4.2-5.4"></path><circle cx="12" cy="17" r="1.1" fill="currentColor" stroke="none"></circle></svg>
             </button>
             </div>
             <span class="spacer"></span>
@@ -3526,8 +3523,19 @@ const state = {
    版本号在左上角 GeoAI 打开的「更新与版本」弹窗里展示。改完版本号后，在
    APP_CHANGELOG 最上面补一条（版本、日期、类型、一句摘要、几条说明），
    新版本会自动出现在版本历史里。 */
-const APP_VERSION = '1.7.1';
+const APP_VERSION = '1.7.2';
 const APP_CHANGELOG = [
+  {
+    v: '1.7.2', date: '2026-11-14', tag: '界面调整', code: '约 2.93 万行 · 1.75 MB',
+    lead: '输入条与 CAS 的一轮收口：精度设置一键直达，上下文用量归入历史区，思考强度收起时只留仪表盘。',
+    notes: [
+      'CAS 标题栏的设置键打开后直接滚到「计算精度」分组，并让标题短暂变色指认落点',
+      '上下文用量键从底部工具排挪到历史对话右上角，与历史条数并排',
+      '思考强度收起态只显示一个仪表盘图案，档位名与滑块都收进展开面板',
+      '删除输入条上的动态 logo，品牌图标与思考时的 loader 保留',
+      '上传按钮放大到 34px，与相邻工具键拉开主次',
+    ],
+  },
   {
     v: '1.7.1', date: '2026-11-14', tag: '体验优化', code: '约 2.93 万行 · 1.75 MB',
     lead: '首屏更快、输入条更顺手：启动画面不再等字体，CAS 精度收进设置键，图片与文档合并成一个加号，底部工具键重新排序。',
@@ -17372,7 +17380,7 @@ function springSwitch(el) {
   el._springT = setTimeout(off, 600);
 }
 let objSetTarget = null;   // 非空表示当前模态展示的是「单个对象」的设置
-function openSettings() {
+function openSettings(focus) {
   objSetTarget = null;
   $('#settingsTitle').textContent = '设置';
   /* 设置项是「标签 + 控件」两列，600 比 660 更紧凑，视线不用横跨半个弹窗 */
@@ -17384,6 +17392,17 @@ function openSettings() {
   b.scrollTop = 0;                 /* 每次打开都从顶部开始，不接着上次的滚动位置 */
   bindSettings();
   openBackdrop('settingsBackdrop');
+  /* 从 CAS 标题栏进来时直接落到「计算精度」：滚到分组位置并给标题一个短暂的强调，
+     否则用户还得自己往下翻 */
+  if (focus === 'calc') {
+    const g = b.querySelector('[data-group="calc"]');
+    if (g) {
+      /* 用 rect 换算滚动量，不依赖 offsetParent（弹窗里 offsetTop 未必相对滚动容器） */
+      b.scrollTop = Math.max(0, g.getBoundingClientRect().top - b.getBoundingClientRect().top + b.scrollTop - 14);
+      g.classList.add('flash');
+      setTimeout(() => g.classList.remove('flash'), 1200);
+    }
+  }
 }
 function settingsHtml() {
   const sw = (k, label, sub) => '<div class="set-row"><label>' + label + (sub ? '<span class="sublabel">' + sub + '</span>' : '') + '</label><div class="switch' + (SET[k] ? ' on' : '') + '" role="switch" aria-checked="' + !!SET[k] + '" tabindex="0" data-sw="' + k + '"></div></div>';
@@ -17402,7 +17421,7 @@ function settingsHtml() {
     '<div class="set-group"><h3>对象样式</h3>' +
     rg('pointSize', '默认点大小', 2, 12, .5, '像素') + rg('lineWidth', '默认线宽', 1, 12, .2, '像素') + rg('fontSize', '标签字号', 8, 22, 1, '像素') + sw('labels', '显示对象标签') +
     '</div>' +
-    '<div class="set-group"><h3>计算精度</h3>' +
+    '<div class="set-group" data-group="calc"><h3>计算精度</h3>' +
     '<div class="set-row"><label>π 的位数<span class="sublabel">10–2000</span></label><input type="number" data-num="piDigits" min="10" max="2000" step="10" value="' + SET.piDigits + '"></div>' +
     '<div class="set-row"><label>e 的位数<span class="sublabel">10–2000</span></label><input type="number" data-num="eDigits" min="10" max="2000" step="10" value="' + SET.eDigits + '"></div>' +
     '<div class="set-row"><label>除法</label><select data-sel="divMode"><option value="cycle"' + (SET.divMode === 'cycle' ? ' selected' : '') + '>算到循环节</option><option value="fixed"' + (SET.divMode === 'fixed' ? ' selected' : '') + '>固定位数</option></select></div>' +
@@ -20875,9 +20894,7 @@ function init() {
   /* 恢复上次的折叠状态（在渲染工具栏之前设置，图标即为正确状态） */
   if (foldStored('ggai_toolfold')) document.body.classList.add('tool-folded');
 
-  /* AI 输入条左侧、菜单品牌图标、Grok 思考时头顶那颗：同一套 Gemini 形变 loader */
-  const aiLogoHost = $('#aiHeadIcon');
-  if (aiLogoHost) { aiLogoHost.innerHTML = ''; morphBind(aiLogoHost, 20); }
+  /* AI 输入条左侧不再放动态 logo；菜单品牌图标、Grok 思考时头顶那颗仍共用 Gemini loader */
   morphBind($('#brandLogo'), 22);
   morphBind($('#aiiThink'), 22);
   morphBind($('#updBootLogo'), 54);   /* 更新与版本弹窗装载层的动态 logo */
@@ -20991,7 +21008,7 @@ function init() {
   if (livePause) livePause.addEventListener('click', casLivePause);
   /* 点 CAS 标题栏的精度角标直接打开设置（计算精度分组就在里面） */
   const precEl = $('#casSetBtn');
-  if (precEl) precEl.addEventListener('click', () => openSettings());
+  if (precEl) precEl.addEventListener('click', () => openSettings('calc'));
   /* 空状态里的例子可以直接点：点哪条就把哪条送进输入框并执行 */
   const casOutEl = $('#casOut');
   if (casOutEl) casOutEl.addEventListener('click', e => {
@@ -22099,6 +22116,8 @@ async function runUITest() {
       if (!tools.contains($('#' + id))) throw new Error(id + ' 没有独立浮到工具排');
     });
     if (tools.contains($('#aiSend')) || tools.contains($('#aiFold'))) throw new Error('发送 / 展开对话键不该在工具排里');
+    if (!$('.ai-chat-wrap').contains($('#aiCtx'))) throw new Error('上下文用量键没有挪进历史对话区');
+    if (tools.contains($('#aiCtx'))) throw new Error('上下文用量键还留在工具排里');
     if (!capsule.contains($('#aiFold'))) throw new Error('展开对话键没有放在胶囊底部');
     if ($('#aiDropZone').contains(tools) === false || !$('#aiDropZone').contains(capsule)) throw new Error('结构与拖放区不匹配');
     /* 默认思考强度是第 2 档「Low」 */
@@ -22108,7 +22127,8 @@ async function runUITest() {
     /* 4 档：Off 不产思维链，其余三档各有独立的 API 强度 */
     if (EFFORTS[0].api) throw new Error('Off 档不该调用推理接口');
     if (!EFFORTS.slice(1).every(e => e.api && e.effort)) throw new Error('Low / Medium / High 都要映射到推理强度');
-    if ($('#effortName').textContent !== 'Low' || $('#effPopName').textContent !== 'Low') throw new Error('默认档文案不是 Low');
+    if ($('#effortBox').textContent.trim() || $('#effortBox').querySelector('.eff-gauge') === null) throw new Error('折叠态思考强度应只留仪表盘图案');
+    if ($('#effPopName').textContent !== 'Low') throw new Error('默认档文案不是 Low');
     if (!$('#effPopDesc').textContent.includes('默认档')) throw new Error('轻度档的描述没有写「默认档」');
   });
   await A('AI:再次联网与澄清指令', async () => {
@@ -22169,7 +22189,7 @@ async function runUITest() {
     for (let i = 0; i < EFFORTS.length; i++) {
       set(i); await sleep(0);
       if (state.aiEffort !== EFFORTS[i].id) throw new Error('切换失败 ' + EFFORTS[i].id);
-      if ($('#effortName').textContent !== EFFORTS[i].label) throw new Error('档位名未同步：' + $('#effortName').textContent);
+      if ($('#effortBox').textContent.trim()) throw new Error('折叠态不该出现档位文字');
       if ($('#effPopName').textContent !== EFFORTS[i].label) throw new Error('面板标题未同步：' + $('#effPopName').textContent);
       const p = box.style.getPropertyValue('--pn');
       const want = (EFFORTS.length > 1 ? i / (EFFORTS.length - 1) : 1).toFixed(4);
@@ -22315,8 +22335,8 @@ async function runUITest() {
     if (!dock.classList.contains('hist-fold')) throw new Error('历史头折叠键没有收起历史');
     $('#aiHistFold').click(); await sleep(0);
     if (dock.classList.contains('hist-fold')) throw new Error('历史头折叠键没有展开回来');
-    /* AI 输入条左侧与品牌图标都换成同一套 Gemini 形变 loader（canvas 绘制） */
-    if (!$('#aiHeadIcon canvas')) throw new Error('AI 输入条左侧没有换成 Gemini loader');
+    /* 输入条上不再有动态 logo：品牌图标与思考位置仍共用 Gemini 形变 loader */
+    if ($('#aiHeadIcon')) throw new Error('AI 输入条上的动态 logo 没有删除');
     if (!document.querySelector('#brandLogo canvas')) throw new Error('菜单品牌图标没有换成 Gemini loader');
     /* 思考时头顶那颗：三个气泡点 → 同一套 loader（要先收成角色，画布才在布局里） */
     aiMini(true); await sleep(50);
@@ -22603,9 +22623,15 @@ async function runUITest() {
     if (d8 !== '0.14285714…') throw new Error('固定位数除法不对：' + d8);
     SET.divMode = 'cycle';
     if (casNumeric('1/7').indexOf('0.(142857)') < 0) throw new Error('循环节模式没有恢复');
-    /* 点标题栏角标打开设置 */
+    /* 点标题栏齿轮：打开设置并直接落到「计算精度」分组 */
     $('#casSetBtn').click(); await sleep(0);
     if (!$('#settingsBackdrop').classList.contains('on')) throw new Error('点精度角标没有打开设置');
+    const sb = $('#settingsBody'), cg = sb.querySelector('[data-group="calc"]');
+    if (!cg) throw new Error('设置里缺少计算精度分组');
+    const sbr = sb.getBoundingClientRect(), cgr = cg.getBoundingClientRect();
+    const scrollable = sb.scrollHeight > sb.clientHeight + 8;
+    if (cgr.bottom < sbr.top + 20 || cgr.top > sbr.bottom - 20) throw new Error('计算精度分组不在可视范围');
+    if (scrollable && cgr.top > sbr.top + 60) throw new Error('打开设置没有定位到计算精度：' + Math.round(cgr.top - sbr.top));
     $('#settingsBackdrop [data-close]').click(); await sleep(0);
     SET.piDigits = 60; SET.eDigits = 60; casSyncScale();
     switchPanel('algebra');
@@ -27153,9 +27179,7 @@ function aiIsland(kind, label, sub, opts) {
   isl.dataset.kind = kind;
   isl.classList.toggle('busy', busy);
   AI_ISLAND_KINDS.forEach(k => isl.classList.toggle('is-' + k, k === kind));
-  /* 思考时头右上方那颗 loader 只在显示期间画：切到思考就把停掉的循环拉起来。
-     AI 条左侧图标同理 —— 空闲时必须定妆静止，常转会被当成「卡住了在加载」 */
-  morphSetLive($('#aiHeadIcon'), busy);
+  /* 思考时头右上方那颗 loader 只在思考期间画：切到思考就把停掉的循环拉起来 */
   morphSetLive($('#aiiThink'), busy && kind === 'think');
   if (!same) {
     const st = isl.querySelector('.aii-status');
@@ -27373,9 +27397,9 @@ function bindAiImages() {
   if (add) add.onclick = () => $('#aiAddFile').click();
   const fi = $('#aiAddFile');
   if (fi) fi.onchange = () => { aiAddFiles(fi.files); fi.value = ''; };
-  /* 工具排顺序：+ 添加 → 联网 → 思考强度 → 上下文 → 历史 → Key */
+  /* 工具排顺序：+ 添加 → 联网 → 思考强度 → 历史 → Key（上下文用量键已挪进历史区） */
   const toolsEl = $('#aiTools');
-  if (toolsEl) ['#aiAddBtn', '#aiWeb', '#effortBox', '#aiCtx', '#aiHistMini', '#aiHistOpen', '#aiKeyBtn']
+  if (toolsEl) ['#aiAddBtn', '#aiWeb', '#effortBox', '#aiHistMini', '#aiHistOpen', '#aiKeyBtn']
     .forEach(sel => { const el = $(sel); if (el && el.parentElement === toolsEl) toolsEl.appendChild(el); });
   /* 画布图片：右键「更换图片…」时替换那张图，否则把文件备给「图片」工具下一次放置 */
   const cf = $('#imgFile');
@@ -27510,8 +27534,6 @@ function aiEffortVisual(p) {
   box.style.setProperty('--pn', p.toFixed(4));
   box.style.setProperty('--eff-col', effFillColor(i));
   box.classList.toggle('off', !EFFORTS[i].api);
-  const mini = $('#effMiniFill'); if (mini) mini.style.width = (p * 100).toFixed(1) + '%';
-  const nm = $('#effortName'); if (nm) nm.style.color = effInkColor(i);
   const pn = $('#effPopName'); if (pn) pn.style.color = effInkColor(i);
 }
 /* Ultra 警示：进入 Ultra 那一刻立即出现，1.8 秒后淡回档位标题；离开 Ultra 立即恢复 */
@@ -27542,9 +27564,6 @@ function aiEffortPick(i) {
     box.style.setProperty('--pn', (i / Math.max(1, EFFORTS.length - 1)).toFixed(4));
     box.classList.toggle('off', !ef.api);
   }
-  const nm = $('#effortName'); if (nm) { nm.textContent = ef.label; nm.style.color = ink; }
-  const mini = $('#effMiniFill');
-  if (mini) mini.style.width = (i / Math.max(1, EFFORTS.length - 1) * 100).toFixed(1) + '%';
   const pn = $('#effPopName'); if (pn) { pn.textContent = ef.label; pn.style.color = ink; }
   const pd = $('#effPopDesc'); if (pd) pd.textContent = ef.desc;
   /* 最高档的仪式感（流动渐变 + 星尘 + 短暂警示）认「最后一档」，不写死档位 id：
