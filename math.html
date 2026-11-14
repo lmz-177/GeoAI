@@ -1116,7 +1116,10 @@ body.dark .eff-warn{color:#c39bff}
 .api-pop.on{display:block;animation:apiPopIn .22s var(--ease-out) both}
 @keyframes apiPopIn{from{opacity:0;transform:translateY(10px) scale(.985)}to{opacity:1;transform:translateY(0) scale(1)}}
 .api-pop-head{display:flex;align-items:center;padding:16px 16px 10px}
-.api-pop-ttl{flex:1;font-size:16px;font-weight:700;letter-spacing:-.2px;line-height:22px;color:var(--text)}
+.api-pop-ttl{flex:1;min-width:0;font-size:16px;font-weight:700;letter-spacing:-.2px;line-height:22px;color:var(--text);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;transition:color .18s ease}
+/* 配置失败：标题就地变成一句原因，不再在卡里多挂一行提示 */
+.api-pop-ttl.err{font-size:var(--fs-xs);font-weight:600;color:var(--danger-ink)}
 .api-close{flex:0 0 26px;width:26px;height:26px;border-radius:50%;display:grid;place-items:center;
   color:var(--text-3);background:var(--panel-3);transition:var(--t-ui)}
 .api-close:hover{background:var(--hover);color:var(--text)}
@@ -1259,10 +1262,17 @@ body.dark .eff-warn{color:#c39bff}
 .bf-edit .api-field{margin:0;height:34px;background:transparent;border:0;border-radius:0;padding:0 2px}
 .bf-edit .api-field:focus-within{border-color:transparent;box-shadow:none}
 .bf-edit .api-field input{font-size:16px;letter-spacing:.01em;color:var(--text);padding:0 4px 0 2px}
+/* 确认键：输入有效时才亮起 */
+.bf-ok{flex:0 0 32px;width:32px;height:32px;display:grid;place-items:center;border-radius:50%;
+  color:var(--accent);opacity:.3;pointer-events:none;transition:var(--t-ui)}
+.bf-ok.ready{opacity:1;pointer-events:auto}
+.bf-ok:active{transform:scale(.9)}
+.bf-ok svg{width:16px;height:16px}
 .bf-edit .api-seal{background:var(--modal-bg)}
 .bf-edit-foot{display:flex;align-items:center;gap:6px;min-height:13px;padding:0 2px}
 .bf-edit .api-state{margin:0;min-height:13px;font-size:var(--fs-3xs);line-height:13px;min-width:0;overflow:hidden}
 .bf-edit .api-state[data-state="empty"]{display:none}
+.bf-edit .api-state[data-state="err"]{display:none}   /* 失败原因交给顶部标题 */
 .bf-edit .api-state-txt{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 /* 状态行：小圆点 + 一句话 */
 .api-state{margin:10px 18px 0;display:flex;align-items:center;gap:7px;min-height:18px;
@@ -2731,7 +2741,7 @@ try {
           <!-- DeepSeek API Key：极简卡片，主操作始终只有一个 -->
           <div class="api-pop" id="apiPop" role="dialog" aria-label="API Key">
             <div class="api-pop-head">
-              <div class="api-pop-ttl">DeepSeek API</div>
+              <div class="api-pop-ttl" id="apiPopTitle">DeepSeek API</div>
               <a class="api-pop-link" href="https://platform.deepseek.com/api_keys" target="_blank" rel="noopener noreferrer">获取 API Key <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17 17 7M9 7h8v8"></path></svg></a>
               <button class="api-close" id="apiPopClose" title="关闭" aria-label="关闭"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6 6 18"></path></svg></button>
             </div>
@@ -2777,6 +2787,7 @@ try {
                       <div class="api-field" id="apiField">
                         <input type="password" id="dsKeyInput" autocomplete="new-password" spellcheck="false" aria-label="API Key">
                         <button class="api-eye" id="dsKeyEye" title="显示 / 隐藏" aria-label="显示 Key"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 12S6 5.8 12 5.8 21.5 12 21.5 12 18 18.2 12 18.2 2.5 12 2.5 12z"></path><circle cx="12" cy="12" r="2.6"></circle></svg></button>
+                        <button class="bf-ok" id="dsKeyOk" type="button" title="确认" aria-label="确认并保存"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5 10 17.5 19 6.5"></path></svg></button>
                         <div class="api-seal" id="apiSeal" aria-hidden="true"><span class="api-seal-txt"></span></div>
                       </div>
                       <div class="bf-edit-foot">
@@ -3586,8 +3597,17 @@ const state = {
    版本号在左上角 GeoAI 打开的「更新与版本」弹窗里展示。改完版本号后，在
    APP_CHANGELOG 最上面补一条（版本、日期、类型、一句摘要、几条说明），
    新版本会自动出现在版本历史里。 */
-const APP_VERSION = '1.7.9';
+const APP_VERSION = '1.7.10';
 const APP_CHANGELOG = [
+  {
+    v: '1.7.10', date: '2026-11-14', tag: '交互优化', code: '约 2.96 万行 · 1.76 MB',
+    lead: '配置失败用面板标题直接说明，输入区右侧加了一枚确认键。',
+    notes: [
+      '验证或保存失败时，顶部「DeepSeek API」就地变成红色的失败原因；问题解决后自动恢复标题',
+      'Key 输入框右侧新增确认键，输入看起来完整时亮起，点它立即验证保存',
+      '回车、失焦自动保存保留；三种触发加了防重复请求',
+    ],
+  },
   {
     v: '1.7.9', date: '2026-11-14', tag: '界面调整', code: '约 2.96 万行 · 1.76 MB',
     lead: '让 UI 说话：删掉「未配置」「回车保存」这类辅助文字，输入框也去掉边框与占位提示。',
@@ -4023,6 +4043,19 @@ function apiSetState(tone, text, hint) {
     st.textContent = text + (hint ? ' · ' + hint : '');
     if (tone !== 'err') st.title = '';
   }
+  /* 失败原因直接顶到面板标题上，卡里不再多一行字 */
+  const title = $('#apiPopTitle');
+  if (title) {
+    if (tone === 'err') {
+      title.textContent = text + (hint ? ' · ' + hint : '');
+      title.title = text + (hint ? ' · ' + hint : '');
+      title.classList.add('err');
+    } else {
+      title.textContent = 'DeepSeek API';
+      title.title = '';
+      title.classList.remove('err');
+    }
+  }
 }
 /* 保存按钮已经去掉：验证进度只体现在卡套上的状态行与密文幕布。
    保留空实现，调用点（开始 / 失败 / 结束）不用逐个改。 */
@@ -4047,6 +4080,8 @@ function aiSyncKeyUI() {
   const card = $('#apiKeyCard'), editor = $('#apiEditor'), fold = $('#bankFold');
   if (card) card.hidden = false;
   if (editor) editor.hidden = !editing;
+  const okBtn = $('#dsKeyOk');
+  if (okBtn) okBtn.classList.toggle('ready', editing && /^sk-[A-Za-z0-9._-]{8,}$/.test((($('#dsKeyInput') || {}).value || '').trim()));
   const view = $('#bankView');
   if (view) view.hidden = editing;
   if (fold) {
@@ -4321,6 +4356,7 @@ async function apiBalanceRefresh() {
 }
 /* 保存并验证：先测通再加密保存，避免把错误 Key 存下来 */
 async function aiSaveAndVerify() {
+  if (aiKeyState === 'saving') return;    /* 确认键 / 回车 / 失焦可能同一时刻触发，防重复请求 */
   const inp = $('#dsKeyInput');
   const typed = ((inp && inp.value) || '').trim();
   const key = typed || AI_CONF.key;
@@ -27971,24 +28007,28 @@ function bindAI() {
     const close = $('#apiPopClose');
     if (close) close.addEventListener('click', () => setApiPop(false));
     const inp = $('#dsKeyInput');
+    const okBtn = $('#dsKeyOk');
+    const keyLooksOk = v => /^sk-[A-Za-z0-9._-]{8,}$/.test(String(v || '').trim());
     if (inp) {
       inp.addEventListener('input', () => {
         /* 输错后重新输入：把红色错误提示收回到中性状态 */
         const box = $('#dsKeyState');
-        if (box && box.dataset.state === 'err') apiSetState('empty', '继续输入，完成后回车保存');
-        apiBusy(false);
+        if (box && box.dataset.state === 'err') apiSetState('empty', '');
+        if (okBtn) okBtn.classList.toggle('ready', keyLooksOk(inp.value));
       });
       inp.addEventListener('keydown', e => {
         if (e.key === 'Enter') { e.preventDefault(); aiSaveAndVerify(); }
       });
-      /* 没有保存按钮：离开输入框时，只要是一把看起来完整的 Key 就自动验证保存 */
-      inp.addEventListener('blur', () => {
-        const v = inp.value.trim();
-        if (!v || !/^sk-[A-Za-z0-9._-]{8,}$/.test(v)) return;
-        if (aiKeyState === 'saving') return;
+      /* 没有保存按钮时也可以离开输入框自动保存；点眼睛 / 确认键不算离开 */
+      inp.addEventListener('blur', e => {
+        const rt = e.relatedTarget;
+        if (rt && rt.closest && rt.closest('#dsKeyEye,#dsKeyOk')) return;
+        if (!keyLooksOk(inp.value) || aiKeyState === 'saving') return;
         aiSaveAndVerify();
       });
     }
+    /* 确认键：输入看起来完整时亮起，点它立即验证保存 */
+    if (okBtn) okBtn.addEventListener('click', e => { e.stopPropagation(); aiSaveAndVerify(); });
     const eye = $('#dsKeyEye');
     if (eye && inp) eye.addEventListener('click', () => {
       const show = inp.type === 'password';
