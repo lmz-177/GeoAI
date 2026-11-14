@@ -431,8 +431,6 @@ body.dark .app::before{
 .tg-head .tg-chev{margin-left:auto;flex:0 0 13px;width:13px;height:13px;color:var(--text-3);
   transform:rotate(0);transition:transform .22s var(--ease)}
 .tgroup.folded .tg-head .tg-chev{transform:rotate(-90deg)}
-.tg-head .tg-count{flex:0 0 auto;font-size:var(--fs-3xs);font-weight:600;color:var(--text-3);
-  font-variant-numeric:tabular-nums}
 /* 组内工具：3 列图标网格 */
 .flyout{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:3px}
 .tgroup.folded .flyout{display:none}
@@ -2543,11 +2541,11 @@ try {
 
       <div class="panel-body hidden" id="paneAlgebra">
         <div class="cmd-search"><input id="alSearch" placeholder="搜索对象，例如 A、y=x²…" aria-label="搜索对象"></div>
-        <div id="algebraList"><div class="empty-hint"><b>从空白开始</b>输入 <code>A=(1,2)</code>，画出第一个点。<br>或从工具栏选择工具。<br>也可以对 AI 说一句话，把想法画出来。</div></div>
+        <div id="algebraList"><div class="empty-hint"><b>从空白开始</b>输入 <code>A=(1,2)</code> 或从工具栏选一个工具。</div></div>
       </div>
 
       <div class="panel-body hidden" id="paneCas">
-        <div class="algebra-head"><span>CAS 计算</span><span class="spacer"></span><span class="cas-prec" id="casPrec" title="设置 → 计算精度">60 位</span></div>
+        <div class="algebra-head"><span class="spacer"></span><span class="cas-prec" id="casPrec" title="点击打开设置 → 计算精度">60 位</span></div>
         <div class="cas-live hidden" id="casLive">
           <div class="cas-live-row">
             <span class="cas-live-name" id="casLiveName">π</span>
@@ -2711,7 +2709,7 @@ try {
           <!-- 统一作曲家：附件 / 输入 / 工具 / 发送收进同一枚玻璃卡片 -->
           <div class="ai-box">
             <div class="ai-attach" id="aiAttach"></div>
-            <textarea id="aiInput" placeholder="描述你要画的图形、要解的题，或拖入图片；大数 / 高精度计算交给 AI 自动调用计算器…" spellcheck="false" style="height: 34px;"></textarea>
+            <textarea id="aiInput" placeholder="描述你要画的图形、要解的题，或拖入图片" spellcheck="false" style="height: 34px;"></textarea>
             <div class="ai-row">
               <span class="ai-ttl" id="aiHeadIcon" title="AI 助手"><canvas aria-hidden="true" style="width: 20px; height: 20px; display: block;"></canvas></span>
             <div class="ai-tools" id="aiTools">
@@ -3536,6 +3534,7 @@ const APP_CHANGELOG = [
       '输入框上的 hello 手写动画等启动画面结束后才开始播放，不会被装载挡掉',
       '思考强度面板改为对齐输入框中心，工具排增减按钮时不再左右乱跳',
       '从本版起版本条目记录代码量',
+      '全局精简辅助文案：设置、对象设置、空状态与工具组只保留必要信息，让布局本身说明层级',
       '「移动」改名为「选择 / 移动」，「缩放」改回「放大」，名字与实际操作一致',
     ],
   },
@@ -14366,7 +14365,7 @@ function casLog(input, result, isErr) {
 function casEmptyHint() {
   const host = $('#casOut'); if (!host) return;
   if (host.querySelector('.cas-ln') || host.querySelector('.empty-hint')) return;
-  host.innerHTML = '<div class="empty-hint"><b>还没有计算记录</b>在下方输入框写算式并回车，每一步都会记在这里。例如' +
+  host.innerHTML = '<div class="empty-hint"><b>还没有计算记录</b>写算式并回车，结果记在这里。例如' +
     '<code>2^2000</code>' +
     '<code>√2</code>' +
     '<code>20!</code>' +
@@ -15784,7 +15783,6 @@ function renderToolbar() {
     wrap.innerHTML =
       '<button class="tg-head" data-group="' + gid + '" aria-expanded="' + (folded.has(gid) ? 'false' : 'true') + '" aria-label="' + esc(gname) + '">' +
         '<span>' + esc(gname) + '</span>' +
-        '<span class="tg-count">' + group.length + '</span>' +
         '<span class="tg-chev">' + ICON.chevDown + '</span>' +
       '</button>' +
       '<div class="flyout">' +
@@ -15796,7 +15794,7 @@ function renderToolbar() {
   /* 概率计算器：分布曲线计算，不是作图工具，单独一组放在末尾 */
   const pwrap = document.createElement('div');
   pwrap.className = 'tgroup';
-  pwrap.innerHTML = '<button class="tg-head" aria-label="概率计算器"><span>概率计算</span><span class="tg-count">1</span></button>' +
+  pwrap.innerHTML = '<button class="tg-head" aria-label="概率计算器"><span>概率计算</span></button>' +
     '<div class="flyout"><button id="btnProbCalc" data-name="概率计算器" aria-label="概率计算器">' +
     ICON.dist + '<span class="fl-name">概率计算器</span></button></div>';
   pwrap.querySelector('#btnProbCalc').addEventListener('click', e => { e.stopPropagation(); probOpen(); });
@@ -15995,7 +15993,7 @@ function refreshAlgebra() {
   if ($('#layerPanel') && $('#layerPanel').classList.contains('on')) renderLayerPanel();
   const list = state.objects.filter(o => !o.aux);
   if (!list.length) {
-    host.innerHTML = '<div class="empty-hint"><b>从空白开始</b>输入 <code>A=(1,2)</code>，画出第一个点。<br>或从工具栏选择工具。<br>也可以对 AI 说一句话，把想法画出来。</div>';
+    host.innerHTML = '<div class="empty-hint"><b>从空白开始</b>输入 <code>A=(1,2)</code> 或从工具栏选一个工具。</div>';
     return;
   }
   /* 按图层组织成 iOS 分组列表：一层一个 section header，下面是内缩圆角卡片；
@@ -17373,13 +17371,13 @@ function settingsHtml() {
     sw('snap', '吸附到网格') + sw('snapToObjects', '吸附到已有对象') +
     '</div>' +
     '<div class="set-group"><h3>对象样式</h3>' +
-    rg('pointSize', '默认点大小', 2, 12, .5, '像素 · 未单独设置的跟随') + rg('lineWidth', '默认线宽', 1, 12, .2, '像素 · 未单独设置的跟随') + rg('fontSize', '标签字号', 8, 22, 1, '像素') + sw('labels', '显示对象标签') +
+    rg('pointSize', '默认点大小', 2, 12, .5, '像素') + rg('lineWidth', '默认线宽', 1, 12, .2, '像素') + rg('fontSize', '标签字号', 8, 22, 1, '像素') + sw('labels', '显示对象标签') +
     '</div>' +
     '<div class="set-group"><h3>计算精度</h3>' +
-    '<div class="set-row"><label>π 的位数<span class="sublabel">其它计算里 π 使用的精度（10–2000 位）</span></label><input type="number" data-num="piDigits" min="10" max="2000" step="10" value="' + SET.piDigits + '"></div>' +
-    '<div class="set-row"><label>e 的位数<span class="sublabel">其它计算里 e 使用的精度（10–2000 位）</span></label><input type="number" data-num="eDigits" min="10" max="2000" step="10" value="' + SET.eDigits + '"></div>' +
-    '<div class="set-row"><label>除法<span class="sublabel">算到出现循环节，或只保留固定位数</span></label><select data-sel="divMode"><option value="cycle"' + (SET.divMode === 'cycle' ? ' selected' : '') + '>算到循环节</option><option value="fixed"' + (SET.divMode === 'fixed' ? ' selected' : '') + '>固定位数</option></select></div>' +
-    '<div class="set-row"><label>除法位数<span class="sublabel">仅「固定位数」时生效（1–20000）</span></label><input type="number" data-num="divDigits" min="1" max="20000" step="10" value="' + SET.divDigits + '"></div>' +
+    '<div class="set-row"><label>π 的位数<span class="sublabel">10–2000</span></label><input type="number" data-num="piDigits" min="10" max="2000" step="10" value="' + SET.piDigits + '"></div>' +
+    '<div class="set-row"><label>e 的位数<span class="sublabel">10–2000</span></label><input type="number" data-num="eDigits" min="10" max="2000" step="10" value="' + SET.eDigits + '"></div>' +
+    '<div class="set-row"><label>除法</label><select data-sel="divMode"><option value="cycle"' + (SET.divMode === 'cycle' ? ' selected' : '') + '>算到循环节</option><option value="fixed"' + (SET.divMode === 'fixed' ? ' selected' : '') + '>固定位数</option></select></div>' +
+    '<div class="set-row"><label>除法位数<span class="sublabel">仅固定模式，1–20000</span></label><input type="number" data-num="divDigits" min="1" max="20000" step="10" value="' + SET.divDigits + '"></div>' +
     '</div>';
 }
 function bindSettings() {
@@ -17466,15 +17464,15 @@ function objSettingsHtml(o) {
   const num = (k, label, val, step, sub) => '<div class="set-row"><label>' + label + (sub ? '<span class="sublabel">' + sub + '</span>' : '') + '</label><input type="number" data-onum="' + k + '" step="' + step + '" value="' + val + '"></div>';
   const sel = (k, label, opts, val) => '<div class="set-row"><label>' + label + '</label><select data-osel="' + k + '">' + opts.map(([v, t]) => '<option value="' + esc(v) + '"' + (String(val) === String(v) ? ' selected' : '') + '>' + t + '</option>').join('') + '</select></div>';
   const lineish = isLineish(o), areaish = isAreaish(o);
-  let h = '<div class="set-row"><label>对象类型<span class="sublabel">' + esc(TYPENAME[o.type] || o.type) + ' · ' + esc(defText(o)) + '</span></label></div>';
+  let h = '';
 
   /* ── 基本：对象本身的状态，GGB 的 Basic 页 ── */
   h += '<div class="set-group"><h3>基本</h3>';
   h += '<div class="set-row"><label>名称</label><input type="text" class="oinput" data-olabel value="' + esc(o.label) + '"></div>';
   h += chk('visible', o.visible !== false, '显示对象');
-  h += chk('fixed', !!o.fixed, '固定<span class="sublabel">禁止拖动 / 拖动端点</span>');
-  if (o.type === 'point') h += chk('trace', !!o.trace, '显示拖影<span class="sublabel">移动时在画布上留下轨迹</span>');
-  if (o.group) h += '<div class="set-row"><label>所属组<span class="sublabel">' + esc(o.group) + '（成组对象一起显隐 / 删除）</span></label></div>';
+  h += chk('fixed', !!o.fixed, '固定');
+  if (o.type === 'point') h += chk('trace', !!o.trace, '显示拖影');
+  if (o.group) h += '<div class="set-row"><label>所属组<span class="sublabel">' + esc(o.group) + '</span></label></div>';
   h += '</div>';
 
   /* ── 标签：GGB 的 Label 设置（名称 / 标题 / 模式 / 偏移） ── */
@@ -17482,7 +17480,7 @@ function objSettingsHtml(o) {
   h += '<div class="set-group"><h3>标签</h3>';
   h += chk('showLabel', o.showLabel !== false, '显示标签');
   h += sel('labelMode', '标签显示', LABEL_MODE_NAMES.map((s, i) => [i, s]), o.labelMode || 0);
-  h += '<div class="set-row"><label>自定义标题<span class="sublabel">留空则显示名称</span></label><input type="text" class="oinput" data-ocaption value="' + esc(o.caption || '') + '"></div>';
+  h += '<div class="set-row"><label>自定义标题</label><input type="text" class="oinput" data-ocaption value="' + esc(o.caption || '') + '"></div>';
   h += rng('labelOffX', '标签水平偏移', -80, 80, 1, isNum(loff.x) ? loff.x : 0, ' 像素');
   h += rng('labelOffY', '标签垂直偏移', -80, 80, 1, isNum(loff.y) ? loff.y : 0, ' 像素');
   h += '</div>';
@@ -17529,13 +17527,13 @@ function objSettingsHtml(o) {
   if (o.type === 'text') {
     h += '<div class="set-group"><h3>文字</h3>';
     h += rng('size', '字号', 8, 72, 1, isNum(o.def.size) ? o.def.size : SET.fontSize + 1, ' 像素');
-    h += chk('scaleWithView', !!o.def.scaleWithView, '随画布缩放<span class="sublabel">开启后放大 / 缩小画布，文字跟着变大变小</span>');
+    h += chk('scaleWithView', !!o.def.scaleWithView, '随画布缩放');
     h += chk('bold', !!o.def.bold, '整体加粗');
-    h += chk('math', !!o.def.math, 'LaTeX / 公式文字<span class="sublabel">整段按数学公式排版</span>');
+    h += chk('math', !!o.def.math, 'LaTeX / 公式文字');
     h += sel('align', '对齐', [['left', '左对齐'], ['center', '居中'], ['right', '右对齐']], o.def.align || 'left');
     h += chk('textBg', !!o.bgColor, '文字背景色');
     h += '<div class="set-row"><label>背景颜色</label><input type="color" data-ocolor="bgColor" value="' + esc(o.bgColor || '#fff3c4') + '"><button class="btn" data-obgclear>清除</button></div>';
-    h += '<div class="set-row"><label>内容<span class="sublabel">支持 Markdown，点「修改」按钮编辑</span></label><button class="btn" data-oedit>编辑文字…</button></div>';
+    h += '<div class="set-row"><label>内容<span class="sublabel">支持 Markdown</span></label><button class="btn" data-oedit>编辑文字…</button></div>';
     h += '</div>';
   }
   if (o.type === 'image') {
@@ -17546,7 +17544,7 @@ function objSettingsHtml(o) {
   if (o.type === 'boolean') {
     h += '<div class="set-group"><h3>复选框</h3>';
     h += '<div class="set-row"><label>类型<span class="sublabel">' + (o.def.checkbox ? '可勾选复选框（值可切换）' : '布尔值对象') + '</span></label></div>';
-    h += '<div class="set-row"><label>复选框标题<span class="sublabel">显示在勾选框旁的说明文字</span></label><input type="text" class="oinput" data-ocheckcap value="' + esc(o.def.caption || '') + '"></div>';
+    h += '<div class="set-row"><label>复选框标题</label><input type="text" class="oinput" data-ocheckcap value="' + esc(o.def.caption || '') + '"></div>';
     h += '</div>';
   }
   /* 画布控件：按钮 / 输入框 / 下拉列表（对应 GGB 的 Button、Input Box、Drop-down List） */
@@ -17588,7 +17586,7 @@ function objSettingsHtml(o) {
   const cond = o.def.showCondExpr || (o.def.showCond ? ((getObj(o.def.showCond) || {}).label || '') : '');
   h += '<div class="set-group"><h3>高级</h3>';
   h += sel('layer', '所属图层', state.layers.map((L, i) => [i, esc(L.name)]), layerIndexOf(o));
-  h += '<div class="set-row"><label>显示条件<span class="sublabel">布尔表达式；留空表示始终显示</span></label><input type="text" class="oinput" data-ocond value="' + esc(cond) + '"></div>';
+  h += '<div class="set-row"><label>显示条件<span class="sublabel">布尔表达式，留空则始终显示</span></label><input type="text" class="oinput" data-ocond value="' + esc(cond) + '"></div>';
   h += '<div class="set-row"><label>对象定义<span class="sublabel">' + esc(defText(o)) + '</span></label><button class="btn" data-oeditdef>修改定义…</button></div>';
   h += '</div>';
   return h;
