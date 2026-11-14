@@ -1543,11 +1543,42 @@ body.booted .ai-dock.sheet-open .ai-hello .p4{animation:hkDot .12s linear 2.38s 
 .ai-tool:hover{color:var(--accent);background:var(--hover)}
 .ai-tool:active{transform:scale(.94)}
 .ai-tool.on{color:var(--accent);background:var(--accent-dim)}
-/* 语音输入：录音时麦克风变红并轻轻呼吸 */
-#aiMic.on{color:var(--danger);background:rgba(255,59,48,.14)}
-#aiMic.on svg{animation:micPulse 1.1s ease-in-out infinite}
-@keyframes micPulse{0%,100%{opacity:1}50%{opacity:.4}}
-#aiMic[hidden]{display:none}
+/* 语音输入：收起是一枚麦克风；收听时向右展开出频谱与计时（照 voice-input 组件） */
+.ai-mic{flex:0 0 auto;display:flex;align-items:center;height:30px;padding:0 7px;
+  border-radius:99px;color:var(--text-2);background:transparent;border:.5px solid transparent;
+  transition:var(--t-ui),max-width .4s var(--ease-out)}
+.ai-mic:hover{color:var(--accent);background:var(--hover)}
+.ai-mic.on{color:var(--accent);background:var(--accent-dim);border-color:var(--accent-dim)}
+.ai-mic.busy{opacity:.6;pointer-events:none}
+.ai-mic[hidden]{display:none}
+.mic-ic{flex:0 0 16px;width:16px;height:16px;display:grid;place-items:center}
+.mic-ic svg{width:16px;height:16px}
+/* 收听中：麦克风换成一枚旋转的小方块 */
+.mic-ic .mic-sq{display:none;width:11px;height:11px;border-radius:2px;background:var(--accent)}
+.ai-mic.on .mic-ic svg{display:none}
+.ai-mic.on .mic-ic .mic-sq{display:block;animation:micSpin 2s linear infinite}
+@keyframes micSpin{from{transform:rotate(0)}to{transform:rotate(360deg)}}
+/* 右侧展开区：宽度从 0 撑开，配合透明度淡入 */
+.mic-live{display:flex;align-items:center;gap:8px;max-width:0;opacity:0;overflow:hidden;
+  transition:max-width .4s var(--ease-out),opacity .28s ease,margin-left .4s var(--ease-out)}
+.ai-mic.on .mic-live{max-width:150px;opacity:1;margin-left:8px}
+.mic-bars{display:flex;align-items:center;gap:2px;height:14px}
+.mic-bars i{display:block;width:2px;height:2px;border-radius:99px;background:var(--accent)}
+.ai-mic.on .mic-bars i{animation:micBar 1s ease-in-out infinite}
+.mic-bars i:nth-child(2){animation-delay:.05s}
+.mic-bars i:nth-child(3){animation-delay:.1s}
+.mic-bars i:nth-child(4){animation-delay:.15s}
+.mic-bars i:nth-child(5){animation-delay:.2s}
+.mic-bars i:nth-child(6){animation-delay:.25s}
+.mic-bars i:nth-child(7){animation-delay:.3s}
+.mic-bars i:nth-child(8){animation-delay:.35s}
+.mic-bars i:nth-child(9){animation-delay:.4s}
+.mic-bars i:nth-child(10){animation-delay:.45s}
+.mic-bars i:nth-child(11){animation-delay:.5s}
+.mic-bars i:nth-child(12){animation-delay:.55s}
+@keyframes micBar{0%,100%{height:2px}30%{height:12px}60%{height:6px}}
+.mic-time{font-size:var(--fs-3xs);color:var(--text-3);width:34px;text-align:center;white-space:nowrap;
+  font-variant-numeric:tabular-nums}
 /* 添加入口：比普通工具键大一号 */
 #aiAddBtn{width:34px;height:34px;flex:0 0 34px;border-radius:11px}
 #aiAddBtn svg{width:19px;height:19px}
@@ -2813,7 +2844,13 @@ try {
                 <input type="range" id="effortRangeBig" min="0" max="6" step="1" value="2" aria-label="思考强度" aria-valuetext="Low" title="思考强度：Low · 默认档，响应快，适合日常作图与简单计算">
               </span>
             </div>
-            <button class="ai-tool" id="aiMic" title="语音输入" aria-label="语音输入" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="3" width="6" height="11" rx="3"></rect><path d="M5.5 11.5a6.5 6.5 0 0 0 13 0M12 18v3"></path></svg></button>
+            <button class="ai-mic" id="aiMic" type="button" title="语音输入" aria-label="语音输入" aria-pressed="false">
+              <span class="mic-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"></rect><path d="M5.5 11.5a6.5 6.5 0 0 0 13 0M12 18v3"></path></svg><i class="mic-sq" aria-hidden="true"></i></span>
+              <span class="mic-live" aria-hidden="true">
+                <span class="mic-bars"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span>
+                <span class="mic-time" id="aiMicTime">00:00</span>
+              </span>
+            </button>
             <button class="ai-tool" id="aiWeb" title="联网检索：需要最新资料或网址内容时开启" aria-label="联网检索：需要最新资料或网址内容时开启"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.6"></circle><path d="M3.4 12h17.2M12 3.4c2.4 2.4 3.6 5.3 3.6 8.6s-1.2 6.2-3.6 8.6c-2.4-2.4-3.6-5.3-3.6-8.6s1.2-6.2 3.6-8.6z"></path></svg></button>
             <button class="ai-tool" id="aiAddBtn" title="添加图片或文档（也可拖入）" aria-label="添加图片或文档"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"></path></svg></button>
             <button class="effort" id="effortBox" title="思考强度：Low · 默认档，响应快，适合日常作图与简单计算" aria-haspopup="true" aria-expanded="false" style="--eff-col: #3a83f7;">
@@ -3581,8 +3618,18 @@ const state = {
    版本号在左上角 GeoAI 打开的「更新与版本」弹窗里展示。改完版本号后，在
    APP_CHANGELOG 最上面补一条（版本、日期、类型、一句摘要、几条说明），
    新版本会自动出现在版本历史里。 */
-const APP_VERSION = '1.7.12';
+const APP_VERSION = '1.7.13';
 const APP_CHANGELOG = [
+  {
+    v: '1.7.13', date: '2026-11-14', tag: '界面调整', code: '约 2.97 万行 · 1.77 MB',
+    lead: '语音输入改走 DeepSeek 语音识别，并做成会展开的胶囊：收听时撑开频谱与计时。',
+    notes: [
+      '识别改用 DeepSeek 语音识别接口（POST /v1/tools/asr）：本地录成 16 kHz 单声道 WAV 再上传，识别结果追加到输入框',
+      '收起态只是一枚麦克风，点一下开始录音；胶囊向右展开，露出 12 根跳动的频谱和 mm:ss 计时',
+      '录音中图标换成持续旋转的小方块，再点一次结束并送去识别；录音上限 115 秒',
+      '展开用宽度 + 透明度过渡，和参考组件的 0.4s 节奏一致；没有 Key 时点它会提示先填 Key',
+    ],
+  },
   {
     v: '1.7.12', date: '2026-11-14', tag: '新功能', code: '约 2.96 万行 · 1.76 MB',
     lead: '输入条新增语音输入：点麦克风说话，识别结果直接写进输入框。',
@@ -28220,10 +28267,25 @@ function bindAI() {
       try { r.stream.getTracks().forEach(t => t.stop()); } catch (e) { }
       try { r.proc.disconnect(); r.src.disconnect(); r.ctx.close(); } catch (e) { }
     };
+    /* 展开区里的计时：mm:ss，随录音每秒走一格 */
+    const timeEl = $('#aiMicTime');
+    let tick = 0, recT0 = 0;
+    const fmt = s => String(Math.floor(s / 60)).padStart(2, '0') + ':' + String(s % 60).padStart(2, '0');
     const setRec = on => {
       btn.classList.toggle('on', on);
       btn.setAttribute('aria-pressed', on ? 'true' : 'false');
       btn.title = on ? '正在听…（再点结束）' : '语音输入';
+      clearInterval(tick);
+      if (on) {
+        recT0 = Date.now();
+        if (timeEl) timeEl.textContent = '00:00';
+        tick = setInterval(() => {
+          const s = Math.floor((Date.now() - recT0) / 1000);
+          if (timeEl) timeEl.textContent = fmt(s);
+        }, 500);
+      } else {
+        if (timeEl) timeEl.textContent = '00:00';
+      }
     };
 
     const transcribe = async blob => {
