@@ -3618,8 +3618,17 @@ const state = {
    版本号在左上角 GeoAI 打开的「更新与版本」弹窗里展示。改完版本号后，在
    APP_CHANGELOG 最上面补一条（版本、日期、类型、一句摘要、几条说明），
    新版本会自动出现在版本历史里。 */
-const APP_VERSION = '1.7.13';
+const APP_VERSION = '1.7.14';
 const APP_CHANGELOG = [
+  {
+    v: '1.7.14', date: '2026-11-14', tag: '界面调整', code: '约 2.97 万行 · 1.77 MB',
+    lead: '卡面上的余额隐藏开关同样作用于工具排折叠态的余额。',
+    notes: [
+      '点卡套上的眼睛隐藏金额后，工具排上的余额也一并变成打码显示，只保留币种符号',
+      '隐藏时的悬停说明改成「余额已隐藏」，不再把真实金额写进提示里',
+      '重新显示后两处一起恢复，状态始终一致',
+    ],
+  },
   {
     v: '1.7.13', date: '2026-11-14', tag: '界面调整', code: '约 2.97 万行 · 1.77 MB',
     lead: '语音输入改走 DeepSeek 语音识别，并做成会展开的胶囊：收听时撑开频谱与计时。',
@@ -4339,16 +4348,21 @@ function bankRenderAmt() {
   const g = $('#bankGrant'), u = $('#bankTopup');
   if (g) g.textContent = bankMask(bankGrantText);
   if (u) u.textContent = bankMask(bankTopupText);
+  apiKeyBalSync();          /* 隐藏状态同步到折叠态工具排上的余额 */
 }
-/* 把余额同步到工具排的钥匙键：有余额时从圆形图标展开成金额小胶囊 */
+/* 把余额同步到工具排的钥匙键：有余额时从圆形图标展开成金额小胶囊。
+   卡面眼睛关掉时，这里也只显示打码后的金额。 */
 function apiKeyBalSync() {
   const btn = $('#aiKeyBtn'), badge = $('#aiKeyBal');
-  const txt = AI_CONF.key ? apiBalText : '';
+  const raw = AI_CONF.key ? apiBalText : '';
+  const txt = raw ? bankMask(raw) : '';
   if (badge) { badge.textContent = txt; badge.hidden = !txt; }
   if (btn) {
     btn.classList.toggle('has-bal', !!txt);
     btn.title = AI_CONF.key
-      ? 'API Key：已加密保存' + (txt ? ' · 余额 ' + txt : ' · 点按查看余额') + '（点按管理）'
+      ? 'API Key：已加密保存' + (raw
+        ? ' · 余额 ' + (bankHidden ? '已隐藏（点按余额卡可显示）' : raw)
+        : ' · 点按查看余额') + '（点按管理）'
       : 'API Key：未配置，点此填入';
   }
 }
