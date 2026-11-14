@@ -1543,6 +1543,11 @@ body.booted .ai-dock.sheet-open .ai-hello .p4{animation:hkDot .12s linear 2.38s 
 .ai-tool:hover{color:var(--accent);background:var(--hover)}
 .ai-tool:active{transform:scale(.94)}
 .ai-tool.on{color:var(--accent);background:var(--accent-dim)}
+/* 语音输入：录音时麦克风变红并轻轻呼吸 */
+#aiMic.on{color:var(--danger);background:rgba(255,59,48,.14)}
+#aiMic.on svg{animation:micPulse 1.1s ease-in-out infinite}
+@keyframes micPulse{0%,100%{opacity:1}50%{opacity:.4}}
+#aiMic[hidden]{display:none}
 /* 添加入口：比普通工具键大一号 */
 #aiAddBtn{width:34px;height:34px;flex:0 0 34px;border-radius:11px}
 #aiAddBtn svg{width:19px;height:19px}
@@ -2808,6 +2813,7 @@ try {
                 <input type="range" id="effortRangeBig" min="0" max="6" step="1" value="2" aria-label="思考强度" aria-valuetext="Low" title="思考强度：Low · 默认档，响应快，适合日常作图与简单计算">
               </span>
             </div>
+            <button class="ai-tool" id="aiMic" title="语音输入" aria-label="语音输入" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="3" width="6" height="11" rx="3"></rect><path d="M5.5 11.5a6.5 6.5 0 0 0 13 0M12 18v3"></path></svg></button>
             <button class="ai-tool" id="aiWeb" title="联网检索：需要最新资料或网址内容时开启" aria-label="联网检索：需要最新资料或网址内容时开启"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.6"></circle><path d="M3.4 12h17.2M12 3.4c2.4 2.4 3.6 5.3 3.6 8.6s-1.2 6.2-3.6 8.6c-2.4-2.4-3.6-5.3-3.6-8.6s1.2-6.2 3.6-8.6z"></path></svg></button>
             <button class="ai-tool" id="aiAddBtn" title="添加图片或文档（也可拖入）" aria-label="添加图片或文档"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"></path></svg></button>
             <button class="effort" id="effortBox" title="思考强度：Low · 默认档，响应快，适合日常作图与简单计算" aria-haspopup="true" aria-expanded="false" style="--eff-col: #3a83f7;">
@@ -3575,8 +3581,17 @@ const state = {
    版本号在左上角 GeoAI 打开的「更新与版本」弹窗里展示。改完版本号后，在
    APP_CHANGELOG 最上面补一条（版本、日期、类型、一句摘要、几条说明），
    新版本会自动出现在版本历史里。 */
-const APP_VERSION = '1.7.11';
+const APP_VERSION = '1.7.12';
 const APP_CHANGELOG = [
+  {
+    v: '1.7.12', date: '2026-11-14', tag: '新功能', code: '约 2.96 万行 · 1.76 MB',
+    lead: '输入条新增语音输入：点麦克风说话，识别结果直接写进输入框。',
+    notes: [
+      '工具排多了一枚麦克风，只在使用 Web Speech 的浏览器里出现，不支持时自动隐藏',
+      '点一下开始听、再点结束；识别结果实时追加到已有文字后面',
+      '录音时麦克风变红并呼吸；没有麦克风权限或没听到声音会给一句提示',
+    ],
+  },
   {
     v: '1.7.11', date: '2026-11-14', tag: '界面调整', code: '约 2.96 万行 · 1.76 MB',
     lead: '删掉输入框下的状态行与绿点，所有提示都交给顶部标题。',
@@ -27591,9 +27606,9 @@ function bindAiImages() {
   if (add) add.onclick = () => $('#aiAddFile').click();
   const fi = $('#aiAddFile');
   if (fi) fi.onchange = () => { aiAddFiles(fi.files); fi.value = ''; };
-  /* 工具排顺序：+ 添加 → 联网 → 思考强度 → Key（折叠键在输入条右下角） */
+  /* 工具排顺序：+ 添加 → 语音 → 联网 → 思考强度 → Key（折叠键在输入条右下角） */
   const toolsEl = $('#aiTools');
-  if (toolsEl) ['#aiAddBtn', '#aiWeb', '#effortBox', '#aiKeyBtn']
+  if (toolsEl) ['#aiAddBtn', '#aiMic', '#aiWeb', '#effortBox', '#aiKeyBtn']
     .forEach(sel => { const el = $(sel); if (el && el.parentElement === toolsEl) toolsEl.appendChild(el); });
   /* 画布图片：右键「更换图片…」时替换那张图，否则把文件备给「图片」工具下一次放置 */
   const cf = $('#imgFile');
@@ -28159,6 +28174,45 @@ function bindAI() {
       try { localStorage.setItem('ggai_web', state.aiWeb ? '1' : '0'); } catch (e) { }
       sync();
       toast(state.aiWeb ? '联网已开启：搜索与阅读链接交给 DeepSeek 服务端' : '联网已关闭');
+    });
+  })();
+
+  /* 语音输入：浏览器支持 Web Speech 时出现麦克风；点一下说话，再点结束。
+     识别结果实时追加到输入框，已有的文字会保留在前面。 */
+  (function initVoice() {
+    const btn = $('#aiMic'), inp = $('#aiInput');
+    if (!btn) return;
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SR) { btn.hidden = true; return; }
+    let rec = null;
+    const reset = () => {
+      rec = null;
+      btn.classList.remove('on');
+      btn.setAttribute('aria-pressed', 'false');
+      btn.title = '语音输入';
+    };
+    btn.addEventListener('click', () => {
+      if (rec) { try { rec.stop(); } catch (e) { } return; }
+      rec = new SR();
+      rec.lang = 'zh-CN';
+      rec.interimResults = true;
+      rec.continuous = false;
+      const base = inp.value.trim() ? inp.value.replace(/\s+$/, '') + ' ' : '';
+      btn.classList.add('on');
+      btn.setAttribute('aria-pressed', 'true');
+      btn.title = '正在听…（再点结束）';
+      rec.onresult = e => {
+        let txt = '';
+        for (let i = e.resultIndex; i < e.results.length; i++) txt += e.results[i][0].transcript;
+        inp.value = base + txt;
+        inp.dispatchEvent(new Event('input', { bubbles: true }));
+      };
+      rec.onerror = e => {
+        if (e.error === 'not-allowed' || e.error === 'service-not-allowed') toast('麦克风没有权限，请在浏览器里允许后重试', 'err');
+        else if (e.error === 'no-speech') toast('没有听到声音');
+      };
+      rec.onend = () => { reset(); inp.focus(); };
+      try { rec.start(); } catch (e) { reset(); }
     });
   })();
 
