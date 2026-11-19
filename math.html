@@ -3618,8 +3618,18 @@ const state = {
    版本号在左上角 GeoAI 打开的「更新与版本」弹窗里展示。改完版本号后，在
    APP_CHANGELOG 最上面补一条（版本、日期、类型、一句摘要、几条说明），
    新版本会自动出现在版本历史里。 */
-const APP_VERSION = '1.7.14';
+const APP_VERSION = '1.7.15';
 const APP_CHANGELOG = [
+  {
+    v: '1.7.15', date: '2026-11-19', tag: '新功能', code: '约 3.01 万行 · 1.79 MB',
+    lead: '新增语言切换：简体中文 / English，选择会记在本机。',
+    notes: [
+      '画布右侧视图条多了一枚语言键，可在简体中文与 English 之间即时切换',
+      '菜单、页签、工具栏、设置、银行卡、AI 输入条、按钮与常用提示都会跟着换语言',
+      '切换通过文本节点替换完成，动态弹出的窗口与提示也会自动翻译；选择存在 localStorage',
+      '尚未收录的长篇帮助说明在英文模式下保留中文原文',
+    ],
+  },
   {
     v: '1.7.14', date: '2026-11-14', tag: '界面调整', code: '约 2.97 万行 · 1.77 MB',
     lead: '卡面上的余额隐藏开关同样作用于工具排折叠态的余额。',
@@ -29800,6 +29810,304 @@ async function aiSend() {
     if (AI_CONF.key) apiBalanceRefresh();
   }
 }
+
+
+/* ══════════════════════════════════════════════════════════════════
+   语言切换：简体中文 / English
+   —— 以「简体原文」为 key，按文本节点与 placeholder / title / aria-label
+   整串匹配替换；动态生成的节点由 MutationObserver 补翻，所以弹窗、提示、
+   工具名同样生效。未收录的长篇帮助文字保留中文。
+   ══════════════════════════════════════════════════════════════════ */
+(function () {
+  'use strict';
+  var LS = 'ggai_lang';
+  var lang = 'zh-CN';
+  try { if (localStorage.getItem(LS) === 'en') lang = 'en'; } catch (e) { }
+
+  /* ── 英文词典 ───────────────────────────────────────────────── */
+  var EN = {
+    /* 菜单与页签 */
+    '文件': 'File', '编辑': 'Edit', '视图': 'View', '帮助': 'Help',
+    '新建': 'New', '打开构造文件…': 'Open Construction…', '下载构造文件': 'Download Construction',
+    '导出为图片 (PNG)': 'Export Image (PNG)', '导出为 GeoGebra 文件 (.ggb)': 'Export GeoGebra (.ggb)',
+    '导出命令脚本': 'Export Command Script', '复制全部命令': 'Copy All Commands',
+    '在线分享…': 'Share Online…', '打开在线分享…': 'Open Shared Link…', '载入示例构造': 'Load Example',
+    '撤销': 'Undo', '重做': 'Redo', '全选对象': 'Select All',
+    '把选中的对象编成一组': 'Group Selection', '解散选中对象所在的组': 'Ungroup',
+    '删除选中': 'Delete Selected', '重命名选中…': 'Rename…', '对象设置…': 'Object Settings…',
+    '清空全部对象': 'Clear All Objects',
+    '✓ 显示网格': '✓ Show Grid', '✓ 显示坐标轴': '✓ Show Axes', '✓ 显示对象标签': '✓ Show Labels',
+    '吸附到网格': 'Snap to Grid', '收起绘图工具': 'Collapse Tools',
+    '放大': 'Zoom In', '缩小': 'Zoom Out', '适合窗口': 'Fit to Window', '标准视图': 'Standard View',
+    '绘图区与全局设置…': 'Canvas & Global Settings…', '切换深色 / 浅色': 'Toggle Dark / Light',
+    '全部功能说明': 'All Features', '键盘与鼠标快捷键': 'Keyboard & Mouse Shortcuts',
+    'AI 助手能做什么': 'What the AI Can Do', '关于本应用': 'About',
+    '绘图': 'Draw', '代数': 'Algebra', '命令': 'Commands', '表格': 'Sheet',
+    '绘图工具': 'Drawing Tools', '搜索工具': 'Search tools',
+    '正在铺开坐标系…': 'Laying out the coordinate system…',
+    '收起侧栏': 'Collapse sidebar', '收起侧栏，画布最大化': 'Collapse sidebar to maximize canvas',
+    '展开侧栏': 'Expand sidebar', '在线分享': 'Share online',
+    '在线分享：把当前构造生成一条公开链接': 'Share online: create a public link to this construction',
+    '设置': 'Settings', '更新与版本': 'Updates & Version',
+    '完成': 'Done', '恢复默认': 'Reset', '取消': 'Cancel', '确定': 'OK', '确认': 'Confirm',
+    '关闭': 'Close', '关闭菜单': 'Close menu', '输入': 'Input',
+    '更新与版本': 'Updates & Version', 'GitHub 查看更新': 'View updates on GitHub',
+    'AI 正在作图，建议先别手动改画布': 'AI is drawing — avoid manual edits for now',
+    /* 面板 */
+    '数值或公式，如 =A1+B2': 'Value or formula, e.g. =A1+B2',
+    '绘制选中列': 'Plot Selected Columns', '清空表格': 'Clear Sheet',
+    '搜索对象，例如 A、y=x²…': 'Search objects, e.g. A, y=x²…',
+    '从空白开始': 'Start from scratch', '或从工具栏选一个工具。': 'or pick a tool from the toolbar.',
+    '搜索命令，例如 交点、Derivative…': 'Search commands, e.g. Intersect, Derivative…',
+    '计算精度设置': 'Precision settings', '已计算 0 位': '0 digits computed',
+    '开始': 'Start', '暂停': 'Pause',
+    '图层': 'Layers', '图层管理': 'Layers', '新建图层': 'New Layer',
+    '拖动行调整叠放次序；点名字切换当前图层（新对象落在这一层）。左侧列表里的对象行也可以拖到任意图层行上换层。': 'Drag rows to reorder; click a name to make it the current layer (new objects go there). Object rows on the left can also be dragged onto any layer.',
+    '播放全部动画': 'Play all animations',
+    '图层管理：显隐 / 锁定 / 改名 / 排序 / 删除（当前：图层 1）': 'Layers: show/hide, lock, rename, reorder, delete (current: Layer 1)',
+    /* AI 输入条 */
+    '描述你要画的图形、要解的题，或拖入图片 / 文档': 'Describe a figure or a problem, or drop an image / document',
+    '发送': 'Send', '停止': 'Stop',
+    '添加图片或文档（也可拖入）': 'Add image or document (or drop)',
+    '联网检索：需要最新资料或网址内容时开启': 'Web search: turn on for latest info or URLs',
+    '语音输入': 'Voice input', '思考强度': 'Reasoning effort', '数学键盘': 'Math keyboard',
+    '执行 (Enter)': 'Evaluate (Enter)', '添加图片或文档': 'Add image or document',
+    '松开即可添加图片': 'Release to add the image',
+    '上下文用量：点按清空上下文（保留对话历史）': 'Context usage: tap to clear context (history kept)',
+    '点按展开 AI 对话': 'Tap to open AI chat', '展开 AI 对话': 'Open AI chat',
+    '需要你补充': 'Need your input', 'AI 助手': 'AI assistant',
+    /* 银行卡 / API */
+    '账户余额': 'Balance', '赠款': 'Grant', '充值': 'Top-up',
+    '已加密保存': 'Encrypted', '仅本次会话': 'This session only',
+    '密钥不可用': 'Key unavailable', '加密中…': 'Encrypting…',
+    '获取 API Key': 'Get API Key', '粘贴 DeepSeek API Key': 'Paste your DeepSeek API Key',
+    '仅本次会话有效': 'Valid for this session only',
+    '点按刷新余额': 'Tap to refresh balance',
+    '点按抽出 / 收回；横向拖走可删除这张卡': 'Tap to pull out / tuck in; drag sideways to delete this card',
+    '点按抽出或收回银行卡，横向拖走可删除': 'Tap to pull out or tuck in; drag sideways to delete',
+    '显示 / 隐藏': 'Show / hide', '显示 Key': 'Show key', '隐藏 Key': 'Hide key',
+    '确认': 'Confirm', '确认并保存': 'Confirm and save',
+    'API Key 已加密保存': 'API Key encrypted and saved',
+    '余额已隐藏（点按余额卡可显示）': 'Balance hidden (open the card to show)',
+    /* 通用 */
+    '对象': 'Object', '属性': 'Properties', '颜色': 'Color', '线宽': 'Line width',
+    '填充': 'Fill', '标签': 'Label', '名称': 'Name', '删除': 'Delete', '添加': 'Add',
+    '应用': 'Apply', '复制': 'Copy', '粘贴': 'Paste', '全选': 'Select all',
+    '重置': 'Reset', '保存': 'Save', '加载': 'Load', '导出': 'Export', '导入': 'Import',
+    '分享': 'Share', '链接': 'Link', '复制链接': 'Copy link', '已复制': 'Copied',
+    '失败': 'Failed', '成功': 'Success', '错误': 'Error', '警告': 'Warning', '提示': 'Notice',
+    '显示': 'Show', '隐藏': 'Hide', '此操作不可撤销。': 'This cannot be undone.',
+    '未命名': 'Untitled', '确定要删除吗？': 'Delete this?',
+    /* 工具名 */
+    '选择 / 移动': 'Select / Move', '移动视图': 'Pan view', '点': 'Point',
+    '对象上的点': 'Point on Object', '交点': 'Intersect', '中点': 'Midpoint',
+    '重心': 'Centroid', '内心': 'Incenter', '垂线': 'Perpendicular', '平行线': 'Parallel',
+    '中垂线': 'Perpendicular Bisector', '角平分线': 'Angle Bisector', '切线': 'Tangent',
+    '多边形': 'Polygon', '正多边形': 'Regular Polygon', '直线': 'Line', '线段': 'Segment',
+    '射线': 'Ray', '向量': 'Vector', '圆': 'Circle', '圆弧': 'Arc', '扇形': 'Sector',
+    '椭圆': 'Ellipse', '双曲线': 'Hyperbola', '抛物线': 'Parabola', '函数': 'Function',
+    '导数': 'Derivative', '积分': 'Integral', '极值点': 'Extremum', '拐点': 'Inflection Point',
+    '距离 / 长度': 'Distance / Length', '角度': 'Angle', '面积': 'Area', '文本': 'Text',
+    '图片': 'Image', '按钮': 'Button', '复选框': 'Checkbox', '输入框': 'Input Box',
+    '滑动条': 'Slider', '下拉列表': 'Dropdown', '动画': 'Animation', '轨迹': 'Locus',
+    '变换': 'Transform', '平移': 'Translate', '旋转': 'Rotate', '位似': 'Dilate',
+    '对称': 'Reflect', '手绘': 'Freehand', '橡皮擦': 'Eraser', '套索选择': 'Lasso Select',
+    '删除对象': 'Delete Object', '显示 / 隐藏对象': 'Show / Hide Object',
+    '显示 / 隐藏标签': 'Show / Hide Label', '复制样式': 'Copy Style',
+    '解方程': 'Solve', '化简': 'Simplify', '因式分解': 'Factor', '展开': 'Expand',
+    '方程': 'Equation', '关系': 'Relation', '数字': 'Number', '复数点': 'Complex Point',
+    '参数曲线': 'Parametric Curve', '最佳拟合直线': 'Best Fit Line', '思维导图': 'Mind Map',
+    '便签': 'Sticky Note', '三角尺': 'Set Square', '直尺': 'Ruler', '圆规': 'Compass',
+    '定长线段': 'Fixed Segment', '定角': 'Fixed Angle', '过三点的圆': 'Circle through 3 Points',
+    '过三点的圆弧': 'Arc through 3 Points', '过三点的扇形': 'Sector through 3 Points',
+    '过五点的圆锥曲线': 'Conic through 5 Points', '极线': 'Polar', '直径': 'Diameter',
+    '斜率': 'Slope', '中心对称': 'Central Symmetry', '关于直线对称': 'Reflect about Line',
+    '关于圆反演': 'Invert about Circle', '函数分析': 'Analyze Function',
+    '导函数': 'Derivative Function', '定积分': 'Definite Integral',
+    '刚体多边形': 'Rigid Polygon', '向量多边形': 'Vector Polygon',
+    '正弦函数': 'Sine', '单位圆与三角函数': 'Unit Circle & Trig',
+    '二次函数与顶点': 'Quadratic & Vertex', '指数分布': 'Exponential Distribution',
+    '正态分布': 'Normal Distribution', '泊松分布': 'Poisson Distribution',
+    '二项分布': 'Binomial Distribution'
+  };
+
+  /* ── 翻译：只有英文需要换词；简体原样返回 ─────────────────── */
+  function translate(s) {
+    if (lang !== 'en' || !s) return s;
+    var k = s.trim();
+    if (EN[k] == null) return s;
+    var at = s.indexOf(k);
+    return s.slice(0, at) + EN[k] + s.slice(at + k.length);
+  }
+
+  /* ── 文本节点 / 属性翻译（保留原文，切回简体可还原）────────── */
+  var ATTRS = ['placeholder', 'title', 'aria-label'];
+  var origText = new WeakMap(), lastText = new WeakMap();
+  var origAttr = new WeakMap(), lastAttr = new WeakMap();
+
+  function txNode(node) {
+    var cur = node.nodeValue;
+    if (!cur || !cur.trim()) return;
+    var orig = origText.get(node);
+    if (orig === undefined || cur !== lastText.get(node)) {
+      orig = cur;
+      origText.set(node, orig);
+    }
+    var out = translate(orig);
+    if (out !== cur) node.nodeValue = out;
+    lastText.set(node, out);
+  }
+  function txAttr(el, name) {
+    var cur = el.getAttribute(name);
+    if (cur == null) return;
+    var store = origAttr.get(el);
+    if (!store) { store = {}; origAttr.set(el, store); }
+    var last = lastAttr.get(el);
+    if (!last) { last = {}; lastAttr.set(el, last); }
+    if (store[name] === undefined || cur !== last[name]) store[name] = cur;
+    var out = translate(store[name]);
+    if (out !== cur) el.setAttribute(name, out);
+    last[name] = out;
+  }
+  var SKIP_TAGS = { SCRIPT: 1, STYLE: 1, TEXTAREA: 1, PRE: 1, CODE: 1 };
+  function scan(node) {
+    if (node.nodeType === 3) { txNode(node); return; }
+    if (node.nodeType !== 1) return;
+    var el = node;
+    if (SKIP_TAGS[el.tagName]) {
+      if (el.tagName === 'TEXTAREA') ATTRS.forEach(function (a) { if (el.hasAttribute(a)) txAttr(el, a); });
+      return;
+    }
+    ATTRS.forEach(function (a) { if (el.hasAttribute(a)) txAttr(el, a); });
+    for (var c = el.firstChild; c; c = c.nextSibling) scan(c);
+  }
+
+  /* 动态节点补翻 */
+  var queued = false, queue = [];
+  var mo = new MutationObserver(function (muts) {
+    for (var i = 0; i < muts.length; i++) queue.push(muts[i]);
+    if (queued) return;
+    queued = true;
+    requestAnimationFrame(function () {
+      queued = false;
+      var batch = queue; queue = [];
+      for (var i = 0; i < batch.length; i++) {
+        var m = batch[i];
+        if (m.type === 'childList') {
+          for (var j = 0; j < m.addedNodes.length; j++) scan(m.addedNodes[j]);
+        } else if (m.type === 'characterData') {
+          txNode(m.target);
+        } else if (m.type === 'attributes') {
+          txAttr(m.target, m.attributeName);
+        }
+      }
+    });
+  });
+
+  /* ── 语言切换按钮（挂在右侧视图切换条里）────────────────────── */
+  var UI = [
+    { id: 'zh-CN', label: '简体中文', short: '中' },
+    { id: 'en', label: 'English', short: 'EN' }
+  ];
+  var pop = null, btn = null;
+  function syncUI() {
+    if (!pop) return;
+    Array.prototype.forEach.call(pop.querySelectorAll('button'), function (b) {
+      b.classList.toggle('on', b.getAttribute('data-lang') === lang);
+    });
+    if (btn) {
+      btn.setAttribute('aria-label', lang === 'en' ? 'Switch to Chinese' : 'Switch to English');
+      btn.title = lang === 'en' ? 'Switch to 简体中文' : 'Switch to English';
+      var s = btn.querySelector('.lang-short');
+      if (s) s.textContent = lang === 'en' ? 'EN' : '中';
+    }
+  }
+  function setLang(next) {
+    lang = next === 'en' ? 'en' : 'zh-CN';
+    try { localStorage.setItem(LS, lang); } catch (e) { }
+    document.documentElement.lang = lang;
+    scan(document.body);
+    syncUI();
+  }
+  function mountUI() {
+    var host = document.querySelector('.persp-float');
+    if (!host || document.getElementById('langBtn')) return;
+    var style = document.createElement('style');
+    style.textContent =
+      '.lang-wrap{position:relative;display:flex}\n'
+      + '.lang-btn{display:flex;align-items:center;justify-content:center;gap:4px;height:30px;padding:0 9px;'
+      + 'border-radius:99px;color:var(--text-2);background:var(--panel-2);border:.5px solid var(--border);'
+      + 'font-size:11px;font-weight:700;letter-spacing:.02em;transition:var(--t-ui)}\n'
+      + '.lang-btn:hover{color:var(--accent);background:var(--hover)}\n'
+      + '.lang-btn svg{width:14px;height:14px}\n'
+      + '.lang-pop{position:absolute;bottom:40px;right:0;min-width:136px;padding:5px;border-radius:12px;'
+      + 'background:var(--modal-bg);border:.5px solid var(--border);box-shadow:0 12px 30px rgba(0,0,0,.18);'
+      + 'display:none;z-index:80}\n'
+      + '.lang-pop.on{display:block;animation:apiPopIn .18s var(--ease-out) both}\n'
+      + '.lang-pop button{display:flex;align-items:center;width:100%;padding:7px 9px;border-radius:8px;'
+      + 'font-size:12.5px;color:var(--text);text-align:left}\n'
+      + '.lang-pop button:hover{background:var(--hover)}\n'
+      + '.lang-pop button.on{color:var(--accent);background:var(--accent-dim)}\n'
+      + '.lang-pop .tick{margin-left:auto;opacity:0;font-weight:700}\n'
+      + '.lang-pop button.on .tick{opacity:1}\n';
+    document.head.appendChild(style);
+
+    var wrap = document.createElement('div');
+    wrap.className = 'lang-wrap';
+    btn = document.createElement('button');
+    btn.className = 'lang-btn';
+    btn.id = 'langBtn';
+    btn.type = 'button';
+    btn.title = '语言 / Language';
+    btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8.6"></circle><path d="M3.4 12h17.2M12 3.4c2.4 2.4 3.6 5.3 3.6 8.6s-1.2 6.2-3.6 8.6c-2.4-2.4-3.6-5.3-3.6-8.6s1.2-6.2 3.6-8.6z"></path></svg><span class="lang-short">中</span>';
+    pop = document.createElement('div');
+    pop.className = 'lang-pop';
+    pop.setAttribute('role', 'menu');
+    UI.forEach(function (o) {
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.setAttribute('data-lang', o.id);
+      b.setAttribute('role', 'menuitemradio');
+      b.innerHTML = '<span>' + o.label + '</span><span class="tick">✓</span>';
+      b.addEventListener('click', function (e) {
+        e.stopPropagation();
+        setLang(o.id);
+        pop.classList.remove('on');
+      });
+      pop.appendChild(b);
+    });
+    wrap.appendChild(pop);
+    wrap.appendChild(btn);
+    host.insertBefore(wrap, host.firstChild);
+
+    btn.addEventListener('click', function (e) {
+      e.stopPropagation();
+      pop.classList.toggle('on');
+    });
+    document.addEventListener('pointerdown', function (e) {
+      if (!pop.classList.contains('on')) return;
+      if (pop.contains(e.target) || btn.contains(e.target)) return;
+      pop.classList.remove('on');
+    });
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape') pop.classList.remove('on');
+    });
+  }
+
+  function boot() {
+    document.documentElement.lang = lang;
+    if (lang === 'en') scan(document.body);
+    mountUI();
+    syncUI();
+    mo.observe(document.body, {
+      childList: true, subtree: true, characterData: true,
+      attributes: true, attributeFilter: ATTRS
+    });
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
+  else boot();
+  window.__setLang = setLang;   /* 调试 / 自动化用 */
+})();
 
 </script>
 </body></html>
