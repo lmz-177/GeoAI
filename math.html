@@ -3618,8 +3618,16 @@ const state = {
    版本号在左上角 GeoAI 打开的「更新与版本」弹窗里展示。改完版本号后，在
    APP_CHANGELOG 最上面补一条（版本、日期、类型、一句摘要、几条说明），
    新版本会自动出现在版本历史里。 */
-const APP_VERSION = '1.7.15';
+const APP_VERSION = '1.7.16';
 const APP_CHANGELOG = [
+  {
+    v: '1.7.16', date: '2026-11-19', tag: '问题修复', code: '约 3.01 万行 · 1.79 MB',
+    lead: '语言切换键改成右上角常驻的独立胶囊，弹层向下展开，基础功能模式下也能点到。',
+    notes: [
+      '语言键不再挂在顶部视图条内部，固定在右上角、顶部条下方，任何模式下都不会被隐藏',
+      '语言菜单改为向下展开，不再朝屏幕上边缘外弹出',
+    ],
+  },
   {
     v: '1.7.15', date: '2026-11-19', tag: '新功能', code: '约 3.01 万行 · 1.79 MB',
     lead: '新增语言切换：简体中文 / English，选择会记在本机。',
@@ -30030,19 +30038,21 @@ async function aiSend() {
     syncUI();
   }
   function mountUI() {
-    var host = document.querySelector('.persp-float');
-    if (!host || document.getElementById('langBtn')) return;
+    if (document.getElementById('langBtn')) return;
     var style = document.createElement('style');
     style.textContent =
-      '.lang-wrap{position:relative;display:flex}\n'
-      + '.lang-btn{display:flex;align-items:center;justify-content:center;gap:4px;height:30px;padding:0 9px;'
-      + 'border-radius:99px;color:var(--text-2);background:var(--panel-2);border:.5px solid var(--border);'
-      + 'font-size:11px;font-weight:700;letter-spacing:.02em;transition:var(--t-ui)}\n'
+      /* 固定挂在右上角：不依赖 .persp-float，基础功能模式把顶部条藏起来时也能点到 */
+      '.lang-wrap{position:fixed;top:52px;right:12px;z-index:96;display:flex;flex-direction:column;align-items:flex-end}\n'
+      + '.lang-btn{display:flex;align-items:center;justify-content:center;gap:5px;height:30px;padding:0 10px;'
+      + 'border-radius:99px;color:var(--text-2);background:var(--glass);border:.5px solid var(--glass-brd);'
+      + 'font-size:11px;font-weight:700;letter-spacing:.02em;cursor:pointer;'
+      + '-webkit-backdrop-filter:var(--glass-blur);backdrop-filter:var(--glass-blur);'
+      + 'box-shadow:var(--shadow),var(--hi);transition:var(--t-ui)}\n'
       + '.lang-btn:hover{color:var(--accent);background:var(--hover)}\n'
       + '.lang-btn svg{width:14px;height:14px}\n'
-      + '.lang-pop{position:absolute;bottom:40px;right:0;min-width:136px;padding:5px;border-radius:12px;'
+      + '.lang-pop{margin-top:6px;min-width:136px;padding:5px;border-radius:12px;'
       + 'background:var(--modal-bg);border:.5px solid var(--border);box-shadow:0 12px 30px rgba(0,0,0,.18);'
-      + 'display:none;z-index:80}\n'
+      + 'display:none;z-index:97}\n'
       + '.lang-pop.on{display:block;animation:apiPopIn .18s var(--ease-out) both}\n'
       + '.lang-pop button{display:flex;align-items:center;width:100%;padding:7px 9px;border-radius:8px;'
       + 'font-size:12.5px;color:var(--text);text-align:left}\n'
@@ -30078,7 +30088,7 @@ async function aiSend() {
     });
     wrap.appendChild(pop);
     wrap.appendChild(btn);
-    host.insertBefore(wrap, host.firstChild);
+    document.body.appendChild(wrap);
 
     btn.addEventListener('click', function (e) {
       e.stopPropagation();
