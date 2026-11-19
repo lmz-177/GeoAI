@@ -3618,8 +3618,17 @@ const state = {
    版本号在左上角 GeoAI 打开的「更新与版本」弹窗里展示。改完版本号后，在
    APP_CHANGELOG 最上面补一条（版本、日期、类型、一句摘要、几条说明），
    新版本会自动出现在版本历史里。 */
-const APP_VERSION = '1.7.16';
+const APP_VERSION = '1.7.17';
 const APP_CHANGELOG = [
+  {
+    v: '1.7.17', date: '2026-11-19', tag: '问题修复', code: '约 3.01 万行 · 1.79 MB',
+    lead: '语言键改为贴着右上角视图条左侧摆放，不再压住按钮；补齐分享、键盘、图层等一批英文词条。',
+    notes: [
+      '语言键位置跟随顶部视图条动态计算，基础功能模式自动退回右上角，任何宽度下都不重叠',
+      '分享弹窗、数学键盘页签、图层提示、版本弹窗等新增英文翻译',
+      '「N 位」「N 个对象」「比例 …」这类带数字的动态文案也能翻成英文',
+    ],
+  },
   {
     v: '1.7.16', date: '2026-11-19', tag: '问题修复', code: '约 3.01 万行 · 1.79 MB',
     lead: '语言切换键改成右上角常驻的独立胶囊，弹层向下展开，基础功能模式下也能点到。',
@@ -29936,16 +29945,47 @@ async function aiSend() {
     '正弦函数': 'Sine', '单位圆与三角函数': 'Unit Circle & Trig',
     '二次函数与顶点': 'Quadratic & Vertex', '指数分布': 'Exponential Distribution',
     '正态分布': 'Normal Distribution', '泊松分布': 'Poisson Distribution',
-    '二项分布': 'Binomial Distribution'
+    '二项分布': 'Binomial Distribution',
+    /* 分享 / 键盘 / 其它 */
+    '在线分享': 'Share Online', '生成标识码': 'Create Code', '打开分享': 'Open Share',
+    '公开可读、不加密': 'Publicly readable, not encrypted', '字符': 'characters',
+    '拿到标识码的人都能查看，请勿分享敏感内容；30 天无人访问会自动清理。': 'Anyone with the code can view it. Avoid sharing sensitive content; unvisited shares are cleaned up after 30 days.',
+    '标识码': 'Share code', '这 8 位码发给对方，在「打开分享」里粘贴即可': 'Send this 8-character code; paste it under Open Share.',
+    '把这 8 位码发给对方，在「打开分享」里粘贴即可': 'Send this 8-character code; paste it under Open Share.',
+    '数字': 'Numbers', '运算': 'Operators', '希腊': 'Greek', '集合': 'Sets',
+    '关系': 'Relations', '函数': 'Functions', '暂停': 'Pause',
+    '语言': 'Language', '切换语言': 'Switch language',
+    '关于': 'About', '版本': 'Version', '更新时间': 'Updated',
+    '新建图层': 'New layer', '拖动行调整叠放次序': 'Drag to reorder',
+    '尚未配置': 'Not configured', '已保存': 'Saved'
   };
 
+  /* 动态文案（数字 + 量词）走模式匹配，词典只收固定串 */
+  var RULES = [
+    [/^(\d+) 位$/, '$1 digits'],
+    [/^已计算 (\d+) 位$/, '$1 digits computed'],
+    [/^当前：(.+)$/, 'Now: $1'],
+    [/^图层 (\d+)$/, 'Layer $1'],
+    [/^(\d+) 个对象$/, '$1 objects'],
+    [/^比例 ([\d.]+)×\s*(\d+) px\/单位$/, 'Scale $1× · $2 px/unit'],
+    [/^(\d+) \/ ([\d,]+) 字符$/, '$1 / $2 characters']
+  ];
   /* ── 翻译：只有英文需要换词；简体原样返回 ─────────────────── */
   function translate(s) {
     if (lang !== 'en' || !s) return s;
     var k = s.trim();
-    if (EN[k] == null) return s;
-    var at = s.indexOf(k);
-    return s.slice(0, at) + EN[k] + s.slice(at + k.length);
+    if (EN[k] != null) {
+      var at = s.indexOf(k);
+      return s.slice(0, at) + EN[k] + s.slice(at + k.length);
+    }
+    for (var i = 0; i < RULES.length; i++) {
+      if (RULES[i][0].test(k)) {
+        var out = k.replace(RULES[i][0], RULES[i][1]);
+        var p = s.indexOf(k);
+        return s.slice(0, p) + out + s.slice(p + k.length);
+      }
+    }
+    return s;
   }
 
   /* ── 文本节点 / 属性翻译（保留原文，切回简体可还原）────────── */
@@ -30089,6 +30129,7 @@ async function aiSend() {
     wrap.appendChild(pop);
     wrap.appendChild(btn);
     document.body.appendChild(wrap);
+    wrapEl = wrap;
 
     btn.addEventListener('click', function (e) {
       e.stopPropagation();
@@ -30102,6 +30143,24 @@ async function aiSend() {
     document.addEventListener('keydown', function (e) {
       if (e.key === 'Escape') pop.classList.remove('on');
     });
+    positionUI();
+  }
+
+  /* 语言键贴着顶部右侧视图条左边摆放：不压住分享 / 侧栏按钮；
+     基础功能模式整条被藏起来时，退回到右上角固定位置，仍然点得到。 */
+  var wrapEl = null;
+  function positionUI() {
+    if (!wrapEl) return;
+    var bar = document.querySelector('.persp-float');
+    var r = bar ? bar.getBoundingClientRect() : null;
+    var usable = r && r.width > 0 && getComputedStyle(bar).display !== 'none';
+    if (usable) {
+      wrapEl.style.top = Math.round(r.top) + 'px';
+      wrapEl.style.right = Math.round(window.innerWidth - r.left + 6) + 'px';
+    } else {
+      wrapEl.style.top = '10px';
+      wrapEl.style.right = '12px';
+    }
   }
 
   function boot() {
@@ -30109,6 +30168,9 @@ async function aiSend() {
     if (lang === 'en') scan(document.body);
     mountUI();
     syncUI();
+    window.addEventListener('resize', positionUI);
+    /* 基础功能模式会整条隐藏顶部视图条，位置要跟着换 */
+    new MutationObserver(positionUI).observe(document.body, { attributes: true, attributeFilter: ['class'] });
     mo.observe(document.body, {
       childList: true, subtree: true, characterData: true,
       attributes: true, attributeFilter: ATTRS
