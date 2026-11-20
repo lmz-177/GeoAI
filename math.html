@@ -3721,8 +3721,17 @@ const state = {
    版本号在左上角 GeoAI 打开的「更新与版本」弹窗里展示。改完版本号后，在
    APP_CHANGELOG 最上面补一条（版本、日期、类型、一句摘要、几条说明），
    新版本会自动出现在版本历史里。 */
-const APP_VERSION = '1.9.0';
+const APP_VERSION = '1.9.1';
 const APP_CHANGELOG = [
+  {
+    v: '1.9.1', date: '2026-11-20', tag: '界面优化', code: '约 3.13 万行 · 1.88 MB',
+    lead: '液态玻璃覆盖全部菜单：左侧抽屉、右键菜单、AI 澄清卡等也带边缘折射。',
+    notes: [
+      '新增左侧菜单抽屉、右键菜单与 AI 澄清卡到液态玻璃作用范围',
+      '大面板保留较强模糊，避免中间区域过透影响阅读；小胶囊只留轻微模糊',
+      '其余小弹层（快捷设置、思考强度、API、图层、AI 面板、命令搜索、工具栏）维持原有覆盖',
+    ],
+  },
   {
     v: '1.9.0', date: '2026-11-20', tag: '新功能', code: '约 3.13 万行 · 1.88 MB',
     lead: '新增液态玻璃效果：玻璃控件边缘会真正折射背景，默认开启、可在设置关闭。',
@@ -30809,7 +30818,7 @@ async function aiSend() {
 (function initLiquidGlass() {
   'use strict';
   var LS = 'ggai_glass';
-  var TARGET = '.persp-float,.fmenu-btn,.qs-pop,.eff-pop,.api-pop,.gv-zoom,.gv-badge,.layer-pop,.ai-sheet,.cmd-search,.toolwrap';
+  var TARGET = '.persp-float,.fmenu-btn,.fmenu,.ctx,.ask-pop,.qs-pop,.eff-pop,.api-pop,.gv-zoom,.gv-badge,.layer-pop,.ai-sheet,.cmd-search,.toolwrap';
   var REFRACT = 16;        /* 边缘折弯强度（px） */
   var MAX_FIELD = 48;
   var on = true;
@@ -30932,8 +30941,14 @@ async function aiSend() {
     if (!url) return;
     var id = filterId(w, h, rr, url);
     if (el.dataset.lgOn !== '1') el.dataset.lgPrev = el.style.backdropFilter || '';
-    el.style.webkitBackdropFilter = 'url(#' + id + ') saturate(1.5)';
-    el.style.backdropFilter = 'url(#' + id + ') saturate(1.5)';
+    /* 大面板（抽屉 / AI 面板）保留较强模糊，否则中间没被折弯的区域会太透、字压不住背景；
+       小胶囊只留一点点，避免糊成一片 */
+    var area = w * h;
+    var tail = area >= 120000 ? ' blur(18px) saturate(1.4)'
+      : area >= 20000 ? ' blur(8px) saturate(1.45)'
+        : ' blur(2px) saturate(1.5)';
+    el.style.webkitBackdropFilter = 'url(#' + id + ')' + tail;
+    el.style.backdropFilter = 'url(#' + id + ')' + tail;
     el.dataset.lgOn = '1';
     el.dataset.lgW = String(w);
     el.dataset.lgH = String(h);
