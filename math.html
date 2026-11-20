@@ -2157,19 +2157,19 @@ body.dark .upd-hero{background:linear-gradient(135deg,rgba(10,132,255,.18),rgba(
 .cx-opt:hover{background:var(--hover)}
 .cx-opt.on{color:var(--accent);background:var(--accent-dim);font-weight:600}
 .cx-opt .tick{margin-left:auto;font-weight:700}
-/* 音色选择：一颗缓慢流动的色团 + 名字 / 描述 + 圆点 + 确认 */
+/* 音色选择：一颗胶囊形色块（女声粉 / 男声蓝），配名字 / 描述 / 圆点 / 确认 */
 .speech-voice{padding:4px 0 6px}
 .voice-wrap{display:flex;flex-direction:column;align-items:center;gap:9px;padding:16px 0 10px}
-.voice-hero{position:relative;width:156px;height:88px;border-radius:50% 50% 48% 52% / 52% 48% 52% 48%;
+.voice-hero{position:relative;width:176px;height:84px;border-radius:999px;
   overflow:hidden;isolation:isolate;
-  box-shadow:0 14px 34px rgba(59,110,255,.28),inset 0 0 20px rgba(255,255,255,.65);transition:filter .3s ease}
-.voice-hero::before,.voice-hero::after{content:"";position:absolute;inset:-40%;border-radius:50%;filter:blur(15px)}
-.voice-hero::before{background:conic-gradient(from 20deg,#8fd0ff,#4f7dff,#b9e2ff,#2b6bff,#8fd0ff);
+  box-shadow:0 14px 34px rgba(236,88,150,.30),inset 0 0 20px rgba(255,255,255,.7);transition:filter .3s ease}
+.voice-hero::before,.voice-hero::after{content:"";position:absolute;inset:-40%;border-radius:999px;filter:blur(15px)}
+.voice-hero::before{background:conic-gradient(from 20deg,#ffc7dd,#ff7fb2,#ffe3ef,#f45b9c,#ffc7dd);
   animation:voiceSpin 10s linear infinite}
-.voice-hero::after{background:radial-gradient(circle at 32% 26%,rgba(255,255,255,.95),rgba(255,255,255,0) 55%);
+.voice-hero::after{background:radial-gradient(circle at 32% 26%,rgba(255,255,255,.96),rgba(255,255,255,0) 55%);
   animation:none;filter:blur(7px)}
-.voice-hero[data-v="tide"]::before{background:conic-gradient(from 40deg,#8fe3d4,#2e7f9b,#cfe9ff,#1f5f7a,#8fe3d4)}
-.voice-hero[data-v="tide"]{box-shadow:0 14px 34px rgba(27,120,140,.28),inset 0 0 20px rgba(255,255,255,.65)}
+.voice-hero[data-v="tide"]::before{background:conic-gradient(from 40deg,#a8d4ff,#4f7dff,#dfeaff,#2b6bff,#a8d4ff)}
+.voice-hero[data-v="tide"]{box-shadow:0 14px 34px rgba(59,110,255,.30),inset 0 0 20px rgba(255,255,255,.7)}
 @keyframes voiceSpin{to{transform:rotate(360deg)}}
 .voice-name{font-size:15px;font-weight:700;color:var(--text);letter-spacing:-.2px}
 .voice-desc{font-size:var(--fs-2xs);color:var(--text-3);margin-top:-3px}
@@ -3712,8 +3712,17 @@ const state = {
    版本号在左上角 GeoAI 打开的「更新与版本」弹窗里展示。改完版本号后，在
    APP_CHANGELOG 最上面补一条（版本、日期、类型、一句摘要、几条说明），
    新版本会自动出现在版本历史里。 */
-const APP_VERSION = '1.8.1';
+const APP_VERSION = '1.8.2';
 const APP_CHANGELOG = [
+  {
+    v: '1.8.2', date: '2026-11-20', tag: '界面优化', code: '约 3.10 万行 · 1.85 MB',
+    lead: '朗读音色预览改成胶囊形，女声用粉色、男声用蓝色。',
+    notes: [
+      '音色预览从椭圆改为胶囊（两端全圆角）',
+      '星海（女声）改用粉色渐变，潮汐（男声）改用蓝色渐变',
+      '切换音色时阴影与光晕一起换色，预览更直观',
+    ],
+  },
   {
     v: '1.8.1', date: '2026-11-20', tag: '界面优化', code: '约 3.10 万行 · 1.85 MB',
     lead: '快捷弹层只留视图开关，设置界面重新打磨，并新增 API 分类直接管理 Key 与余额。',
