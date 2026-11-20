@@ -3721,8 +3721,19 @@ const state = {
    版本号在左上角 GeoAI 打开的「更新与版本」弹窗里展示。改完版本号后，在
    APP_CHANGELOG 最上面补一条（版本、日期、类型、一句摘要、几条说明），
    新版本会自动出现在版本历史里。 */
-const APP_VERSION = '1.8.6';
+const APP_VERSION = '1.9.0';
 const APP_CHANGELOG = [
+  {
+    v: '1.9.0', date: '2026-11-20', tag: '新功能', code: '约 3.13 万行 · 1.88 MB',
+    lead: '新增液态玻璃效果：玻璃控件边缘会真正折射背景，默认开启、可在设置关闭。',
+    notes: [
+      '移植 apple-tahoe-liquid-glass 的核心做法：按圆角轮廓生成法线场，用 SVG 置换滤镜在 backdrop-filter 里折弯背景',
+      '顶部控件条、菜单键、快捷设置、缩放条、图层卡、AI 面板等玻璃表面统一生效',
+      '设置 → 通用 → 外观 新增「液态玻璃」开关，默认开启，选择记在本机',
+      '非 Chromium 或浏览器不支持相关滤镜时自动保持原有模糊玻璃，不会更差',
+      '只按尺寸缓存轮廓场与滤镜，尺寸不变不重算，避免拖慢画布',
+    ],
+  },
   {
     v: '1.8.6', date: '2026-11-20', tag: '功能优化', code: '约 3.11 万行 · 1.86 MB',
     lead: '朗读稿改为按步骤流式生成：每生成一步就立刻播报，步骤不再丢失。',
@@ -18032,6 +18043,7 @@ function settingsHtml() {
   const sw = (k, label, sub) => '<div class="set-row"><label>' + label + (sub ? '<span class="sublabel">' + sub + '</span>' : '') + '</label><div class="switch' + (SET[k] ? ' on' : '') + '" role="switch" aria-checked="' + !!SET[k] + '" tabindex="0" data-sw="' + k + '"></div></div>';
   const rg = (k, label, min, max, step, sub) => '<div class="set-row"><label>' + label + ' <span class="sublabel">当前：<b data-out="' + k + '">' + SET[k] + '</b>' + (sub ? ' · ' + sub : '') + '</span></label><input type="range" data-rg="' + k + '" min="' + min + '" max="' + max + '" step="' + step + '" value="' + SET[k] + '"></div>';
   const tts = window.__tts || { getAuto: () => false, getStream: () => true, getVoice: () => 'stella' };
+  const glassOn = window.__lg ? window.__lg.get() : true;
   const voiceName = tts.getVoice() === 'tide' ? '潮汐' : '星海';
   const nav = SET_CATS.map((c, i) =>
     '<button type="button" class="set-nav-item' + (i === 0 ? ' on' : '') + '" data-cat="' + c.id + '" role="tab" aria-selected="' + (i === 0) + '">' +
@@ -18044,6 +18056,7 @@ function settingsHtml() {
       '<div class="set-row"><label>主题</label><select data-sel="theme"><option value="light"' + (SET.theme === 'light' ? ' selected' : '') + '>浅色</option><option value="dark"' + (SET.theme === 'dark' ? ' selected' : '') + '>深色</option></select></div>' +
       '<div class="set-row"><label>小数位数</label><select data-sel="round">' + [0, 1, 2, 3, 4, 5, 6].map(n => '<option value="' + n + '"' + (SET.round === n ? ' selected' : '') + '>' + n + ' 位</option>').join('') + '</select></div>' +
       '<div class="set-row"><label>角度单位</label><select data-sel="angleUnit"><option value="deg"' + (SET.angleUnit === 'deg' ? ' selected' : '') + '>度 (°)</option><option value="rad"' + (SET.angleUnit === 'rad' ? ' selected' : '') + '>弧度</option></select></div>' +
+      '<div class="set-row"><label>液态玻璃<span class="sublabel">边缘折射与高光；Chromium 上生效</span></label><div class="switch' + (glassOn ? ' on' : '') + '" role="switch" aria-checked="' + !!glassOn + '" tabindex="0" data-glass></div></div>' +
       '</div></div>' +
       '<div class="set-group"><h3>智能</h3><div class="set-card">' + sw('safetyCheck', 'AI 内容安全校验') + '</div></div>', true) +
     pane('view',
@@ -18161,6 +18174,18 @@ function bindSettings() {
       toast('除法最多保留 ' + SET[k] + ' 位（仅「固定位数」模式）', 'ok', 1800);
     }
   }));
+
+  /* ── 液态玻璃开关（不属于 SET，单独存在 localStorage） ── */
+  const glassSw = b.querySelector('[data-glass]');
+  if (glassSw && window.__lg) {
+    glassSw.addEventListener('click', () => {
+      window.__lg.set(!window.__lg.get());
+      glassSw.classList.toggle('on', window.__lg.get());
+      glassSw.setAttribute('aria-checked', String(!!window.__lg.get()));
+      springSwitch(glassSw);
+    });
+    glassSw.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); glassSw.click(); } });
+  }
 
   /* ── 朗读分类 ── */
   const tts = window.__tts;
@@ -30773,6 +30798,190 @@ async function aiSend() {
 
 
 /* ══════════════════════════════════════════════════════════════════
+   液态玻璃（Liquid Glass）
+   —— 参考 21st.dev 的 apple-tahoe-liquid-glass-button，但本项目是单文件
+   原生实现，所以只移植它的核心原理：按元素的圆角轮廓生成一张「法线场」，
+   交给 SVG feDisplacementMap 在 backdrop-filter 里把背景折弯；边缘再叠
+   一条高光。Chromium 支持 backdrop-filter 引用 SVG 滤镜，其余浏览器
+   保持原来的模糊玻璃，不会更差。
+   默认开启，设置 → 通用 → 外观 可关闭。
+   ══════════════════════════════════════════════════════════════════ */
+(function initLiquidGlass() {
+  'use strict';
+  var LS = 'ggai_glass';
+  var TARGET = '.persp-float,.fmenu-btn,.qs-pop,.eff-pop,.api-pop,.gv-zoom,.gv-badge,.layer-pop,.ai-sheet,.cmd-search,.toolwrap';
+  var REFRACT = 16;        /* 边缘折弯强度（px） */
+  var MAX_FIELD = 48;
+  var on = true;
+  try { on = localStorage.getItem(LS) !== '0'; } catch (e) { }
+
+  var ua = navigator.userAgent || '';
+  var chromium = /(Chrome|Chromium|Edg|SamsungBrowser)\/\d+/.test(ua) && !/Firefox\//.test(ua);
+  if (!chromium || !window.CSS || !CSS.supports || !CSS.supports('backdrop-filter', 'blur(2px)')) on = false;
+
+  var SVGNS = 'http://www.w3.org/2000/svg';
+  var hostEl = null;
+  var fieldCache = new Map();
+  var filterIds = new Set();
+  var timer = 0;
+
+  function host() {
+    if (hostEl) return hostEl;
+    var svg = document.createElementNS(SVGNS, 'svg');
+    svg.setAttribute('aria-hidden', 'true');
+    svg.setAttribute('width', '0');
+    svg.setAttribute('height', '0');
+    svg.style.cssText = 'position:fixed;width:0;height:0;overflow:hidden;pointer-events:none';
+    document.body.appendChild(svg);
+    hostEl = svg;
+    return svg;
+  }
+
+  /* 圆角矩形的有符号距离场：R 通道存 x 法线，G 存 y 法线，中心 128。
+     边缘一圈按 bezel 宽度逐渐把法线拉满，feDisplacementMap 读它就能把
+     背景沿法线方向折进来，形成玻璃的「边缘折射」。 */
+  function fieldURL(w, h, r) {
+    var key = w + 'x' + h + 'r' + r;
+    var hit = fieldCache.get(key);
+    if (hit) return hit;
+    var cv = document.createElement('canvas');
+    cv.width = w; cv.height = h;
+    var cx = cv.getContext('2d');
+    if (!cx) return '';
+    var img = cx.createImageData(w, h);
+    var data = img.data;
+    var hw = w / 2, hh = h / 2;
+    var rr = Math.min(r, hw, hh);
+    var bz = Math.max(1, Math.min(REFRACT, hw, hh));
+    for (var y = 0; y < h; y++) {
+      var py = y + 0.5 - hh;
+      for (var x = 0; x < w; x++) {
+        var px = x + 0.5 - hw;
+        var qx = Math.abs(px) - (hw - rr);
+        var qy = Math.abs(py) - (hh - rr);
+        var ax = qx > 0 ? qx : 0, ay = qy > 0 ? qy : 0;
+        var out = Math.sqrt(ax * ax + ay * ay);
+        var d = out + Math.min(Math.max(qx, qy), 0) - rr;
+        var o = (y * w + x) * 4;
+        if (d > 0) { data[o + 3] = 0; continue; }
+        var nx = 0, ny = 0;
+        if (ax > 0 && ay > 0) { var l = out || 1; nx = ax / l; ny = ay / l; }
+        else if (ax > 0) nx = 1;
+        else if (ay > 0) ny = 1;
+        if (nx) nx *= px < 0 ? -1 : 1;
+        if (ny) ny *= py < 0 ? -1 : 1;
+        var depth = Math.min(1, -d / bz);
+        var edge = 1 - Math.sqrt(Math.max(0, (2 - depth) * depth));
+        data[o] = Math.round(255 * (0.5 - nx * edge * 0.5));
+        data[o + 1] = Math.round(255 * (0.5 - ny * edge * 0.5));
+        data[o + 2] = 128;
+        data[o + 3] = 255;
+      }
+    }
+    cx.putImageData(img, 0, 0);
+    var url = cv.toDataURL('image/png');
+    if (fieldCache.size > MAX_FIELD) fieldCache.delete(fieldCache.keys().next().value);
+    fieldCache.set(key, url);
+    return url;
+  }
+
+  function filterId(w, h, r, url) {
+    var id = 'lgf' + w + 'x' + h + 'r' + r;
+    if (filterIds.has(id)) return id;
+    var f = document.createElementNS(SVGNS, 'filter');
+    f.setAttribute('id', id);
+    f.setAttribute('color-interpolation-filters', 'sRGB');
+    f.setAttribute('x', '-12%');
+    f.setAttribute('y', '-12%');
+    f.setAttribute('width', '124%');
+    f.setAttribute('height', '124%');
+    /* 折弯 → 轻微提亮（边缘高光）→ 按场蒙版裁回圆角内 */
+    f.innerHTML =
+      '<feImage href="' + url + '" x="0" y="0" width="' + w + '" height="' + h + '" preserveAspectRatio="none" result="f"/>' +
+      '<feDisplacementMap in="SourceGraphic" in2="f" scale="' + (REFRACT * 2) + '" xChannelSelector="R" yChannelSelector="G" result="d"/>' +
+      '<feComponentTransfer in="d" result="t">' +
+      '<feFuncR type="table" tableValues="0.04 0.24 0.58 0.88 1"/>' +
+      '<feFuncG type="table" tableValues="0.04 0.24 0.58 0.88 1"/>' +
+      '<feFuncB type="table" tableValues="0.04 0.24 0.58 0.88 1"/>' +
+      '</feComponentTransfer>' +
+      '<feComposite in="t" in2="f" operator="in"/>';
+    host().appendChild(f);
+    filterIds.add(id);
+    /* 窗口连续拉伸会产出许多一次性尺寸：超过上限就整体回收，扫描时会按需重建 */
+    if (filterIds.size > 56) {
+      var svg = host();
+      while (svg.firstChild) svg.removeChild(svg.firstChild);
+      filterIds.clear();
+      fieldCache.clear();
+      svg.appendChild(f);
+      filterIds.add(id);
+    }
+    return id;
+  }
+
+  function applyOne(el) {
+    var w = Math.round(el.offsetWidth), h = Math.round(el.offsetHeight);
+    if (w < 8 || h < 8) return;
+    var cs = getComputedStyle(el);
+    if (cs.display === 'none' || cs.visibility === 'hidden') return;
+    /* 尺寸没变就不再重算场与滤镜：对话流式输出时 observer 会频繁触发扫描 */
+    if (el.dataset.lgOn === '1' && el.dataset.lgW === String(w) && el.dataset.lgH === String(h)) return;
+    var r = Math.round(parseFloat(cs.borderTopLeftRadius) || 0);
+    var rr = Math.min(r, Math.min(w, h) / 2);
+    var url = fieldURL(w, h, rr);
+    if (!url) return;
+    var id = filterId(w, h, rr, url);
+    if (el.dataset.lgOn !== '1') el.dataset.lgPrev = el.style.backdropFilter || '';
+    el.style.webkitBackdropFilter = 'url(#' + id + ') saturate(1.5)';
+    el.style.backdropFilter = 'url(#' + id + ') saturate(1.5)';
+    el.dataset.lgOn = '1';
+    el.dataset.lgW = String(w);
+    el.dataset.lgH = String(h);
+  }
+
+  function clearOne(el) {
+    if (el.dataset.lgOn !== '1') return;
+    var prev = el.dataset.lgPrev || '';
+    el.style.webkitBackdropFilter = prev;
+    el.style.backdropFilter = prev;
+    el.dataset.lgOn = '0';
+    el.dataset.lgW = '';
+    el.dataset.lgH = '';
+  }
+
+  function scan() {
+    var els = document.querySelectorAll(TARGET);
+    for (var i = 0; i < els.length; i++) {
+      if (on) { try { applyOne(els[i]); } catch (e) { } }
+      else clearOne(els[i]);
+    }
+  }
+  function schedule() {
+    clearTimeout(timer);
+    timer = setTimeout(scan, 180);
+  }
+
+  function set(v) {
+    on = !!v;
+    try { localStorage.setItem(LS, on ? '1' : '0'); } catch (e) { }
+    document.body.classList.toggle('lg-on', on);
+    scan();
+  }
+
+  document.body.classList.toggle('lg-on', on);
+  window.addEventListener('resize', schedule);
+  new MutationObserver(schedule).observe(document.body, {
+    childList: true, subtree: true, attributes: true, attributeFilter: ['class', 'hidden']
+  });
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', scan);
+  else scan();
+  setTimeout(scan, 600);   /* 启动画面收起后再补扫一次，尺寸才算得准 */
+
+  window.__lg = { get: function () { return on; }, set: set, refresh: scan };
+})();
+
+
+/* ══════════════════════════════════════════════════════════════════
    语言切换：简体中文 / English
    —— 以「简体原文」为 key，按文本节点与 placeholder / title / aria-label
    整串匹配替换；动态生成的节点由 MutationObserver 补翻，所以弹窗、提示、
@@ -30907,6 +31116,7 @@ async function aiSend() {
     '通用': 'General', '视图': 'View', '对象': 'Object', '计算': 'Calculation', '语音': 'Speech',
     '外观': 'Appearance', '智能': 'AI', '绘图区': 'Canvas', '对象样式': 'Object style',
     '计算精度': 'Precision', '界面语言': 'Interface language',
+    '液态玻璃': 'Liquid glass', '边缘折射与高光；Chromium 上生效': 'Edge refraction and highlights; works on Chromium',
     '浅色': 'Light', '深色': 'Dark', '度 (°)': 'Degrees (°)', '弧度': 'Radians',
     '算到循环节': 'Recurring decimal', '固定位数': 'Fixed digits',
     '流式朗读': 'Streaming playback', '边说边播，第一句更快出声': 'Play while synthesizing — the first sentence starts sooner',
