@@ -2160,16 +2160,22 @@ body.dark .upd-hero{background:linear-gradient(135deg,rgba(10,132,255,.18),rgba(
 /* 音色选择：一颗胶囊形色块（女声粉 / 男声蓝），配名字 / 描述 / 圆点 / 确认 */
 .speech-voice{padding:4px 0 6px}
 .voice-wrap{display:flex;flex-direction:column;align-items:center;gap:9px;padding:16px 0 10px}
-.voice-hero{position:relative;width:176px;height:84px;border-radius:999px;
+/* 胶囊由容器自身的底色描出完整轮廓（圆角 = 高度的一半），内部只叠一层柔光，
+   不再让模糊色团决定外形 —— 否则中间发白时会看成椭圆。 */
+.voice-hero{position:relative;width:204px;height:72px;border-radius:36px;
   overflow:hidden;isolation:isolate;
-  box-shadow:0 14px 34px rgba(236,88,150,.30),inset 0 0 20px rgba(255,255,255,.7);transition:filter .3s ease}
-.voice-hero::before,.voice-hero::after{content:"";position:absolute;inset:-40%;border-radius:999px;filter:blur(15px)}
-.voice-hero::before{background:conic-gradient(from 20deg,#ffc7dd,#ff7fb2,#ffe3ef,#f45b9c,#ffc7dd);
-  animation:voiceSpin 10s linear infinite}
-.voice-hero::after{background:radial-gradient(circle at 32% 26%,rgba(255,255,255,.96),rgba(255,255,255,0) 55%);
-  animation:none;filter:blur(7px)}
-.voice-hero[data-v="tide"]::before{background:conic-gradient(from 40deg,#a8d4ff,#4f7dff,#dfeaff,#2b6bff,#a8d4ff)}
-.voice-hero[data-v="tide"]{box-shadow:0 14px 34px rgba(59,110,255,.30),inset 0 0 20px rgba(255,255,255,.7)}
+  background:linear-gradient(118deg,#ffd0e2 0%,#ff8fbc 42%,#f0629f 72%,#ffc4d9 100%);
+  box-shadow:0 12px 30px rgba(236,88,150,.28),inset 0 1px 0 rgba(255,255,255,.75);
+  transition:background .3s ease,box-shadow .3s ease}
+.voice-hero::before{content:"";position:absolute;inset:-45%;border-radius:36px;filter:blur(18px);opacity:.55;
+  background:conic-gradient(from 20deg,#ff9ec4,#ffd8e7,#ef5f9d,#ffb6d2,#ff9ec4);
+  animation:voiceSpin 11s linear infinite}
+.voice-hero::after{content:"";position:absolute;inset:0;border-radius:inherit;
+  background:linear-gradient(180deg,rgba(255,255,255,.5),rgba(255,255,255,0) 52%)}
+.voice-hero[data-v="tide"]{
+  background:linear-gradient(118deg,#bcdcff 0%,#6f9dff 42%,#3d6ff0 72%,#a9cbff 100%);
+  box-shadow:0 12px 30px rgba(59,110,255,.28),inset 0 1px 0 rgba(255,255,255,.75)}
+.voice-hero[data-v="tide"]::before{background:conic-gradient(from 40deg,#8fb8ff,#d6e6ff,#3f6ff0,#9cc0ff,#8fb8ff)}
 @keyframes voiceSpin{to{transform:rotate(360deg)}}
 .voice-name{font-size:15px;font-weight:700;color:var(--text);letter-spacing:-.2px}
 .voice-desc{font-size:var(--fs-2xs);color:var(--text-3);margin-top:-3px}
@@ -3712,8 +3718,16 @@ const state = {
    版本号在左上角 GeoAI 打开的「更新与版本」弹窗里展示。改完版本号后，在
    APP_CHANGELOG 最上面补一条（版本、日期、类型、一句摘要、几条说明），
    新版本会自动出现在版本历史里。 */
-const APP_VERSION = '1.8.2';
+const APP_VERSION = '1.8.3';
 const APP_CHANGELOG = [
+  {
+    v: '1.8.3', date: '2026-11-20', tag: '界面优化', code: '约 3.10 万行 · 1.85 MB',
+    lead: '音色预览的胶囊轮廓更明确：加长降低、容器直接铺色，不再看成椭圆。',
+    notes: [
+      '胶囊改为 204×72、圆角取高度一半，轮廓由容器底色直接描出',
+      '内部只叠一层柔光，中间不再泛白导致外形被误认成椭圆',
+    ],
+  },
   {
     v: '1.8.2', date: '2026-11-20', tag: '界面优化', code: '约 3.10 万行 · 1.85 MB',
     lead: '朗读音色预览改成胶囊形，女声用粉色、男声用蓝色。',
