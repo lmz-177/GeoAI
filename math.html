@@ -2157,31 +2157,29 @@ body.dark .upd-hero{background:linear-gradient(135deg,rgba(10,132,255,.18),rgba(
 .cx-opt:hover{background:var(--hover)}
 .cx-opt.on{color:var(--accent);background:var(--accent-dim);font-weight:600}
 .cx-opt .tick{margin-left:auto;font-weight:700}
-/* 音色选择：一颗胶囊形色块（女声粉 / 男声蓝），配名字 / 描述 / 圆点 / 确认 */
+/* 音色选择：大色团只做氛围预览；下方胶囊指示条表示当前音色（女声粉 / 男声蓝） */
 .speech-voice{padding:4px 0 6px}
 .voice-wrap{display:flex;flex-direction:column;align-items:center;gap:9px;padding:16px 0 10px}
-/* 胶囊由容器自身的底色描出完整轮廓（圆角 = 高度的一半），内部只叠一层柔光，
-   不再让模糊色团决定外形 —— 否则中间发白时会看成椭圆。 */
-.voice-hero{position:relative;width:204px;height:72px;border-radius:36px;
+.voice-hero{position:relative;width:156px;height:88px;border-radius:50% 50% 48% 52% / 52% 48% 52% 48%;
   overflow:hidden;isolation:isolate;
-  background:linear-gradient(118deg,#ffd0e2 0%,#ff8fbc 42%,#f0629f 72%,#ffc4d9 100%);
-  box-shadow:0 12px 30px rgba(236,88,150,.28),inset 0 1px 0 rgba(255,255,255,.75);
-  transition:background .3s ease,box-shadow .3s ease}
-.voice-hero::before{content:"";position:absolute;inset:-45%;border-radius:36px;filter:blur(18px);opacity:.55;
-  background:conic-gradient(from 20deg,#ff9ec4,#ffd8e7,#ef5f9d,#ffb6d2,#ff9ec4);
-  animation:voiceSpin 11s linear infinite}
-.voice-hero::after{content:"";position:absolute;inset:0;border-radius:inherit;
-  background:linear-gradient(180deg,rgba(255,255,255,.5),rgba(255,255,255,0) 52%)}
-.voice-hero[data-v="tide"]{
-  background:linear-gradient(118deg,#bcdcff 0%,#6f9dff 42%,#3d6ff0 72%,#a9cbff 100%);
-  box-shadow:0 12px 30px rgba(59,110,255,.28),inset 0 1px 0 rgba(255,255,255,.75)}
-.voice-hero[data-v="tide"]::before{background:conic-gradient(from 40deg,#8fb8ff,#d6e6ff,#3f6ff0,#9cc0ff,#8fb8ff)}
+  box-shadow:0 14px 34px rgba(59,110,255,.28),inset 0 0 20px rgba(255,255,255,.65);transition:filter .3s ease}
+.voice-hero::before,.voice-hero::after{content:"";position:absolute;inset:-40%;border-radius:50%;filter:blur(15px)}
+.voice-hero::before{background:conic-gradient(from 20deg,#8fd0ff,#4f7dff,#b9e2ff,#2b6bff,#8fd0ff);
+  animation:voiceSpin 10s linear infinite}
+.voice-hero::after{background:radial-gradient(circle at 32% 26%,rgba(255,255,255,.95),rgba(255,255,255,0) 55%);
+  filter:blur(7px)}
+.voice-hero[data-v="tide"]::before{background:conic-gradient(from 40deg,#8fe3d4,#2e7f9b,#cfe9ff,#1f5f7a,#8fe3d4)}
+.voice-hero[data-v="tide"]{box-shadow:0 14px 34px rgba(27,120,140,.28),inset 0 0 20px rgba(255,255,255,.65)}
 @keyframes voiceSpin{to{transform:rotate(360deg)}}
 .voice-name{font-size:15px;font-weight:700;color:var(--text);letter-spacing:-.2px}
 .voice-desc{font-size:var(--fs-2xs);color:var(--text-3);margin-top:-3px}
-.voice-dots{display:flex;align-items:center;gap:7px;padding:8px 0 4px}
-.voice-dots button{width:6px;height:6px;border-radius:50%;background:var(--border-2);transition:transform var(--t),background .2s}
-.voice-dots button.on{background:var(--accent);transform:scale(1.3)}
+/* 指示条：每一档是一枚小胶囊，选中后变长并按性别上色 */
+.voice-dots{display:flex;align-items:center;gap:8px;padding:10px 0 4px}
+.voice-dots button{width:18px;height:6px;border-radius:99px;background:var(--border-2);
+  transition:width .22s var(--ease),background .22s var(--ease)}
+.voice-dots button.on{width:28px}
+.voice-dots button[data-voice-pick="stella"].on{background:#f0629f}
+.voice-dots button[data-voice-pick="tide"].on{background:#3d6ff0}
 .voice-ok{width:210px;justify-content:center;margin-top:6px;height:40px}
 .voice-back{display:inline-flex;align-items:center;gap:5px;padding:5px 8px;border-radius:8px;
   font-size:var(--fs-xs);color:var(--text-2);margin-left:-6px}
@@ -3718,8 +3716,17 @@ const state = {
    版本号在左上角 GeoAI 打开的「更新与版本」弹窗里展示。改完版本号后，在
    APP_CHANGELOG 最上面补一条（版本、日期、类型、一句摘要、几条说明），
    新版本会自动出现在版本历史里。 */
-const APP_VERSION = '1.8.3';
+const APP_VERSION = '1.8.4';
 const APP_CHANGELOG = [
+  {
+    v: '1.8.4', date: '2026-11-20', tag: '界面优化', code: '约 3.10 万行 · 1.85 MB',
+    lead: '音色指示条改成胶囊并按性别上色；朗读稿更精简，生成后立即出声。',
+    notes: [
+      '大色团预览恢复原样，改的是下方表示当前音色的指示条：小胶囊 + 女声粉 / 男声蓝',
+      '朗读稿限制在 120 字、三句话内，只讲结论与关键一步，生成更快',
+      '朗读稿请求超时由 12 秒收紧到 8 秒，输出上限 320 tokens，生成完立即开始流式朗读',
+    ],
+  },
   {
     v: '1.8.3', date: '2026-11-20', tag: '界面优化', code: '约 3.10 万行 · 1.85 MB',
     lead: '音色预览的胶囊轮廓更明确：加长降低、容器直接铺色，不再看成椭圆。',
@@ -28994,7 +29001,7 @@ function bindAI() {
     async function aiNarration(bubble, text, my) {
       if (narrCache.has(bubble)) return narrCache.get(bubble);
       const ac = new AbortController();
-      const timer = setTimeout(() => { try { ac.abort(); } catch (e) { } }, 12000);
+      const timer = setTimeout(() => { try { ac.abort(); } catch (e) { } }, 8000);
       try {
         const res = await fetch(AI_URL, {
           method: 'POST',
@@ -29002,11 +29009,11 @@ function bindAI() {
           body: JSON.stringify({
             model: AI_MODEL,
             stream: false,
-            temperature: 0.3,
-            max_tokens: 900,
+            temperature: 0.2,
+            max_tokens: 320,
             messages: [
-              { role: 'system', content: '你是朗读稿编辑。把用户给出的回答改写成适合朗读的口语稿：去掉 Markdown 标记、公式与符号、代码块、链接和列表符号；数字与运算用自然口语表达；保留结论与关键步骤；不要添加原答案没有的信息；不要开场白；不超过 400 字；只输出改写后的正文。' },
-              { role: 'user', content: String(text).slice(0, 4000) }
+              { role: 'system', content: '你是朗读稿编辑。把用户给出的回答压缩成可直接朗读的口语稿：最多 120 字、三句话以内；只讲结论和最关键的一步；去掉 Markdown、公式符号、代码块、链接和列表符号；数字用自然口语；不要开场白、不要复述问题；只输出正文。' },
+              { role: 'user', content: String(text).slice(0, 2500) }
             ]
           }),
           signal: ac.signal
