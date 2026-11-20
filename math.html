@@ -2103,26 +2103,39 @@ body.dark .upd-hero{background:linear-gradient(135deg,rgba(10,132,255,.18),rgba(
 .set-row input[type=range]{width:150px}
 .set-row input[type=color]{width:38px;height:32px;padding:2px;border:.5px solid var(--border);border-radius:9px;background:var(--panel-2)}
 /* ── 设置：分类导航 + 分组卡片（对齐 iOS 设置 / DeepSeek 客户端的分层写法） ── */
-.set-shell{display:grid;grid-template-columns:132px minmax(0,1fr);gap:16px;align-items:start}
-.set-nav{position:sticky;top:0;display:flex;flex-direction:column;gap:2px;padding:2px 8px 10px 0;border-right:.5px solid var(--border)}
-.set-nav-item{display:flex;align-items:center;gap:9px;padding:9px 10px;border-radius:10px;font-size:var(--fs-xs);color:var(--text-2);text-align:left;transition:var(--t-ui)}
-.set-nav-item svg{width:15px;height:15px;flex:0 0 15px;color:var(--text-3)}
+.set-shell{display:grid;grid-template-columns:124px minmax(0,1fr);gap:20px;align-items:start}
+.set-nav{position:sticky;top:0;display:flex;flex-direction:column;gap:1px;padding:2px 10px 10px 0;border-right:.5px solid var(--border)}
+.set-nav-item{display:flex;align-items:center;gap:9px;padding:9px 10px;border-radius:9px;font-size:var(--fs-xs);color:var(--text-2);text-align:left;transition:var(--t-ui)}
+.set-nav-item svg{width:16px;height:16px;flex:0 0 16px;color:var(--text-3);opacity:.9}
 .set-nav-item:hover{background:var(--hover);color:var(--text)}
 .set-nav-item.on{background:var(--accent-dim);color:var(--accent);font-weight:600}
-.set-nav-item.on svg{color:var(--accent)}
+.set-nav-item.on svg{color:var(--accent);opacity:1}
 .set-panes{min-width:0}
 .set-pane{display:none}
 .set-pane.on{display:block;animation:paneIn .2s var(--ease-out) both}
 @keyframes paneIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
-.set-pane>.set-group{margin-bottom:16px}
+.set-pane>.set-group{margin-bottom:18px}
 /* 每组设置做成一张圆角卡片：行与行之间只用发丝线分隔，和信息列表一致 */
-.set-card{background:var(--panel-2);border:.5px solid var(--border);border-radius:13px;padding:0 13px}
+.set-card{background:var(--panel-2);border:.5px solid var(--border);border-radius:14px;padding:0 14px}
 .set-card>.set-row{padding:12px 0}
 .set-card>.set-row+.set-row{border-top:.5px solid var(--border)}
+.set-group>h3{display:flex;align-items:center;gap:6px}
 /* 可进入下一级的行 */
 .set-link{cursor:pointer}
-.set-link .chev{width:15px;height:15px;color:var(--text-3);flex:0 0 auto}
+.set-link:hover{background:color-mix(in srgb,var(--accent) 5%,transparent)}
+.set-link .chev{width:15px;height:15px;color:var(--text-3);flex:0 0 auto;margin-left:6px}
 .set-link .cur{font-size:var(--fs-2xs);color:var(--text-3);margin-right:2px}
+/* API 分类 */
+.set-actions{display:flex;flex-wrap:wrap;gap:8px;margin:-4px 0 18px}
+.btn.danger-ghost{color:var(--danger-ink);border-color:rgba(255,59,48,.26)}
+.btn.danger-ghost:hover{background:rgba(255,59,48,.08)}
+.api-fp{font-family:var(--mono);font-size:var(--fs-2xs);color:var(--text-3);letter-spacing:.06em;white-space:nowrap}
+.api-bal{font-size:var(--fs-sm);font-weight:700;color:var(--text);font-variant-numeric:tabular-nums}
+.api-key-row input{flex:1;min-width:0}
+.api-state{display:inline-flex;align-items:center;gap:6px}
+.api-state::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--text-3)}
+.api-state.ok::before{background:var(--ok)}
+.api-state.warn::before{background:var(--warn)}
 /* 自绘下拉框：原生 select 留在 DOM 里（value / change 语义不变），只替换外观 */
 .cx-sel{position:relative;display:inline-flex;flex:0 0 auto;min-width:124px;max-width:210px}
 .cx-sel>select{position:absolute;inset:0;width:100%;height:100%;opacity:0;pointer-events:none}
@@ -2145,24 +2158,27 @@ body.dark .upd-hero{background:linear-gradient(135deg,rgba(10,132,255,.18),rgba(
 .cx-opt.on{color:var(--accent);background:var(--accent-dim);font-weight:600}
 .cx-opt .tick{margin-left:auto;font-weight:700}
 /* 音色选择：一颗缓慢流动的色团 + 名字 / 描述 + 圆点 + 确认 */
-.voice-wrap{display:flex;flex-direction:column;align-items:center;gap:10px;padding:14px 0 8px}
-.voice-hero{position:relative;width:172px;height:96px;border-radius:48% 52% 46% 54% / 54% 46% 54% 46%;
-  overflow:hidden;isolation:isolate;box-shadow:inset 0 0 22px rgba(255,255,255,.55),0 10px 26px rgba(16,24,40,.16);
-  transition:filter .3s ease}
-.voice-hero::before,.voice-hero::after{content:"";position:absolute;inset:-38%;border-radius:50%;filter:blur(14px)}
+.speech-voice{padding:4px 0 6px}
+.voice-wrap{display:flex;flex-direction:column;align-items:center;gap:9px;padding:16px 0 10px}
+.voice-hero{position:relative;width:156px;height:88px;border-radius:50% 50% 48% 52% / 52% 48% 52% 48%;
+  overflow:hidden;isolation:isolate;
+  box-shadow:0 14px 34px rgba(59,110,255,.28),inset 0 0 20px rgba(255,255,255,.65);transition:filter .3s ease}
+.voice-hero::before,.voice-hero::after{content:"";position:absolute;inset:-40%;border-radius:50%;filter:blur(15px)}
 .voice-hero::before{background:conic-gradient(from 20deg,#8fd0ff,#4f7dff,#b9e2ff,#2b6bff,#8fd0ff);
-  animation:voiceSpin 9s linear infinite}
-.voice-hero::after{background:radial-gradient(circle at 32% 28%,rgba(255,255,255,.92),rgba(255,255,255,0) 52%);
-  animation:none;filter:blur(6px)}
+  animation:voiceSpin 10s linear infinite}
+.voice-hero::after{background:radial-gradient(circle at 32% 26%,rgba(255,255,255,.95),rgba(255,255,255,0) 55%);
+  animation:none;filter:blur(7px)}
 .voice-hero[data-v="tide"]::before{background:conic-gradient(from 40deg,#8fe3d4,#2e7f9b,#cfe9ff,#1f5f7a,#8fe3d4)}
+.voice-hero[data-v="tide"]{box-shadow:0 14px 34px rgba(27,120,140,.28),inset 0 0 20px rgba(255,255,255,.65)}
 @keyframes voiceSpin{to{transform:rotate(360deg)}}
-.voice-name{font-size:var(--fs-md);font-weight:700;color:var(--text)}
-.voice-desc{font-size:var(--fs-2xs);color:var(--text-3);margin-top:-4px}
-.voice-dots{display:flex;align-items:center;gap:7px;padding:6px 0 2px}
-.voice-dots button{width:7px;height:7px;border-radius:50%;background:var(--border-2);transition:transform var(--t),background .2s}
-.voice-dots button.on{background:var(--accent);transform:scale(1.25)}
-.voice-ok{width:190px;justify-content:center;margin-top:4px}
-.voice-back{display:inline-flex;align-items:center;gap:6px;padding:6px 8px;border-radius:8px;font-size:var(--fs-xs);color:var(--text-2)}
+.voice-name{font-size:15px;font-weight:700;color:var(--text);letter-spacing:-.2px}
+.voice-desc{font-size:var(--fs-2xs);color:var(--text-3);margin-top:-3px}
+.voice-dots{display:flex;align-items:center;gap:7px;padding:8px 0 4px}
+.voice-dots button{width:6px;height:6px;border-radius:50%;background:var(--border-2);transition:transform var(--t),background .2s}
+.voice-dots button.on{background:var(--accent);transform:scale(1.3)}
+.voice-ok{width:210px;justify-content:center;margin-top:6px;height:40px}
+.voice-back{display:inline-flex;align-items:center;gap:5px;padding:5px 8px;border-radius:8px;
+  font-size:var(--fs-xs);color:var(--text-2);margin-left:-6px}
 .voice-back:hover{background:var(--hover);color:var(--text)}
 .voice-back svg{width:14px;height:14px}
 @media(max-width:640px){
@@ -2171,6 +2187,8 @@ body.dark .upd-hero{background:linear-gradient(135deg,rgba(10,132,255,.18),rgba(
     border-bottom:.5px solid var(--border);padding:0 0 8px;gap:4px;scrollbar-width:none}
   .set-nav::-webkit-scrollbar{display:none}
   .set-nav-item{flex:0 0 auto;padding:7px 11px;white-space:nowrap}
+  /* 窄屏分类多，省掉图标才排得下，不会把首尾分类挤出视野 */
+  .set-nav-item svg{display:none}
 }
 /* iOS 开关：按住时滑块横向「长胖」盖过轨道边缘再弹回 —— 系统开关最标志性的细节。
    尺寸走 iOS 规范 51×31 / 滑块 27，闭合态底色是 iOS 的 systemGray。 */
@@ -3694,8 +3712,19 @@ const state = {
    版本号在左上角 GeoAI 打开的「更新与版本」弹窗里展示。改完版本号后，在
    APP_CHANGELOG 最上面补一条（版本、日期、类型、一句摘要、几条说明），
    新版本会自动出现在版本历史里。 */
-const APP_VERSION = '1.8.0';
+const APP_VERSION = '1.8.1';
 const APP_CHANGELOG = [
+  {
+    v: '1.8.1', date: '2026-11-20', tag: '界面优化', code: '约 3.10 万行 · 1.85 MB',
+    lead: '快捷弹层只留视图开关，设置界面重新打磨，并新增 API 分类直接管理 Key 与余额。',
+    notes: [
+      '快捷弹层移出朗读与语言，只保留网格 / 坐标轴 / 标签 / 吸附 / 深色模式和更多设置',
+      '设置分类增加 API：状态、密文指纹、Key 输入、保存并验证、刷新余额、删除本机 Key',
+      '分类导航、卡片圆角、分组标题与音色页重新收紧；恢复默认只在参数类分类出现',
+      '语言与语音设置统一收进完整设置，界面更清爽',
+      '朗读前可由 AI 单独生成口语朗读稿（公式与 Markdown 不原样念出），仅在朗读开启时请求；失败自动回退原文',
+    ],
+  },
   {
     v: '1.8.0', date: '2026-11-20', tag: '界面重构', code: '约 3.09 万行 · 1.84 MB',
     lead: '设置改成分类面板，全部下拉框换成自绘样式；朗读支持流式出声，并加入音色选择页。',
@@ -17893,6 +17922,7 @@ const SET_CATS = [
   { id: 'view', label: '视图', ic: '<rect x="4" y="4" width="16" height="16" rx="2.5"/><path d="M4 12h16M12 4v16"/>' },
   { id: 'object', label: '对象', ic: '<circle cx="12" cy="12" r="3.4" fill="currentColor" stroke="none"/><path d="M4 12h3M17 12h3M12 4v3M12 17v3" opacity=".5"/>' },
   { id: 'calc', label: '计算', ic: '<rect x="5" y="3.5" width="14" height="17" rx="2.5"/><path d="M8.5 7.5h7M8.5 12h2M13.5 12h2M8.5 16h2M13.5 16h2"/>' },
+  { id: 'api', label: 'API', ic: '<circle cx="8.5" cy="12" r="4"/><path d="M12.5 12H21M18 12v3.2M15.2 12v2.2"/>' },
   { id: 'speech', label: '语音', ic: '<path d="M4.5 10v4h3.3L12 17.6V6.4L7.8 10z" fill="currentColor" stroke="none" opacity=".9"/><path d="M15.6 9.2a4 4 0 0 1 0 5.6M18.2 6.5a7.6 7.6 0 0 1 0 11"/>' },
   { id: 'language', label: '语言', ic: '<circle cx="12" cy="12" r="8.2"/><path d="M3.8 12h16.4M12 3.8c2.3 2.3 3.4 5.1 3.4 8.2s-1.1 5.9-3.4 8.2c-2.3-2.3-3.4-5.1-3.4-8.2s1.1-5.9 3.4-8.2z"/>' },
   { id: 'about', label: '关于', ic: '<circle cx="12" cy="12" r="8.4"/><path d="M12 11v5.4M12 8v.1"/>' }
@@ -17912,8 +17942,15 @@ function setSettingsCat(id) {
   Array.prototype.forEach.call(b.querySelectorAll('.set-pane'), el => {
     el.classList.toggle('on', el.dataset.pane === id);
   });
+  const cur = b.querySelector('.set-nav-item.on');
+  if (cur && cur.scrollIntoView) {
+    try { cur.scrollIntoView({ block: 'nearest', inline: 'nearest' }); } catch (e) { }
+  }
   const pane = b.querySelector('.set-pane.on');
   if (pane) enhanceAllSelects(pane);
+  /* 恢复默认只对需要重置的参数分类有意义 */
+  const rst = $('#setReset');
+  if (rst) rst.style.display = ['general', 'view', 'object', 'calc'].indexOf(id) >= 0 ? '' : 'none';
   b.scrollTop = 0;
 }
 function openSettings(focus) {
@@ -17928,8 +17965,7 @@ function openSettings(focus) {
   b.scrollTop = 0;                 /* 每次打开都从顶部开始，不接着上次的滚动位置 */
   bindSettings();
   openBackdrop('settingsBackdrop');
-  setSettingsCat(focus === 'calc' ? 'calc' : 'general');
-  /* 从 CAS 标题栏进来时给「计算」分类一个短暂的强调 */
+  setSettingsCat(focus === 'calc' ? 'calc' : 'general');  /* 从 CAS 标题栏进来时给「计算」分类一个短暂的强调 */
   if (focus === 'calc') {
     const g = b.querySelector('[data-group="calc"]');
     if (g) {
@@ -17973,10 +18009,23 @@ function settingsHtml() {
       '<div class="set-row"><label>除法</label><select data-sel="divMode"><option value="cycle"' + (SET.divMode === 'cycle' ? ' selected' : '') + '>算到循环节</option><option value="fixed"' + (SET.divMode === 'fixed' ? ' selected' : '') + '>固定位数</option></select></div>' +
       '<div class="set-row"><label>除法位数<span class="sublabel">仅固定模式，1–20000</span></label><input type="number" data-num="divDigits" min="1" max="20000" step="10" value="' + SET.divDigits + '"></div>' +
       '</div></div>') +
+    pane('api',
+      '<div class="set-group"><h3>DeepSeek API</h3><div class="set-card">' +
+      '<div class="set-row"><label>状态<span class="sublabel api-state" data-api-state>未配置</span></label><span class="api-fp" data-api-fp>•••• •••• •••• ••••</span></div>' +
+      '<div class="set-row api-key-row"><label>API Key<span class="sublabel">加密保存在本机，不会上传</span></label><input type="password" data-api-key placeholder="sk-…" autocomplete="off" spellcheck="false"></div>' +
+      '</div></div>' +
+      '<div class="set-actions"><button type="button" class="btn primary" data-api-save>保存并验证</button>' +
+      '<button type="button" class="btn" data-api-refresh>刷新余额</button>' +
+      '<button type="button" class="btn danger-ghost" data-api-clear>删除本机 Key</button></div>' +
+      '<div class="set-group"><h3>账户</h3><div class="set-card">' +
+      '<div class="set-row"><label>当前余额</label><strong class="api-bal" data-api-bal>—</strong></div>' +
+      '<div class="set-row set-link" data-api-get role="button" tabindex="0"><label>获取 API Key</label><span class="cur">platform.deepseek.com</span><svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 5 7 7-7 7"/></svg></div>' +
+      '</div></div>') +
     pane('speech',
       '<div class="speech-main"><div class="set-group"><h3>朗读</h3><div class="set-card">' +
       '<div class="set-row"><label>流式朗读<span class="sublabel">边说边播，第一句更快出声</span></label><div class="switch' + (tts.getStream() ? ' on' : '') + '" role="switch" aria-checked="' + !!tts.getStream() + '" tabindex="0" data-tts-stream></div></div>' +
       '<div class="set-row"><label>自动朗读回复<span class="sublabel">只读正常答完的回复，中止或报错不读</span></label><div class="switch' + (tts.getAuto() ? ' on' : '') + '" role="switch" aria-checked="' + !!tts.getAuto() + '" tabindex="0" data-tts-auto2></div></div>' +
+      '<div class="set-row"><label>AI 生成朗读稿<span class="sublabel">单独生成口语稿，朗读更自然；仅在朗读时请求</span></label><div class="switch' + (tts.getRewrite() ? ' on' : '') + '" role="switch" aria-checked="' + !!tts.getRewrite() + '" tabindex="0" data-tts-rewrite></div></div>' +
       '<div class="set-row set-link" data-voice-open tabindex="0" role="button"><label>朗读音色</label><span class="cur" data-voice-cur>' + voiceName + '</span><svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 5 7 7-7 7"/></svg></div>' +
       '</div></div></div>' +
       '<div class="speech-voice hidden" data-voice-sub>' +
@@ -18081,6 +18130,16 @@ function bindSettings() {
     });
     autoSw.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); autoSw.click(); } });
   }
+  const rewriteSw = b.querySelector('[data-tts-rewrite]');
+  if (rewriteSw && tts) {
+    rewriteSw.addEventListener('click', () => {
+      tts.setRewrite(!tts.getRewrite());
+      rewriteSw.classList.toggle('on', tts.getRewrite());
+      rewriteSw.setAttribute('aria-checked', String(!!tts.getRewrite()));
+      springSwitch(rewriteSw);
+    });
+    rewriteSw.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); rewriteSw.click(); } });
+  }
   const voiceMain = b.querySelector('.speech-main');
   const voiceSub = b.querySelector('[data-voice-sub]');
   let previewVoice = tts ? tts.getVoice() : 'stella';
@@ -18153,6 +18212,81 @@ function bindSettings() {
   if (upd) upd.addEventListener('click', () => { closeBackdrop('settingsBackdrop'); showChangelog(); });
   const hp = b.querySelector('[data-about-help]');
   if (hp) hp.addEventListener('click', () => { showHelp(); });
+
+  /* ── API 分类 ── */
+  const apiInp = b.querySelector('[data-api-key]');
+  const paintApi = () => {
+    const has = !!AI_CONF.key;
+    const st = b.querySelector('[data-api-state]');
+    if (st) {
+      st.textContent = !has ? '未配置' : (aiKeyState === 'session' ? '仅本次会话有效' : '已加密保存');
+      st.classList.toggle('ok', has && aiKeyState !== 'session');
+      st.classList.toggle('warn', !has || aiKeyState === 'session');
+    }
+    const fpEl = b.querySelector('[data-api-fp]');
+    if (fpEl) {
+      const fp = (AI_CONF.fp || '').toUpperCase();
+      const groups = fp ? fp.match(/.{1,4}/g).slice(0, 4) : [];
+      fpEl.textContent = groups.length ? groups.join(' ') : '•••• •••• •••• ••••';
+    }
+    const bal = b.querySelector('[data-api-bal]');
+    if (bal) bal.textContent = has ? (apiBalText ? bankMask(apiBalText) : '—') : '—';
+    if (apiInp) apiInp.placeholder = has ? '粘贴新的 Key 以更换' : 'sk-…';
+  };
+  paintApi();
+  const apiSave = b.querySelector('[data-api-save]');
+  if (apiSave) apiSave.addEventListener('click', async () => {
+    const typed = ((apiInp && apiInp.value) || '').trim();
+    const key = typed || AI_CONF.key;
+    if (!key) { toast('请先填入 API Key', 'err'); if (apiInp) apiInp.focus(); return; }
+    if (typed && !/^sk-[A-Za-z0-9._-]{8,}$/.test(typed)) {
+      toast('Key 格式不正确：应以 sk- 开头', 'err', 3000);
+      if (apiInp) apiInp.focus();
+      return;
+    }
+    if (apiSave.disabled) return;
+    const old = apiSave.textContent;
+    apiSave.disabled = true;
+    apiSave.textContent = '验证中…';
+    try {
+      const r = await aiTestKey(key);
+      if (!r.ok) { toast(r.msg, 'err', 3400); return; }
+      await aiSaveKey(typed || key);
+      aiSetState('ok', '已加密保存 · ' + r.ms + ' ms');
+      aiSyncKeyUI();
+      if (apiInp) apiInp.value = '';
+      paintApi();
+      toast('已验证并保存', 'ok', 2000);
+      apiBalanceRefresh();
+      setTimeout(paintApi, 1500);
+    } catch (e) {
+      toast((e && e.message) || '保存失败', 'err', 3000);
+    } finally {
+      apiSave.disabled = false;
+      apiSave.textContent = old;
+    }
+  });
+  const apiRefresh = b.querySelector('[data-api-refresh]');
+  if (apiRefresh) apiRefresh.addEventListener('click', async () => {
+    if (!AI_CONF.key) { toast('请先填入 API Key', 'err'); return; }
+    apiRefresh.disabled = true;
+    await apiBalanceRefresh();
+    apiRefresh.disabled = false;
+    paintApi();
+  });
+  const apiClear = b.querySelector('[data-api-clear]');
+  if (apiClear) apiClear.addEventListener('click', () => {
+    if (!AI_CONF.key) { toast('本机还没有保存 Key'); return; }
+    aiClearKey();
+    paintApi();
+    toast('已删除本机 Key', 'ok', 1800);
+  });
+  const apiGet = b.querySelector('[data-api-get]');
+  if (apiGet) {
+    const go = () => window.open('https://platform.deepseek.com/api_keys', '_blank', 'noopener');
+    apiGet.addEventListener('click', go);
+    apiGet.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); go(); } });
+  }
 
   enhanceAllSelects(b);
 }
@@ -28775,15 +28909,16 @@ function bindAI() {
   (function initTTS() {
     const TTS_URL = 'https://api.deepseek.com/v1/tools/tts';
     const WS_URL = 'wss://api.deepseek.com/v1/tools/tts';
-    const LS_VOICE = 'ggai_tts_voice', LS_AUTO = 'ggai_tts_auto', LS_STREAM = 'ggai_tts_stream';
+    const LS_VOICE = 'ggai_tts_voice', LS_AUTO = 'ggai_tts_auto', LS_STREAM = 'ggai_tts_stream', LS_REWRITE = 'ggai_tts_rewrite';
     const MAX_CHARS = 4800;   /* 中文按 2 字符计费，1 万上限约合 5000 个汉字 */
     const PCM_RATE = 24000;   /* 流式 / 整段 pcm 都是 24kHz 单声道 16 位 */
-    let voice = 'stella', auto = false, stream = true;
+    let voice = 'stella', auto = false, stream = true, rewrite = true;
     try {
       const v = localStorage.getItem(LS_VOICE);
       if (v === 'stella' || v === 'tide') voice = v;
       auto = localStorage.getItem(LS_AUTO) === '1';
       stream = localStorage.getItem(LS_STREAM) !== '0';
+      rewrite = localStorage.getItem(LS_REWRITE) !== '0';
     } catch (e) { }
 
     let audio = null, url = null, curBtn = null, ctrl = null;
@@ -28829,6 +28964,43 @@ function bindAI() {
       const t = String(el.innerText || el.textContent || '').replace(/\u00a0/g, ' ').trim();
       return t.length > MAX_CHARS ? t.slice(0, MAX_CHARS) : t;
     };
+
+    /* ── 朗读稿：单独请模型把回答改写成口语，避免把公式 / Markdown / 代码原样念出来。
+       只在真正朗读时调用（自动朗读开启或用户点喇叭），不朗读就不产生这次请求。 ── */
+    const narrCache = new WeakMap();
+    async function aiNarration(bubble, text, my) {
+      if (narrCache.has(bubble)) return narrCache.get(bubble);
+      const ac = new AbortController();
+      const timer = setTimeout(() => { try { ac.abort(); } catch (e) { } }, 12000);
+      try {
+        const res = await fetch(AI_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json; charset=utf-8', Authorization: 'Bearer ' + AI_CONF.key },
+          body: JSON.stringify({
+            model: AI_MODEL,
+            stream: false,
+            temperature: 0.3,
+            max_tokens: 900,
+            messages: [
+              { role: 'system', content: '你是朗读稿编辑。把用户给出的回答改写成适合朗读的口语稿：去掉 Markdown 标记、公式与符号、代码块、链接和列表符号；数字与运算用自然口语表达；保留结论与关键步骤；不要添加原答案没有的信息；不要开场白；不超过 400 字；只输出改写后的正文。' },
+              { role: 'user', content: String(text).slice(0, 4000) }
+            ]
+          }),
+          signal: ac.signal
+        });
+        if (!res.ok) return '';
+        const j = await res.json().catch(() => null);
+        const out = ((j && j.choices && j.choices[0] && j.choices[0].message && j.choices[0].message.content) || '').trim();
+        if (!out || my !== sess) return '';
+        const cut = out.length > MAX_CHARS ? out.slice(0, MAX_CHARS) : out;
+        narrCache.set(bubble, cut);
+        return cut;
+      } catch (e) {
+        return '';
+      } finally {
+        clearTimeout(timer);
+      }
+    }
 
     /* ── 流式：WebSocket + PCM 分片边收边播 ──
        浏览器不能给 WebSocket 加自定义头，按官方文档用子协议传 Key；音频按 24kHz
@@ -28954,14 +29126,21 @@ function bindAI() {
       const my = sess;
       curBtn = btn;
       btn.classList.add('busy');
-      btn.title = '正在合成…';
+      btn.title = rewrite ? '正在生成朗读稿…' : '正在合成…';
+      let spoken = text;
+      if (rewrite) {
+        const script = await aiNarration(bubble, text, my);
+        if (my !== sess) return;
+        if (script) spoken = script;   /* 生成失败就退回读可见文字 */
+        btn.title = '正在合成…';
+      }
       if (stream && window.WebSocket) {
-        const ok = await speakStream(text, my);
+        const ok = await speakStream(spoken, my);
         if (my !== sess) return;
         if (ok) return;      /* 已经流式播完 / 正在播 */
       }
       if (my !== sess) return;   /* 流式失败时 stopAll 不改 session，这里继续走整段 */
-      await speakBuffer(text, my);
+      await speakBuffer(spoken, my);
     }
 
     /* 消息头是流式插入的，逐条绑会漏；统一委托到 document 一次 */
@@ -28988,6 +29167,11 @@ function bindAI() {
       getAuto: () => auto,
       getVoice: () => voice,
       getStream: () => stream,
+      getRewrite: () => rewrite,
+      setRewrite(on) {
+        rewrite = !!on;
+        try { localStorage.setItem(LS_REWRITE, rewrite ? '1' : '0'); } catch (e) { }
+      },
       setAuto(on) {
         auto = !!on;
         try { localStorage.setItem(LS_AUTO, auto ? '1' : '0'); } catch (e) { }
@@ -30585,10 +30769,20 @@ async function aiSend() {
     '算到循环节': 'Recurring decimal', '固定位数': 'Fixed digits',
     '流式朗读': 'Streaming playback', '边说边播，第一句更快出声': 'Play while synthesizing — the first sentence starts sooner',
     '只读正常答完的回复，中止或报错不读': 'Only completed replies; stopped or failed ones are skipped',
+    'AI 生成朗读稿': 'AI-scripted narration', '单独生成口语稿，朗读更自然；仅在朗读时请求': 'Generate a spoken script for more natural playback — requested only when reading',
     '朗读音色': 'Reading voice', '星海': 'Stella', '潮汐': 'Tide', '音色温柔': 'Gentle', '音色沉稳': 'Deep',
     '切换后立即生效，选择会记在本机。': 'Applies immediately; your choice is saved on this device.',
     '动态数学画板': 'Dynamic math board', '代数 / 绘图 / CAS / 命令 / 表格': 'Algebra / Graphics / CAS / Commands / Sheet',
-    '设置分类': 'Settings categories',
+    '设置分类': 'Settings categories', '快捷设置': 'Quick settings',
+    /* API 分类 */
+    '状态': 'Status', '账户': 'Account', '未配置': 'Not configured',
+    '已加密保存': 'Encrypted & saved', '仅本次会话有效': 'This session only',
+    '保存并验证': 'Save & verify', '刷新余额': 'Refresh balance', '删除本机 Key': 'Remove local key',
+    '当前余额': 'Balance', '加密保存在本机，不会上传': 'Encrypted on this device; never uploaded',
+    '粘贴新的 Key 以更换': 'Paste a new key to replace', '验证中…': 'Verifying…',
+    '已验证并保存': 'Verified and saved', '已删除本机 Key': 'Local key removed',
+    '请先填入 API Key': 'Enter your API key first', '本机还没有保存 Key': 'No key saved on this device',
+    'Key 格式不正确：应以 sk- 开头': 'Invalid key: it should start with sk-', '保存失败': 'Save failed',
     'API Key 无效或已失效': 'API Key is invalid or expired',
     '这段内容无法朗读（没有可读文字或未通过内容审核）': 'This text cannot be read (no readable text or failed content review)',
     '朗读请求太频繁，稍后再试': 'Too many reading requests — try again later',
@@ -30691,11 +30885,7 @@ async function aiSend() {
     });
   });
 
-  /* ── 快捷设置：常用视图选项、主题、更多设置与语言 ────────────── */
-  var UI = [
-    { id: 'zh-CN', label: '简体中文' },
-    { id: 'en', label: 'English' }
-  ];
+  /* ── 快捷设置：只放高频的画布开关与主题，其余都收进完整设置 ── */
   var pop = null, btn = null;
   function closeUI() {
     if (!pop) return;
@@ -30707,11 +30897,6 @@ async function aiSend() {
   }
   function syncUI() {
     if (!pop) return;
-    Array.prototype.forEach.call(pop.querySelectorAll('[data-lang]'), function (b) {
-      var on = b.getAttribute('data-lang') === lang;
-      b.classList.toggle('on', on);
-      b.setAttribute('aria-checked', String(on));
-    });
     Array.prototype.forEach.call(pop.querySelectorAll('[data-quick]'), function (b) {
       var on = !!SET[b.getAttribute('data-key')];
       b.classList.toggle('on', on);
@@ -30723,15 +30908,6 @@ async function aiSend() {
       theme.classList.toggle('on', dark);
       theme.setAttribute('aria-checked', String(dark));
     }
-    var tts = window.__tts;
-    var autoRow = pop.querySelector('[data-tts-auto]');
-    if (tts && autoRow) {
-      var ttsOn = !!tts.getAuto();
-      autoRow.classList.toggle('on', ttsOn);
-      autoRow.setAttribute('aria-checked', String(ttsOn));
-    }
-    var voiceSel = pop.querySelector('[data-tts-voice]');
-    if (tts && voiceSel) voiceSel.value = tts.getVoice();
   }
   function setLang(next) {
     lang = next === 'en' ? 'en' : 'zh-CN';
@@ -30754,29 +30930,24 @@ async function aiSend() {
       + '.persp-float .ps-set:active{transform:scale(.94)}\n'
       + '.persp-float .ps-set svg{width:17px;height:17px}\n'
       /* 弹层对齐视口右边，而不是齿轮右边：窄屏上齿轮左侧空间不够时也不会跑出屏幕。 */
-      + '.qs-pop{position:fixed;top:54px;right:12px;width:260px;max-width:calc(100vw - 24px);'
-      + 'max-height:calc(100vh - 64px);overflow-y:auto;overscroll-behavior:contain;padding:5px;border-radius:16px;'
+      + '.qs-pop{position:fixed;top:54px;right:12px;width:248px;max-width:calc(100vw - 24px);'
+      + 'max-height:calc(100vh - 64px);overflow-y:auto;overscroll-behavior:contain;padding:6px;border-radius:18px;'
       + 'background:var(--pop-bg);border:.5px solid var(--glass-brd);box-shadow:var(--shadow-lg),var(--hi-strong);'
       + '-webkit-backdrop-filter:var(--glass-blur);backdrop-filter:var(--glass-blur);display:none;z-index:212;user-select:none}\n'
       + '.qs-pop.on{display:block;animation:apiPopIn .18s var(--ease-out) both}\n'
-      + '.qs-head{padding:10px 11px 6px;font-size:var(--fs-sm);font-weight:700;color:var(--text)}\n'
-      + '.qs-label{padding:7px 11px 4px;font-size:var(--fs-3xs);font-weight:600;color:var(--text-3)}\n'
-      + '.qs-row{display:flex;align-items:center;gap:12px;width:100%;min-height:40px;padding:8px 11px;border-radius:10px;'
-      + 'font-size:var(--fs-xs);color:var(--text);text-align:left;transition:background-color .18s ease,color .18s ease}\n'
+      + '.qs-head{padding:10px 11px 7px;font-size:var(--fs-sm);font-weight:700;color:var(--text);letter-spacing:-.2px}\n'
+      + '.qs-label{padding:8px 11px 4px;font-size:var(--fs-3xs);font-weight:600;color:var(--text-3);letter-spacing:.04em}\n'
+      + '.qs-row{display:flex;align-items:center;gap:12px;width:100%;min-height:42px;padding:9px 11px;border-radius:11px;'
+      + 'font-size:var(--fs-sm);color:var(--text);text-align:left;transition:background-color .18s ease,color .18s ease}\n'
       + '.qs-row:hover{background:var(--hover)}\n'
       + '.qs-row>span:first-child{flex:1}\n'
-      + '.qs-switch{position:relative;width:36px;height:22px;flex:0 0 36px;border-radius:99px;background:rgba(120,120,128,.32);transition:background .2s var(--ease)}\n'
-      + '.qs-switch::after{content:"";position:absolute;top:2px;left:2px;width:18px;height:18px;border-radius:50%;background:#fff;'
+      + '.qs-switch{position:relative;width:38px;height:23px;flex:0 0 38px;border-radius:99px;background:rgba(120,120,128,.32);transition:background .2s var(--ease)}\n'
+      + '.qs-switch::after{content:"";position:absolute;top:2px;left:2px;width:19px;height:19px;border-radius:50%;background:#fff;'
       + 'box-shadow:0 2px 5px rgba(0,0,0,.18);transition:transform .2s var(--ease)}\n'
       + '.qs-row.on .qs-switch{background:var(--ok)}\n'
-      + '.qs-row.on .qs-switch::after{transform:translateX(14px)}\n'
+      + '.qs-row.on .qs-switch::after{transform:translateX(15px)}\n'
       + '.qs-sep{height:.5px;margin:5px 9px;background:var(--border)}\n'
       + '.qs-more svg{width:15px;height:15px;color:var(--text-3)}\n'
-      + '.qs-select{padding:5px 7px;border-radius:8px;border:.5px solid var(--border);background:var(--panel-2);'
-      + 'font-size:var(--fs-2xs);color:var(--text);max-width:132px}\n'
-      + '.qs-lang .tick{margin-left:auto;opacity:0;color:var(--accent);font-weight:700}\n'
-      + '.qs-lang.on{color:var(--accent);background:var(--accent-dim)}\n'
-      + '.qs-lang.on .tick{opacity:1}\n'
       + '@media(max-width:600px){#perspPanelTxt{display:none}.persp-float .ps-panel{width:34px;padding:0;justify-content:center}}\n';
     document.head.appendChild(style);
 
@@ -30797,33 +30968,14 @@ async function aiSend() {
     pop.setAttribute('role', 'dialog');
     pop.setAttribute('aria-label', '设置');
     pop.innerHTML =
-      '<div class="qs-head">设置</div><div class="qs-label">视图</div>'
+      '<div class="qs-head">快捷设置</div><div class="qs-label">视图</div>'
       + '<button type="button" class="qs-row" data-quick="toggleGrid" data-key="grid" role="switch"><span>显示网格</span><span class="qs-switch" aria-hidden="true"></span></button>'
       + '<button type="button" class="qs-row" data-quick="toggleAxes" data-key="axes" role="switch"><span>显示坐标轴</span><span class="qs-switch" aria-hidden="true"></span></button>'
       + '<button type="button" class="qs-row" data-quick="toggleLabels" data-key="labels" role="switch"><span>显示对象标签</span><span class="qs-switch" aria-hidden="true"></span></button>'
       + '<button type="button" class="qs-row" data-quick="toggleSnap" data-key="snap" role="switch"><span>吸附到网格</span><span class="qs-switch" aria-hidden="true"></span></button>'
       + '<button type="button" class="qs-row" data-theme role="switch"><span>深色模式</span><span class="qs-switch" aria-hidden="true"></span></button>'
-      + '<div class="qs-sep"></div><button type="button" class="qs-row qs-more" data-more><span>更多设置</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 5 7 7-7 7"></path></svg></button>'
-      + '<div class="qs-sep"></div><div class="qs-label">朗读</div>'
-      + '<button type="button" class="qs-row" data-tts-auto role="switch"><span>自动朗读回复</span><span class="qs-switch" aria-hidden="true"></span></button>'
-      + '<div class="qs-row qs-voice"><span>声音</span><select class="qs-select" data-tts-voice aria-label="朗读声音"><option value="stella">女声 · Stella</option><option value="tide">男声 · Tide</option></select></div>'
-      + '<div class="qs-sep"></div><div class="qs-label">语言</div><div class="qs-langs" role="radiogroup" aria-label="语言"></div>';
+      + '<div class="qs-sep"></div><button type="button" class="qs-row qs-more" data-more><span>更多设置</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 5 7 7-7 7"></path></svg></button>';
 
-    var langHost = pop.querySelector('.qs-langs');
-    UI.forEach(function (o) {
-      var b = document.createElement('button');
-      b.type = 'button';
-      b.className = 'qs-row qs-lang';
-      b.setAttribute('data-lang', o.id);
-      b.setAttribute('role', 'radio');
-      b.innerHTML = '<span>' + o.label + '</span><span class="tick">✓</span>';
-      b.addEventListener('click', function (e) {
-        e.stopPropagation();
-        setLang(o.id);
-        closeUI();
-      });
-      langHost.appendChild(b);
-    });
     Array.prototype.forEach.call(pop.querySelectorAll('[data-quick]'), function (b) {
       b.addEventListener('click', function (e) {
         e.stopPropagation();
@@ -30841,19 +30993,6 @@ async function aiSend() {
       closeUI();
       openSettings();
     });
-    pop.querySelector('[data-tts-auto]').addEventListener('click', function (e) {
-      e.stopPropagation();
-      if (!window.__tts) return;
-      window.__tts.setAuto(!window.__tts.getAuto());
-      syncUI();
-    });
-    var voiceSel = pop.querySelector('[data-tts-voice]');
-    if (voiceSel) {
-      voiceSel.addEventListener('pointerdown', function (e) { e.stopPropagation(); });
-      voiceSel.addEventListener('change', function () {
-        if (window.__tts) window.__tts.setVoice(voiceSel.value);
-      });
-    }
 
     document.body.appendChild(pop);
     window.__quickSettingsSync = syncUI;
