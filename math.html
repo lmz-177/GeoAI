@@ -2555,19 +2555,12 @@ try {
       <div class="fgroup" data-fgroup="">
         <button class="fg-btn" aria-expanded="false">视图 <span class="fg-arrow">▸</span></button>
         <div class="fg-items">
-          <button class="dd-item" data-act="toggleGrid">✓ 显示网格 <span class="k">Ctrl+M</span></button>
-          <button class="dd-item" data-act="toggleAxes">✓ 显示坐标轴</button>
-          <button class="dd-item" data-act="toggleLabels">✓ 显示对象标签</button>
-          <button class="dd-item" data-act="toggleSnap">吸附到网格</button>
           <button class="dd-item" data-act="toggleToolbar">收起绘图工具</button>
           <div class="dd-sep"></div>
           <button class="dd-item" data-act="zoomIn">放大 <span class="k">Ctrl++</span></button>
           <button class="dd-item" data-act="zoomOut">缩小 <span class="k">Ctrl+-</span></button>
           <button class="dd-item" data-act="zoomFit">适合窗口 <span class="k">Ctrl+Shift+Z</span></button>
           <button class="dd-item" data-act="resetView">标准视图 <span class="k">Ctrl+0</span></button>
-          <div class="dd-sep"></div>
-          <button class="dd-item" data-act="settings">绘图区与全局设置…</button>
-          <button class="dd-item" data-act="toggleTheme">切换深色 / 浅色</button>
         </div>
       </div>
       <div class="fgroup" data-fgroup="">
@@ -3618,8 +3611,17 @@ const state = {
    版本号在左上角 GeoAI 打开的「更新与版本」弹窗里展示。改完版本号后，在
    APP_CHANGELOG 最上面补一条（版本、日期、类型、一句摘要、几条说明），
    新版本会自动出现在版本历史里。 */
-const APP_VERSION = '1.7.17';
+const APP_VERSION = '1.7.18';
 const APP_CHANGELOG = [
+  {
+    v: '1.7.18', date: '2026-11-20', tag: '界面优化', code: '约 3.02 万行 · 1.80 MB',
+    lead: '右上角语言键升级为快捷设置，常用视图选项、主题和语言集中在一个弹层。',
+    notes: [
+      '从汉堡菜单取出网格、坐标轴、对象标签、吸附、主题和全局设置入口',
+      '齿轮贴在视图条左侧，弹层向下展开，小屏自动限制高度',
+      '语言切换移到快捷设置底部，仍记忆本机选择',
+    ],
+  },
   {
     v: '1.7.17', date: '2026-11-19', tag: '问题修复', code: '约 3.01 万行 · 1.79 MB',
     lead: '语言键改为贴着右上角视图条左侧摆放，不再压住按钮；补齐分享、键盘、图层等一批英文词条。',
@@ -18131,6 +18133,7 @@ function syncMenuChecks() {
   const tf = $('[data-act="toggleToolbar"]');
   if (tf) tf.textContent = folded ? '展开绘图工具' : '收起绘图工具';
   mark('toggleToolbar', folded);
+  if (window.__quickSettingsSync) window.__quickSettingsSync();
 }
 function bindMenus() {
   const btn = $('#fmenuBtn'), dr = $('#fmenu'), scrim = $('#fmenuScrim');
@@ -21726,10 +21729,10 @@ async function runUITest() {
     if (getComputedStyle(gs[1].querySelector('.fg-items')).display === 'none') throw new Error('展开后条目仍不可见');
 
     /* 点条目：先收起抽屉，再执行动作 */
-    dr.querySelector('[data-act="toggleGrid"]').click(); await sleep(0);
+    dr.querySelector('[data-act="toggleToolbar"]').click(); await sleep(0);
     if (dr.classList.contains('on')) throw new Error('点条目后抽屉没有收起');
     if (scrim.classList.contains('on')) throw new Error('点条目后遮罩没有收起');
-    doMenuAction('toggleGrid'); await sleep(0);   /* 把网格状态还原 */
+    setToolbarFold(false); await sleep(0);   /* 避免影响后续布局用例 */
 
     /* Esc 也能收起，并把焦点还给菜单按钮 */
     setFmenu(true); await sleep(0);
@@ -29955,6 +29958,8 @@ async function aiSend() {
     '数字': 'Numbers', '运算': 'Operators', '希腊': 'Greek', '集合': 'Sets',
     '关系': 'Relations', '函数': 'Functions', '暂停': 'Pause',
     '语言': 'Language', '切换语言': 'Switch language',
+    '显示网格': 'Show Grid', '显示坐标轴': 'Show Axes', '显示对象标签': 'Show Labels',
+    '深色模式': 'Dark Mode', '更多设置': 'More Settings',
     '关于': 'About', '版本': 'Version', '更新时间': 'Updated',
     '新建图层': 'New layer', '拖动行调整叠放次序': 'Drag to reorder',
     '尚未配置': 'Not configured', '已保存': 'Saved'
@@ -30052,22 +30057,37 @@ async function aiSend() {
     });
   });
 
-  /* ── 语言切换按钮（挂在右侧视图切换条里）────────────────────── */
+  /* ── 快捷设置：常用视图选项、主题、更多设置与语言 ────────────── */
   var UI = [
-    { id: 'zh-CN', label: '简体中文', short: '中' },
-    { id: 'en', label: 'English', short: 'EN' }
+    { id: 'zh-CN', label: '简体中文' },
+    { id: 'en', label: 'English' }
   ];
   var pop = null, btn = null;
+  function closeUI() {
+    if (!pop) return;
+    pop.classList.remove('on');
+    if (btn) {
+      btn.classList.remove('on');
+      btn.setAttribute('aria-expanded', 'false');
+    }
+  }
   function syncUI() {
     if (!pop) return;
-    Array.prototype.forEach.call(pop.querySelectorAll('button'), function (b) {
-      b.classList.toggle('on', b.getAttribute('data-lang') === lang);
+    Array.prototype.forEach.call(pop.querySelectorAll('[data-lang]'), function (b) {
+      var on = b.getAttribute('data-lang') === lang;
+      b.classList.toggle('on', on);
+      b.setAttribute('aria-checked', String(on));
     });
-    if (btn) {
-      btn.setAttribute('aria-label', lang === 'en' ? 'Switch to Chinese' : 'Switch to English');
-      btn.title = lang === 'en' ? 'Switch to 简体中文' : 'Switch to English';
-      var s = btn.querySelector('.lang-short');
-      if (s) s.textContent = lang === 'en' ? 'EN' : '中';
+    Array.prototype.forEach.call(pop.querySelectorAll('[data-quick]'), function (b) {
+      var on = !!SET[b.getAttribute('data-key')];
+      b.classList.toggle('on', on);
+      b.setAttribute('aria-checked', String(on));
+    });
+    var theme = pop.querySelector('[data-theme]');
+    if (theme) {
+      var dark = SET.theme === 'dark';
+      theme.classList.toggle('on', dark);
+      theme.setAttribute('aria-checked', String(dark));
     }
   }
   function setLang(next) {
@@ -30078,95 +30098,158 @@ async function aiSend() {
     syncUI();
   }
   function mountUI() {
-    if (document.getElementById('langBtn')) return;
+    if (document.getElementById('quickSettingsBtn')) return;
     var style = document.createElement('style');
     style.textContent =
-      /* 固定挂在右上角：不依赖 .persp-float，基础功能模式把顶部条藏起来时也能点到 */
-      '.lang-wrap{position:fixed;top:52px;right:12px;z-index:96;display:flex;flex-direction:column;align-items:flex-end}\n'
-      + '.lang-btn{display:flex;align-items:center;justify-content:center;gap:5px;height:30px;padding:0 10px;'
-      + 'border-radius:99px;color:var(--text-2);background:var(--glass);border:.5px solid var(--glass-brd);'
-      + 'font-size:11px;font-weight:700;letter-spacing:.02em;cursor:pointer;'
+      /* 齿轮不依赖顶部条；基础功能模式隐藏顶部条后仍然可用。 */
+      '.qs-wrap{position:fixed;top:10px;right:12px;z-index:211}\n'
+      + '.qs-btn{display:flex;align-items:center;justify-content:center;width:38px;height:38px;padding:0;'
+      + 'border-radius:14px;color:var(--text-2);background:var(--glass);border:.5px solid var(--glass-brd);'
       + '-webkit-backdrop-filter:var(--glass-blur);backdrop-filter:var(--glass-blur);'
-      + 'box-shadow:var(--shadow),var(--hi);transition:var(--t-ui)}\n'
-      + '.lang-btn:hover{color:var(--accent);background:var(--hover)}\n'
-      + '.lang-btn svg{width:14px;height:14px}\n'
-      + '.lang-pop{margin-top:6px;min-width:136px;padding:5px;border-radius:12px;'
-      + 'background:var(--modal-bg);border:.5px solid var(--border);box-shadow:0 12px 30px rgba(0,0,0,.18);'
-      + 'display:none;z-index:97}\n'
-      + '.lang-pop.on{display:block;animation:apiPopIn .18s var(--ease-out) both}\n'
-      + '.lang-pop button{display:flex;align-items:center;width:100%;padding:7px 9px;border-radius:8px;'
-      + 'font-size:12.5px;color:var(--text);text-align:left}\n'
-      + '.lang-pop button:hover{background:var(--hover)}\n'
-      + '.lang-pop button.on{color:var(--accent);background:var(--accent-dim)}\n'
-      + '.lang-pop .tick{margin-left:auto;opacity:0;font-weight:700}\n'
-      + '.lang-pop button.on .tick{opacity:1}\n';
+      + 'box-shadow:var(--shadow),var(--hi-strong);transition:var(--t-ui)}\n'
+      + '.qs-btn:hover,.qs-btn.on{color:var(--accent);background:var(--glass-2)}\n'
+      + '.qs-btn:active{transform:scale(.96)}\n'
+      + '.qs-btn svg{width:18px;height:18px}\n'
+      /* 弹层对齐视口右边，而不是齿轮右边：窄屏上齿轮左侧空间不够时也不会跑出屏幕。 */
+      + '.qs-pop{position:fixed;top:54px;right:12px;width:260px;max-width:calc(100vw - 24px);'
+      + 'max-height:calc(100vh - 64px);overflow-y:auto;overscroll-behavior:contain;padding:5px;border-radius:16px;'
+      + 'background:var(--pop-bg);border:.5px solid var(--glass-brd);box-shadow:var(--shadow-lg),var(--hi-strong);'
+      + '-webkit-backdrop-filter:var(--glass-blur);backdrop-filter:var(--glass-blur);display:none;z-index:212;user-select:none}\n'
+      + '.qs-pop.on{display:block;animation:apiPopIn .18s var(--ease-out) both}\n'
+      + '.qs-head{padding:10px 11px 6px;font-size:var(--fs-sm);font-weight:700;color:var(--text)}\n'
+      + '.qs-label{padding:7px 11px 4px;font-size:var(--fs-3xs);font-weight:600;color:var(--text-3)}\n'
+      + '.qs-row{display:flex;align-items:center;gap:12px;width:100%;min-height:40px;padding:8px 11px;border-radius:10px;'
+      + 'font-size:var(--fs-xs);color:var(--text);text-align:left;transition:background-color .18s ease,color .18s ease}\n'
+      + '.qs-row:hover{background:var(--hover)}\n'
+      + '.qs-row>span:first-child{flex:1}\n'
+      + '.qs-switch{position:relative;width:36px;height:22px;flex:0 0 36px;border-radius:99px;background:rgba(120,120,128,.32);transition:background .2s var(--ease)}\n'
+      + '.qs-switch::after{content:"";position:absolute;top:2px;left:2px;width:18px;height:18px;border-radius:50%;background:#fff;'
+      + 'box-shadow:0 2px 5px rgba(0,0,0,.18);transition:transform .2s var(--ease)}\n'
+      + '.qs-row.on .qs-switch{background:var(--ok)}\n'
+      + '.qs-row.on .qs-switch::after{transform:translateX(14px)}\n'
+      + '.qs-sep{height:.5px;margin:5px 9px;background:var(--border)}\n'
+      + '.qs-more svg{width:15px;height:15px;color:var(--text-3)}\n'
+      + '.qs-lang .tick{margin-left:auto;opacity:0;color:var(--accent);font-weight:700}\n'
+      + '.qs-lang.on{color:var(--accent);background:var(--accent-dim)}\n'
+      + '.qs-lang.on .tick{opacity:1}\n'
+      + '@media(max-width:600px){#perspPanelTxt{display:none}.persp-float .ps-panel{width:34px;padding:0;justify-content:center}}\n';
     document.head.appendChild(style);
 
     var wrap = document.createElement('div');
-    wrap.className = 'lang-wrap';
+    wrap.className = 'qs-wrap';
     btn = document.createElement('button');
-    btn.className = 'lang-btn';
-    btn.id = 'langBtn';
+    btn.className = 'qs-btn';
+    btn.id = 'quickSettingsBtn';
     btn.type = 'button';
-    btn.title = '语言 / Language';
-    btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8.6"></circle><path d="M3.4 12h17.2M12 3.4c2.4 2.4 3.6 5.3 3.6 8.6s-1.2 6.2-3.6 8.6c-2.4-2.4-3.6-5.3-3.6-8.6s1.2-6.2 3.6-8.6z"></path></svg><span class="lang-short">中</span>';
+    btn.title = '设置';
+    btn.setAttribute('aria-label', '设置');
+    btn.setAttribute('aria-expanded', 'false');
+    btn.setAttribute('aria-controls', 'quickSettingsPop');
+    btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.87l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1 1.55V21a2 2 0 1 1-4 0v-.09a1.7 1.7 0 0 0-1.11-1.55 1.7 1.7 0 0 0-1.87.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.7 1.7 0 0 0 .34-1.87 1.7 1.7 0 0 0-1.55-1H3a2 2 0 1 1 0-4h.09a1.7 1.7 0 0 0 1.55-1.11 1.7 1.7 0 0 0-.34-1.87l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.7 1.7 0 0 0 1.87.34h.08a1.7 1.7 0 0 0 1-1.55V3a2 2 0 1 1 4 0v.09a1.7 1.7 0 0 0 1 1.55 1.7 1.7 0 0 0 1.87-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.7 1.7 0 0 0-.34 1.87v.08a1.7 1.7 0 0 0 1.55 1H21a2 2 0 1 1 0 4h-.09a1.7 1.7 0 0 0-1.51 1z"></path></svg>';
+
     pop = document.createElement('div');
-    pop.className = 'lang-pop';
-    pop.setAttribute('role', 'menu');
+    pop.className = 'qs-pop';
+    pop.id = 'quickSettingsPop';
+    pop.setAttribute('role', 'dialog');
+    pop.setAttribute('aria-label', '设置');
+    pop.innerHTML =
+      '<div class="qs-head">设置</div><div class="qs-label">视图</div>'
+      + '<button type="button" class="qs-row" data-quick="toggleGrid" data-key="grid" role="switch"><span>显示网格</span><span class="qs-switch" aria-hidden="true"></span></button>'
+      + '<button type="button" class="qs-row" data-quick="toggleAxes" data-key="axes" role="switch"><span>显示坐标轴</span><span class="qs-switch" aria-hidden="true"></span></button>'
+      + '<button type="button" class="qs-row" data-quick="toggleLabels" data-key="labels" role="switch"><span>显示对象标签</span><span class="qs-switch" aria-hidden="true"></span></button>'
+      + '<button type="button" class="qs-row" data-quick="toggleSnap" data-key="snap" role="switch"><span>吸附到网格</span><span class="qs-switch" aria-hidden="true"></span></button>'
+      + '<button type="button" class="qs-row" data-theme role="switch"><span>深色模式</span><span class="qs-switch" aria-hidden="true"></span></button>'
+      + '<div class="qs-sep"></div><button type="button" class="qs-row qs-more" data-more><span>更多设置</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 5 7 7-7 7"></path></svg></button>'
+      + '<div class="qs-sep"></div><div class="qs-label">语言</div><div class="qs-langs" role="radiogroup" aria-label="语言"></div>';
+
+    var langHost = pop.querySelector('.qs-langs');
     UI.forEach(function (o) {
       var b = document.createElement('button');
       b.type = 'button';
+      b.className = 'qs-row qs-lang';
       b.setAttribute('data-lang', o.id);
-      b.setAttribute('role', 'menuitemradio');
+      b.setAttribute('role', 'radio');
       b.innerHTML = '<span>' + o.label + '</span><span class="tick">✓</span>';
       b.addEventListener('click', function (e) {
         e.stopPropagation();
         setLang(o.id);
-        pop.classList.remove('on');
+        closeUI();
       });
-      pop.appendChild(b);
+      langHost.appendChild(b);
     });
-    wrap.appendChild(pop);
+    Array.prototype.forEach.call(pop.querySelectorAll('[data-quick]'), function (b) {
+      b.addEventListener('click', function (e) {
+        e.stopPropagation();
+        doMenuAction(b.getAttribute('data-quick'));
+        syncUI();
+      });
+    });
+    pop.querySelector('[data-theme]').addEventListener('click', function (e) {
+      e.stopPropagation();
+      applyTheme(SET.theme === 'dark' ? 'light' : 'dark');
+      syncUI();
+    });
+    pop.querySelector('[data-more]').addEventListener('click', function (e) {
+      e.stopPropagation();
+      closeUI();
+      openSettings();
+    });
+
     wrap.appendChild(btn);
     document.body.appendChild(wrap);
+    document.body.appendChild(pop);
     wrapEl = wrap;
+    window.__quickSettingsSync = syncUI;
 
     btn.addEventListener('click', function (e) {
       e.stopPropagation();
-      pop.classList.toggle('on');
+      if (pop.classList.contains('on')) { closeUI(); return; }
+      if (typeof setFmenu === 'function') setFmenu(false);
+      syncUI();
+      pop.classList.add('on');
+      btn.classList.add('on');
+      btn.setAttribute('aria-expanded', 'true');
     });
     document.addEventListener('pointerdown', function (e) {
       if (!pop.classList.contains('on')) return;
       if (pop.contains(e.target) || btn.contains(e.target)) return;
-      pop.classList.remove('on');
+      closeUI();
     });
     document.addEventListener('keydown', function (e) {
-      if (e.key === 'Escape') pop.classList.remove('on');
+      if (e.key === 'Escape' && pop.classList.contains('on')) {
+        closeUI();
+        btn.focus({ preventScroll: true });
+      }
     });
     positionUI();
   }
 
-  /* 语言键贴着顶部右侧视图条左边摆放：不压住分享 / 侧栏按钮；
-     基础功能模式整条被藏起来时，退回到右上角固定位置，仍然点得到。 */
+  /* 齿轮贴着顶部右侧视图条左边；弹层向下展开并始终留在视口内。 */
   var wrapEl = null;
   function positionUI() {
     if (!wrapEl) return;
     var bar = document.querySelector('.persp-float');
     var r = bar ? bar.getBoundingClientRect() : null;
     var usable = r && r.width > 0 && getComputedStyle(bar).display !== 'none';
+    var popTop = 54;
     if (usable) {
       wrapEl.style.top = Math.round(r.top) + 'px';
       wrapEl.style.right = Math.round(window.innerWidth - r.left + 6) + 'px';
+      popTop = Math.round(r.bottom + 6);
     } else {
       wrapEl.style.top = '10px';
       wrapEl.style.right = '12px';
+    }
+    if (pop) {
+      pop.style.top = popTop + 'px';
+      pop.style.maxHeight = Math.max(0, window.innerHeight - popTop - 10) + 'px';
     }
   }
 
   function boot() {
     document.documentElement.lang = lang;
-    if (lang === 'en') scan(document.body);
     mountUI();
+    if (lang === 'en') scan(document.body);
     syncUI();
     window.addEventListener('resize', positionUI);
     /* 基础功能模式会整条隐藏顶部视图条，位置要跟着换 */
