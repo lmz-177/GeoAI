@@ -2102,6 +2102,76 @@ body.dark .upd-hero{background:linear-gradient(135deg,rgba(10,132,255,.18),rgba(
 }
 .set-row input[type=range]{width:150px}
 .set-row input[type=color]{width:38px;height:32px;padding:2px;border:.5px solid var(--border);border-radius:9px;background:var(--panel-2)}
+/* ── 设置：分类导航 + 分组卡片（对齐 iOS 设置 / DeepSeek 客户端的分层写法） ── */
+.set-shell{display:grid;grid-template-columns:132px minmax(0,1fr);gap:16px;align-items:start}
+.set-nav{position:sticky;top:0;display:flex;flex-direction:column;gap:2px;padding:2px 8px 10px 0;border-right:.5px solid var(--border)}
+.set-nav-item{display:flex;align-items:center;gap:9px;padding:9px 10px;border-radius:10px;font-size:var(--fs-xs);color:var(--text-2);text-align:left;transition:var(--t-ui)}
+.set-nav-item svg{width:15px;height:15px;flex:0 0 15px;color:var(--text-3)}
+.set-nav-item:hover{background:var(--hover);color:var(--text)}
+.set-nav-item.on{background:var(--accent-dim);color:var(--accent);font-weight:600}
+.set-nav-item.on svg{color:var(--accent)}
+.set-panes{min-width:0}
+.set-pane{display:none}
+.set-pane.on{display:block;animation:paneIn .2s var(--ease-out) both}
+@keyframes paneIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+.set-pane>.set-group{margin-bottom:16px}
+/* 每组设置做成一张圆角卡片：行与行之间只用发丝线分隔，和信息列表一致 */
+.set-card{background:var(--panel-2);border:.5px solid var(--border);border-radius:13px;padding:0 13px}
+.set-card>.set-row{padding:12px 0}
+.set-card>.set-row+.set-row{border-top:.5px solid var(--border)}
+/* 可进入下一级的行 */
+.set-link{cursor:pointer}
+.set-link .chev{width:15px;height:15px;color:var(--text-3);flex:0 0 auto}
+.set-link .cur{font-size:var(--fs-2xs);color:var(--text-3);margin-right:2px}
+/* 自绘下拉框：原生 select 留在 DOM 里（value / change 语义不变），只替换外观 */
+.cx-sel{position:relative;display:inline-flex;flex:0 0 auto;min-width:124px;max-width:210px}
+.cx-sel>select{position:absolute;inset:0;width:100%;height:100%;opacity:0;pointer-events:none}
+.cx-trigger{display:flex;align-items:center;gap:8px;justify-content:space-between;width:100%;
+  padding:8px 11px;border-radius:9px;border:.5px solid var(--border);background:var(--panel-2);
+  font-size:var(--fs-sm);color:var(--text);text-align:left;transition:var(--t-ui)}
+.cx-trigger:hover{background:var(--hover)}
+.cx-trigger .cx-val{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cx-trigger svg{width:13px;height:13px;flex:0 0 13px;color:var(--text-3);transition:transform var(--t) var(--ease)}
+.cx-sel.on .cx-trigger{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-dim)}
+.cx-sel.on .cx-trigger svg{transform:rotate(180deg)}
+.cx-menu{position:fixed;z-index:640;min-width:140px;max-height:264px;overflow-y:auto;overscroll-behavior:contain;
+  padding:5px;border-radius:12px;background:var(--pop-bg);border:.5px solid var(--glass-brd);
+  box-shadow:var(--shadow-lg),var(--hi-strong);-webkit-backdrop-filter:var(--glass-blur);backdrop-filter:var(--glass-blur);
+  display:none;user-select:none}
+.cx-menu.on{display:block;animation:apiPopIn .16s var(--ease-out) both}
+.cx-opt{display:flex;align-items:center;gap:8px;width:100%;padding:8px 10px;border-radius:8px;
+  font-size:var(--fs-sm);color:var(--text);text-align:left;transition:background-color .16s ease,color .16s ease}
+.cx-opt:hover{background:var(--hover)}
+.cx-opt.on{color:var(--accent);background:var(--accent-dim);font-weight:600}
+.cx-opt .tick{margin-left:auto;font-weight:700}
+/* 音色选择：一颗缓慢流动的色团 + 名字 / 描述 + 圆点 + 确认 */
+.voice-wrap{display:flex;flex-direction:column;align-items:center;gap:10px;padding:14px 0 8px}
+.voice-hero{position:relative;width:172px;height:96px;border-radius:48% 52% 46% 54% / 54% 46% 54% 46%;
+  overflow:hidden;isolation:isolate;box-shadow:inset 0 0 22px rgba(255,255,255,.55),0 10px 26px rgba(16,24,40,.16);
+  transition:filter .3s ease}
+.voice-hero::before,.voice-hero::after{content:"";position:absolute;inset:-38%;border-radius:50%;filter:blur(14px)}
+.voice-hero::before{background:conic-gradient(from 20deg,#8fd0ff,#4f7dff,#b9e2ff,#2b6bff,#8fd0ff);
+  animation:voiceSpin 9s linear infinite}
+.voice-hero::after{background:radial-gradient(circle at 32% 28%,rgba(255,255,255,.92),rgba(255,255,255,0) 52%);
+  animation:none;filter:blur(6px)}
+.voice-hero[data-v="tide"]::before{background:conic-gradient(from 40deg,#8fe3d4,#2e7f9b,#cfe9ff,#1f5f7a,#8fe3d4)}
+@keyframes voiceSpin{to{transform:rotate(360deg)}}
+.voice-name{font-size:var(--fs-md);font-weight:700;color:var(--text)}
+.voice-desc{font-size:var(--fs-2xs);color:var(--text-3);margin-top:-4px}
+.voice-dots{display:flex;align-items:center;gap:7px;padding:6px 0 2px}
+.voice-dots button{width:7px;height:7px;border-radius:50%;background:var(--border-2);transition:transform var(--t),background .2s}
+.voice-dots button.on{background:var(--accent);transform:scale(1.25)}
+.voice-ok{width:190px;justify-content:center;margin-top:4px}
+.voice-back{display:inline-flex;align-items:center;gap:6px;padding:6px 8px;border-radius:8px;font-size:var(--fs-xs);color:var(--text-2)}
+.voice-back:hover{background:var(--hover);color:var(--text)}
+.voice-back svg{width:14px;height:14px}
+@media(max-width:640px){
+  .set-shell{grid-template-columns:1fr;gap:10px}
+  .set-nav{position:static;flex-direction:row;overflow-x:auto;border-right:0;
+    border-bottom:.5px solid var(--border);padding:0 0 8px;gap:4px;scrollbar-width:none}
+  .set-nav::-webkit-scrollbar{display:none}
+  .set-nav-item{flex:0 0 auto;padding:7px 11px;white-space:nowrap}
+}
 /* iOS 开关：按住时滑块横向「长胖」盖过轨道边缘再弹回 —— 系统开关最标志性的细节。
    尺寸走 iOS 规范 51×31 / 滑块 27，闭合态底色是 iOS 的 systemGray。 */
 .switch{width:51px;height:31px;border-radius:99px;background:rgba(120,120,128,.32);position:relative;cursor:pointer;flex:0 0 51px;transition:background .2s var(--ease)}
@@ -3624,8 +3694,19 @@ const state = {
    版本号在左上角 GeoAI 打开的「更新与版本」弹窗里展示。改完版本号后，在
    APP_CHANGELOG 最上面补一条（版本、日期、类型、一句摘要、几条说明），
    新版本会自动出现在版本历史里。 */
-const APP_VERSION = '1.7.19';
+const APP_VERSION = '1.8.0';
 const APP_CHANGELOG = [
+  {
+    v: '1.8.0', date: '2026-11-20', tag: '界面重构', code: '约 3.09 万行 · 1.84 MB',
+    lead: '设置改成分类面板，全部下拉框换成自绘样式；朗读支持流式出声，并加入音色选择页。',
+    notes: [
+      '设置分为通用 / 视图 / 对象 / 计算 / 朗读 / 语言 / 关于七类，左侧导航切换，窄屏变为横排分类',
+      '分组改成圆角卡片与发丝分隔，更接近 iOS 设置与 DeepSeek 客户端的层级',
+      '所有下拉框统一换成自绘胶囊 + 浮层菜单，原生 select 仍负责取值与 change 事件',
+      '朗读默认走 WebSocket 流式 PCM，边合成边播；连接不可用时自动回退到整段合成',
+      '朗读分类新增流式开关、自动朗读开关和独立的音色选择页（色团预览 + 圆点 + 确认）',
+    ],
+  },
   {
     v: '1.7.19', date: '2026-11-20', tag: '新功能', code: '约 3.04 万行 · 1.81 MB',
     lead: '设置键并入右上角控件条；AI 回复支持 DeepSeek 朗读，可自动朗读并选择男女声。',
@@ -17707,11 +17788,139 @@ function springSwitch(el) {
   el._springT = setTimeout(off, 600);
 }
 let objSetTarget = null;   // 非空表示当前模态展示的是「单个对象」的设置
+
+/* ── 自绘下拉框 ────────────────────────────────────────────────
+   原生 <select> 仍留在 DOM 里负责 value / change，外观换成胶囊触发器 + 浮层列表。
+   这样设置面板、对象设置乃至以后新增的下拉都能共用一套样式，不用逐个改业务代码。 */
+const CX_OPEN = new Set();
+function closeAllCx(except) { CX_OPEN.forEach(fn => { if (fn !== except) fn(); }); }
+function enhanceSelect(sel) {
+  if (!sel || sel.dataset.cxSel === '1') return;
+  sel.dataset.cxSel = '1';
+  const box = document.createElement('div'); box.className = 'cx-sel';
+  sel.parentNode.insertBefore(box, sel);
+  box.appendChild(sel);
+  const trig = document.createElement('button');
+  trig.type = 'button'; trig.className = 'cx-trigger';
+  trig.setAttribute('aria-haspopup', 'listbox');
+  trig.innerHTML = '<span class="cx-val"></span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>';
+  box.appendChild(trig);
+  const menu = document.createElement('div');
+  menu.className = 'cx-menu'; menu.setAttribute('role', 'listbox');
+  document.body.appendChild(menu);
+  const valEl = trig.querySelector('.cx-val');
+  const sync = () => {
+    const o = sel.options[sel.selectedIndex];
+    valEl.textContent = o ? o.textContent : '';
+    const wrap = sel.closest('.set-row');
+    if (wrap) wrap.setAttribute('aria-label', (o ? o.textContent : ''));
+  };
+  const place = () => {
+    const r = trig.getBoundingClientRect();
+    const w = Math.max(140, r.width);
+    menu.style.width = w + 'px';
+    menu.style.left = Math.min(Math.max(8, r.left), window.innerWidth - w - 8) + 'px';
+    const h = Math.min(264, menu.scrollHeight || 264);
+    let top = Math.round(r.bottom + 6);
+    if (top + h > window.innerHeight - 8) top = Math.max(8, Math.round(r.top - h - 6));
+    menu.style.top = top + 'px';
+  };
+  const close = () => {
+    menu.classList.remove('on'); box.classList.remove('on');
+    CX_OPEN.delete(close);
+  };
+  const open = () => {
+    closeAllCx(close);
+    menu.innerHTML = '';
+    Array.prototype.forEach.call(sel.options, o => {
+      const b = document.createElement('button');
+      b.type = 'button'; b.className = 'cx-opt' + (o.selected ? ' on' : '');
+      b.setAttribute('role', 'option');
+      b.setAttribute('aria-selected', String(o.selected));
+      b.innerHTML = '<span>' + esc(o.textContent) + '</span>' + (o.selected ? '<span class="tick">✓</span>' : '');
+      b.addEventListener('click', e => {
+        e.stopPropagation();
+        if (sel.value !== o.value) { sel.value = o.value; sel.dispatchEvent(new Event('change', { bubbles: true })); }
+        sync(); close();
+      });
+      menu.appendChild(b);
+    });
+    menu.classList.add('on'); box.classList.add('on');
+    CX_OPEN.add(close);
+    place();
+    requestAnimationFrame(place);
+  };
+  trig.addEventListener('click', e => {
+    e.stopPropagation();
+    if (menu.classList.contains('on')) close(); else open();
+  });
+  trig.addEventListener('keydown', e => {
+    if (e.key === 'ArrowDown' || e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(); }
+  });
+  sel.addEventListener('change', sync);
+  document.addEventListener('pointerdown', e => {
+    if (!menu.classList.contains('on')) return;
+    if (menu.contains(e.target) || trig.contains(e.target)) return;
+    close();
+  });
+  window.addEventListener('resize', () => { if (menu.classList.contains('on')) place(); });
+  sel.addEventListener('blur', () => setTimeout(close, 120));
+  /* 语言切换会改写 option 文本，触发器上的当前值要跟着走 */
+  try { new MutationObserver(sync).observe(sel, { childList: true, subtree: true, characterData: true }); } catch (e) { }
+  sync();
+}
+function enhanceAllSelects(root) {
+  (root || document).querySelectorAll('select:not([data-cx-sel])').forEach(enhanceSelect);
+}
+/* 设置 / 对象设置每次重渲染都会造新的 select，统一由这里补外观 */
+(function watchSelects() {
+  if (!document.body) return;
+  new MutationObserver(list => {
+    for (let i = 0; i < list.length; i++) {
+      const added = list[i].addedNodes;
+      for (let j = 0; j < added.length; j++) {
+        const n = added[j];
+        if (n.nodeType !== 1) continue;
+        if (n.tagName === 'SELECT' || (n.querySelector && n.querySelector('select'))) { enhanceAllSelects(); return; }
+      }
+    }
+  }).observe(document.body, { childList: true, subtree: true });
+})();
+
+/* ── 设置面板：分类导航 ─────────────────────────────────────── */
+const SET_CATS = [
+  { id: 'general', label: '通用', ic: '<path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/>' },
+  { id: 'view', label: '视图', ic: '<rect x="4" y="4" width="16" height="16" rx="2.5"/><path d="M4 12h16M12 4v16"/>' },
+  { id: 'object', label: '对象', ic: '<circle cx="12" cy="12" r="3.4" fill="currentColor" stroke="none"/><path d="M4 12h3M17 12h3M12 4v3M12 17v3" opacity=".5"/>' },
+  { id: 'calc', label: '计算', ic: '<rect x="5" y="3.5" width="14" height="17" rx="2.5"/><path d="M8.5 7.5h7M8.5 12h2M13.5 12h2M8.5 16h2M13.5 16h2"/>' },
+  { id: 'speech', label: '语音', ic: '<path d="M4.5 10v4h3.3L12 17.6V6.4L7.8 10z" fill="currentColor" stroke="none" opacity=".9"/><path d="M15.6 9.2a4 4 0 0 1 0 5.6M18.2 6.5a7.6 7.6 0 0 1 0 11"/>' },
+  { id: 'language', label: '语言', ic: '<circle cx="12" cy="12" r="8.2"/><path d="M3.8 12h16.4M12 3.8c2.3 2.3 3.4 5.1 3.4 8.2s-1.1 5.9-3.4 8.2c-2.3-2.3-3.4-5.1-3.4-8.2s1.1-5.9 3.4-8.2z"/>' },
+  { id: 'about', label: '关于', ic: '<circle cx="12" cy="12" r="8.4"/><path d="M12 11v5.4M12 8v.1"/>' }
+];
+function setSettingsCat(id) {
+  const b = $('#settingsBody'); if (!b) return;
+  const nav = b.querySelectorAll('.set-nav-item');
+  let hit = false;
+  Array.prototype.forEach.call(nav, el => {
+    const on = el.dataset.cat === id;
+    el.classList.toggle('on', on);
+    el.setAttribute('aria-selected', String(on));
+    if (on) hit = true;
+  });
+  if (!hit) id = 'general';
+  Array.prototype.forEach.call(nav, el => el.classList.toggle('on', el.dataset.cat === id));
+  Array.prototype.forEach.call(b.querySelectorAll('.set-pane'), el => {
+    el.classList.toggle('on', el.dataset.pane === id);
+  });
+  const pane = b.querySelector('.set-pane.on');
+  if (pane) enhanceAllSelects(pane);
+  b.scrollTop = 0;
+}
 function openSettings(focus) {
   objSetTarget = null;
   $('#settingsTitle').textContent = '设置';
-  /* 设置项是「标签 + 控件」两列，600 比 660 更紧凑，视线不用横跨半个弹窗 */
-  const modal = $('#settingsBackdrop .modal'); if (modal) modal.style.maxWidth = '600px';
+  /* 左侧分类 + 右侧内容，680 足够放下两列且不显得空 */
+  const modal = $('#settingsBackdrop .modal'); if (modal) modal.style.maxWidth = '680px';
   $('#setReset').textContent = '恢复默认';
   $('#setReset').style.display = '';
   const b = $('#settingsBody');
@@ -17719,13 +17928,11 @@ function openSettings(focus) {
   b.scrollTop = 0;                 /* 每次打开都从顶部开始，不接着上次的滚动位置 */
   bindSettings();
   openBackdrop('settingsBackdrop');
-  /* 从 CAS 标题栏进来时直接落到「计算精度」：滚到分组位置并给标题一个短暂的强调，
-     否则用户还得自己往下翻 */
+  setSettingsCat(focus === 'calc' ? 'calc' : 'general');
+  /* 从 CAS 标题栏进来时给「计算」分类一个短暂的强调 */
   if (focus === 'calc') {
     const g = b.querySelector('[data-group="calc"]');
     if (g) {
-      /* 用 rect 换算滚动量，不依赖 offsetParent（弹窗里 offsetTop 未必相对滚动容器） */
-      b.scrollTop = Math.max(0, g.getBoundingClientRect().top - b.getBoundingClientRect().top + b.scrollTop - 14);
       g.classList.add('flash');
       setTimeout(() => g.classList.remove('flash'), 1200);
     }
@@ -17734,29 +17941,71 @@ function openSettings(focus) {
 function settingsHtml() {
   const sw = (k, label, sub) => '<div class="set-row"><label>' + label + (sub ? '<span class="sublabel">' + sub + '</span>' : '') + '</label><div class="switch' + (SET[k] ? ' on' : '') + '" role="switch" aria-checked="' + !!SET[k] + '" tabindex="0" data-sw="' + k + '"></div></div>';
   const rg = (k, label, min, max, step, sub) => '<div class="set-row"><label>' + label + ' <span class="sublabel">当前：<b data-out="' + k + '">' + SET[k] + '</b>' + (sub ? ' · ' + sub : '') + '</span></label><input type="range" data-rg="' + k + '" min="' + min + '" max="' + max + '" step="' + step + '" value="' + SET[k] + '"></div>';
-  return '' +
-    '<div class="set-group"><h3>基本</h3>' +
-    '<div class="set-row"><label>主题</label><select data-sel="theme"><option value="light"' + (SET.theme === 'light' ? ' selected' : '') + '>浅色</option><option value="dark"' + (SET.theme === 'dark' ? ' selected' : '') + '>深色</option></select></div>' +
-    '<div class="set-row"><label>小数位数</label><select data-sel="round">' + [0, 1, 2, 3, 4, 5, 6].map(n => '<option value="' + n + '"' + (SET.round === n ? ' selected' : '') + '>' + n + ' 位</option>').join('') + '</select></div>' +
-    '<div class="set-row"><label>角度单位</label><select data-sel="angleUnit"><option value="deg"' + (SET.angleUnit === 'deg' ? ' selected' : '') + '>度 (°)</option><option value="rad"' + (SET.angleUnit === 'rad' ? ' selected' : '') + '>弧度</option></select></div>' +
-    sw('safetyCheck', 'AI 内容安全校验') +
-    '</div>' +
-    '<div class="set-group"><h3>绘图区</h3>' +
-    sw('grid', '显示网格') + sw('axes', '显示坐标轴') + sw('showGridNumbers', '坐标轴刻度数字') + sw('showMinor', '次要网格线') + sw('boldGrid', '加粗网格线') +
-    sw('snap', '吸附到网格') + sw('snapToObjects', '吸附到已有对象') +
-    '</div>' +
-    '<div class="set-group"><h3>对象样式</h3>' +
-    rg('pointSize', '默认点大小', 2, 12, .5, '像素') + rg('lineWidth', '默认线宽', 1, 12, .2, '像素') + rg('fontSize', '标签字号', 8, 22, 1, '像素') + sw('labels', '显示对象标签') +
-    '</div>' +
-    '<div class="set-group" data-group="calc"><h3>计算精度</h3>' +
-    '<div class="set-row"><label>π 的位数<span class="sublabel">10–2000</span></label><input type="number" data-num="piDigits" min="10" max="2000" step="10" value="' + SET.piDigits + '"></div>' +
-    '<div class="set-row"><label>e 的位数<span class="sublabel">10–2000</span></label><input type="number" data-num="eDigits" min="10" max="2000" step="10" value="' + SET.eDigits + '"></div>' +
-    '<div class="set-row"><label>除法</label><select data-sel="divMode"><option value="cycle"' + (SET.divMode === 'cycle' ? ' selected' : '') + '>算到循环节</option><option value="fixed"' + (SET.divMode === 'fixed' ? ' selected' : '') + '>固定位数</option></select></div>' +
-    '<div class="set-row"><label>除法位数<span class="sublabel">仅固定模式，1–20000</span></label><input type="number" data-num="divDigits" min="1" max="20000" step="10" value="' + SET.divDigits + '"></div>' +
-    '</div>';
+  const tts = window.__tts || { getAuto: () => false, getStream: () => true, getVoice: () => 'stella' };
+  const voiceName = tts.getVoice() === 'tide' ? '潮汐' : '星海';
+  const nav = SET_CATS.map((c, i) =>
+    '<button type="button" class="set-nav-item' + (i === 0 ? ' on' : '') + '" data-cat="' + c.id + '" role="tab" aria-selected="' + (i === 0) + '">' +
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + c.ic + '</svg>' +
+    '<span>' + c.label + '</span></button>').join('');
+  const pane = (id, html, on) => '<section class="set-pane' + (on ? ' on' : '') + '" data-pane="' + id + '" role="tabpanel">' + html + '</section>';
+  return '<div class="set-shell"><nav class="set-nav" role="tablist" aria-label="设置分类">' + nav + '</nav><div class="set-panes">' +
+    pane('general',
+      '<div class="set-group"><h3>外观</h3><div class="set-card">' +
+      '<div class="set-row"><label>主题</label><select data-sel="theme"><option value="light"' + (SET.theme === 'light' ? ' selected' : '') + '>浅色</option><option value="dark"' + (SET.theme === 'dark' ? ' selected' : '') + '>深色</option></select></div>' +
+      '<div class="set-row"><label>小数位数</label><select data-sel="round">' + [0, 1, 2, 3, 4, 5, 6].map(n => '<option value="' + n + '"' + (SET.round === n ? ' selected' : '') + '>' + n + ' 位</option>').join('') + '</select></div>' +
+      '<div class="set-row"><label>角度单位</label><select data-sel="angleUnit"><option value="deg"' + (SET.angleUnit === 'deg' ? ' selected' : '') + '>度 (°)</option><option value="rad"' + (SET.angleUnit === 'rad' ? ' selected' : '') + '>弧度</option></select></div>' +
+      '</div></div>' +
+      '<div class="set-group"><h3>智能</h3><div class="set-card">' + sw('safetyCheck', 'AI 内容安全校验') + '</div></div>', true) +
+    pane('view',
+      '<div class="set-group"><h3>绘图区</h3><div class="set-card">' +
+      sw('grid', '显示网格') + sw('axes', '显示坐标轴') + sw('showGridNumbers', '坐标轴刻度数字') + sw('showMinor', '次要网格线') + sw('boldGrid', '加粗网格线') +
+      sw('snap', '吸附到网格') + sw('snapToObjects', '吸附到已有对象') +
+      '</div></div>') +
+    pane('object',
+      '<div class="set-group"><h3>对象样式</h3><div class="set-card">' +
+      rg('pointSize', '默认点大小', 2, 12, .5, '像素') + rg('lineWidth', '默认线宽', 1, 12, .2, '像素') +
+      rg('fontSize', '标签字号', 8, 22, 1, '像素') + sw('labels', '显示对象标签') +
+      '</div></div>') +
+    pane('calc',
+      '<div class="set-group" data-group="calc"><h3>计算精度</h3><div class="set-card">' +
+      '<div class="set-row"><label>π 的位数<span class="sublabel">10–2000</span></label><input type="number" data-num="piDigits" min="10" max="2000" step="10" value="' + SET.piDigits + '"></div>' +
+      '<div class="set-row"><label>e 的位数<span class="sublabel">10–2000</span></label><input type="number" data-num="eDigits" min="10" max="2000" step="10" value="' + SET.eDigits + '"></div>' +
+      '<div class="set-row"><label>除法</label><select data-sel="divMode"><option value="cycle"' + (SET.divMode === 'cycle' ? ' selected' : '') + '>算到循环节</option><option value="fixed"' + (SET.divMode === 'fixed' ? ' selected' : '') + '>固定位数</option></select></div>' +
+      '<div class="set-row"><label>除法位数<span class="sublabel">仅固定模式，1–20000</span></label><input type="number" data-num="divDigits" min="1" max="20000" step="10" value="' + SET.divDigits + '"></div>' +
+      '</div></div>') +
+    pane('speech',
+      '<div class="speech-main"><div class="set-group"><h3>朗读</h3><div class="set-card">' +
+      '<div class="set-row"><label>流式朗读<span class="sublabel">边说边播，第一句更快出声</span></label><div class="switch' + (tts.getStream() ? ' on' : '') + '" role="switch" aria-checked="' + !!tts.getStream() + '" tabindex="0" data-tts-stream></div></div>' +
+      '<div class="set-row"><label>自动朗读回复<span class="sublabel">只读正常答完的回复，中止或报错不读</span></label><div class="switch' + (tts.getAuto() ? ' on' : '') + '" role="switch" aria-checked="' + !!tts.getAuto() + '" tabindex="0" data-tts-auto2></div></div>' +
+      '<div class="set-row set-link" data-voice-open tabindex="0" role="button"><label>朗读音色</label><span class="cur" data-voice-cur>' + voiceName + '</span><svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 5 7 7-7 7"/></svg></div>' +
+      '</div></div></div>' +
+      '<div class="speech-voice hidden" data-voice-sub>' +
+      '<button type="button" class="voice-back" data-voice-back><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 5-7 7 7 7"/></svg><span>朗读音色</span></button>' +
+      '<div class="voice-wrap"><div class="voice-hero" data-voice-hero data-v="' + tts.getVoice() + '"></div>' +
+      '<div class="voice-name" data-voice-name>' + voiceName + '</div>' +
+      '<div class="voice-desc" data-voice-desc>' + (tts.getVoice() === 'tide' ? '音色沉稳' : '音色温柔') + '</div>' +
+      '<div class="voice-dots"><button type="button" data-voice-pick="stella" class="' + (tts.getVoice() === 'stella' ? 'on' : '') + '" aria-label="星海"></button>' +
+      '<button type="button" data-voice-pick="tide" class="' + (tts.getVoice() === 'tide' ? 'on' : '') + '" aria-label="潮汐"></button></div>' +
+      '<button type="button" class="btn primary voice-ok" data-voice-ok>确认</button></div></div>') +
+    pane('language',
+      '<div class="set-group"><h3>界面语言</h3><div class="set-card">' +
+      '<div class="set-row set-link" data-set-lang="zh-CN" role="button" tabindex="0"><label>简体中文</label><span class="tick" data-lang-tick>✓</span></div>' +
+      '<div class="set-row set-link" data-set-lang="en" role="button" tabindex="0"><label>English</label><span class="tick" data-lang-tick>✓</span></div>' +
+      '</div><p style="font-size:var(--fs-2xs);color:var(--text-3);line-height:1.6;margin:8px 2px 0">切换后立即生效，选择会记在本机。</p></div>') +
+    pane('about',
+      '<div class="set-group"><h3>GeoAI <span style="font-weight:400;color:var(--text-3)">v' + esc(APP_VERSION) + '</span></h3>' +
+      '<div class="set-card"><div class="set-row"><label>动态数学画板</label><span class="sublabel">代数 / 绘图 / CAS / 命令 / 表格</span></div>' +
+      '<div class="set-row set-link" data-about-updates role="button" tabindex="0"><label>更新与版本</label><span class="cur">v' + esc(APP_VERSION) + '</span><svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 5 7 7-7 7"/></svg></div>' +
+      '<div class="set-row set-link" data-about-help role="button" tabindex="0"><label>全部功能说明</label><svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 5 7 7-7 7"/></svg></div>' +
+      '</div></div>') +
+    '</div></div>';
 }
 function bindSettings() {
   const b = $('#settingsBody');
+  /* 分类导航 */
+  b.querySelectorAll('.set-nav-item').forEach(el => {
+    el.addEventListener('click', () => setSettingsCat(el.dataset.cat));
+  });
   /* 开关既可点也可用键盘（Enter / 空格）切换；aria-checked 随状态同步，
      读屏和键盘用户都能得到与视觉一致的反馈。 */
   b.querySelectorAll('[data-sw]').forEach(el => {
@@ -17809,6 +18058,103 @@ function bindSettings() {
       toast('除法最多保留 ' + SET[k] + ' 位（仅「固定位数」模式）', 'ok', 1800);
     }
   }));
+
+  /* ── 朗读分类 ── */
+  const tts = window.__tts;
+  const streamSw = b.querySelector('[data-tts-stream]');
+  if (streamSw && tts) {
+    streamSw.addEventListener('click', () => {
+      tts.setStream(!tts.getStream());
+      streamSw.classList.toggle('on', tts.getStream());
+      streamSw.setAttribute('aria-checked', String(!!tts.getStream()));
+      springSwitch(streamSw);
+    });
+    streamSw.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); streamSw.click(); } });
+  }
+  const autoSw = b.querySelector('[data-tts-auto2]');
+  if (autoSw && tts) {
+    autoSw.addEventListener('click', () => {
+      tts.setAuto(!tts.getAuto());
+      autoSw.classList.toggle('on', tts.getAuto());
+      autoSw.setAttribute('aria-checked', String(!!tts.getAuto()));
+      springSwitch(autoSw);
+    });
+    autoSw.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); autoSw.click(); } });
+  }
+  const voiceMain = b.querySelector('.speech-main');
+  const voiceSub = b.querySelector('[data-voice-sub]');
+  let previewVoice = tts ? tts.getVoice() : 'stella';
+  const voiceMeta = v => v === 'tide' ? { name: '潮汐', desc: '音色沉稳' } : { name: '星海', desc: '音色温柔' };
+  const paintVoice = () => {
+    if (!voiceSub) return;
+    const m = voiceMeta(previewVoice);
+    const hero = voiceSub.querySelector('[data-voice-hero]');
+    if (hero) hero.dataset.v = previewVoice;
+    const nm = voiceSub.querySelector('[data-voice-name]'); if (nm) nm.textContent = m.name;
+    const ds = voiceSub.querySelector('[data-voice-desc]'); if (ds) ds.textContent = m.desc;
+    voiceSub.querySelectorAll('[data-voice-pick]').forEach(x => x.classList.toggle('on', x.dataset.voicePick === previewVoice));
+  };
+  const openVoice = () => {
+    if (!voiceSub || !voiceMain) return;
+    previewVoice = tts ? tts.getVoice() : 'stella';
+    paintVoice();
+    voiceMain.classList.add('hidden');
+    voiceSub.classList.remove('hidden');
+  };
+  const closeVoice = () => {
+    if (!voiceSub || !voiceMain) return;
+    voiceSub.classList.add('hidden');
+    voiceMain.classList.remove('hidden');
+  };
+  const vo = b.querySelector('[data-voice-open]');
+  if (vo) {
+    vo.addEventListener('click', openVoice);
+    vo.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openVoice(); } });
+  }
+  const vb = b.querySelector('[data-voice-back]');
+  if (vb) vb.addEventListener('click', closeVoice);
+  b.querySelectorAll('[data-voice-pick]').forEach(x => x.addEventListener('click', () => {
+    previewVoice = x.dataset.voicePick;
+    paintVoice();
+  }));
+  const vok = b.querySelector('[data-voice-ok]');
+  if (vok) vok.addEventListener('click', () => {
+    if (tts) tts.setVoice(previewVoice);
+    const cur = b.querySelector('[data-voice-cur]');
+    if (cur) cur.textContent = voiceMeta(previewVoice).name;
+    closeVoice();
+    toast('朗读音色已切换为「' + voiceMeta(previewVoice).name + '」', 'ok', 1600);
+  });
+
+  /* ── 语言分类 ── */
+  const langRows = b.querySelectorAll('[data-set-lang]');
+  const paintLang = () => {
+    const cur = document.documentElement.lang === 'en' ? 'en' : 'zh-CN';
+    langRows.forEach(x => {
+      const on = x.dataset.setLang === cur;
+      const tick = x.querySelector('[data-lang-tick]');
+      if (tick) tick.style.opacity = on ? '1' : '0';
+      x.classList.toggle('on', on);
+    });
+  };
+  langRows.forEach(x => {
+    const go = () => {
+      const id = x.dataset.setLang;
+      if (typeof window.__setLang === 'function') window.__setLang(id);
+      paintLang();
+    };
+    x.addEventListener('click', go);
+    x.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); go(); } });
+  });
+  paintLang();
+
+  /* ── 关于分类 ── */
+  const upd = b.querySelector('[data-about-updates]');
+  if (upd) upd.addEventListener('click', () => { closeBackdrop('settingsBackdrop'); showChangelog(); });
+  const hp = b.querySelector('[data-about-help]');
+  if (hp) hp.addEventListener('click', () => { showHelp(); });
+
+  enhanceAllSelects(b);
 }
 /* ══ 单个对象的详细设置（代数栏齿轮 / 右键「对象设置」）══
    分四组：外观（颜色 / 线宽 / 线型 / 点大小）、填充、标签、文字专属。
@@ -21294,6 +21640,7 @@ function init() {
   sheetBind();
   syncMenuChecks();
   applyTheme();
+  enhanceAllSelects();   /* 页面里已有的下拉框先统一换成自绘外观 */
   /* 图标都填好之后再统一补无障碍名 */
   labelIconButtons();
 
@@ -28427,23 +28774,42 @@ function bindAI() {
      设置里能开自动朗读、切换男女声。 */
   (function initTTS() {
     const TTS_URL = 'https://api.deepseek.com/v1/tools/tts';
-    const LS_VOICE = 'ggai_tts_voice', LS_AUTO = 'ggai_tts_auto';
+    const WS_URL = 'wss://api.deepseek.com/v1/tools/tts';
+    const LS_VOICE = 'ggai_tts_voice', LS_AUTO = 'ggai_tts_auto', LS_STREAM = 'ggai_tts_stream';
     const MAX_CHARS = 4800;   /* 中文按 2 字符计费，1 万上限约合 5000 个汉字 */
-    let voice = 'stella', auto = false;
+    const PCM_RATE = 24000;   /* 流式 / 整段 pcm 都是 24kHz 单声道 16 位 */
+    let voice = 'stella', auto = false, stream = true;
     try {
       const v = localStorage.getItem(LS_VOICE);
       if (v === 'stella' || v === 'tide') voice = v;
       auto = localStorage.getItem(LS_AUTO) === '1';
+      stream = localStorage.getItem(LS_STREAM) !== '0';
     } catch (e) { }
 
     let audio = null, url = null, curBtn = null, ctrl = null;
+    let ws = null, actx = null, sources = [], settleT = 0, sess = 0;
 
     const btnIdle = b => {
       b.classList.remove('on', 'busy');
       b.title = '朗读这条回复';
       b.setAttribute('aria-label', '朗读这条回复');
     };
-    const stop = () => {
+    const btnPlaying = b => {
+      b.classList.remove('busy');
+      b.classList.add('on');
+      b.title = '停止朗读';
+      b.setAttribute('aria-label', '停止朗读');
+    };
+    /* 收掉当前所有音频 / 连接 / 请求（不推进 session，便于失败后回退） */
+    const stopAll = () => {
+      clearTimeout(settleT); settleT = 0;
+      if (ws) {
+        try { ws.onopen = ws.onmessage = ws.onerror = ws.onclose = null; ws.close(); } catch (e) { }
+        ws = null;
+      }
+      sources.forEach(s => { try { s.stop(); } catch (e) { } });
+      sources = [];
+      if (actx) { try { actx.close(); } catch (e) { } actx = null; }
       if (ctrl) { try { ctrl.abort(); } catch (e) { } ctrl = null; }
       if (audio) {
         /* 先摘回调再停，避免 pause() 触发 onerror 又走一遍收尾 */
@@ -28454,21 +28820,94 @@ function bindAI() {
       if (url) { try { URL.revokeObjectURL(url); } catch (e) { } url = null; }
       if (curBtn) { btnIdle(curBtn); curBtn = null; }
     };
+    /* 用户主动停止 / 开始新一条：作废所有在途回调 */
+    const halt = () => { sess++; stopAll(); };
+    /* 兼容旧调用点 */
+    const stop = halt;
     const plain = el => {
       /* 用 innerText 取「看得见的文字」：Markdown 符号已被渲染掉，公式也不会读成乱码 */
       const t = String(el.innerText || el.textContent || '').replace(/\u00a0/g, ' ').trim();
       return t.length > MAX_CHARS ? t.slice(0, MAX_CHARS) : t;
     };
 
-    async function speak(btn, bubble) {
-      const text = plain(bubble);
-      if (!text) return;
-      if (curBtn === btn) { stop(); return; }   /* 再点一次 = 停止 */
-      stop();
-      if (!AI_CONF.key) { toast('先点余额卡填入 DeepSeek API Key', 'err'); return; }
-      curBtn = btn;
-      btn.classList.add('busy');
-      btn.title = '正在合成…';
+    /* ── 流式：WebSocket + PCM 分片边收边播 ──
+       浏览器不能给 WebSocket 加自定义头，按官方文档用子协议传 Key；音频按 24kHz
+       解码进 AudioBuffer，排在前一段的结束时间后面连续播放。 */
+    function speakStream(text, my) {
+      return new Promise(resolve => {
+        let sock;
+        try {
+          sock = new WebSocket(WS_URL + '?format=pcm&voice_id=' + encodeURIComponent(voice),
+            ['tts', 'bearer.' + AI_CONF.key]);
+        } catch (e) { resolve(false); return; }
+        ws = sock;
+        const AC = window.AudioContext || window.webkitAudioContext;
+        let ctx;
+        try { ctx = new AC(); } catch (e) { try { sock.close(); } catch (e2) { } ws = null; resolve(false); return; }
+        actx = ctx;
+        if (ctx.state === 'suspended') { try { ctx.resume(); } catch (e) { } }
+
+        let nextAt = 0, played = false, finished = false, settled = false;
+        const fail = () => { if (settled || my !== sess) return; settled = true; stopAll(); resolve(false); };
+        const done = () => {
+          if (settled || my !== sess) return;
+          settled = true;
+          resolve(true);
+          const wait = Math.max(0, (nextAt - ctx.currentTime) * 1000) + 160;
+          settleT = setTimeout(() => { if (my === sess) { stopAll(); } }, wait);
+        };
+        const playPcm = buf => {
+          if (my !== sess || settled) return;
+          const pcm = new Int16Array(buf);
+          if (!pcm.length) return;
+          const ab = ctx.createBuffer(1, pcm.length, PCM_RATE);
+          const ch = ab.getChannelData(0);
+          for (let i = 0; i < pcm.length; i++) ch[i] = pcm[i] / 32768;
+          const src = ctx.createBufferSource();
+          src.buffer = ab; src.connect(ctx.destination);
+          const at = Math.max(ctx.currentTime + 0.08, nextAt);
+          src.start(at);
+          nextAt = at + ab.duration;
+          sources.push(src);
+          if (!played) { played = true; if (curBtn) btnPlaying(curBtn); }
+        };
+        const codeMsg = code => code === 'content_filter' ? '这段内容无法朗读（未通过内容审核）'
+          : code === 'invalid_input' ? '朗读内容不合法'
+            : code === 'service_error' ? '朗读服务繁忙，稍后再试'
+              : '朗读失败（' + code + '）';
+
+        sock.onopen = () => {
+          if (my !== sess) return;
+          /* 按句切块发送：首包更小，第一句能更早出声 */
+          const parts = text.match(/[^。！？!?\n]{1,180}[。！？!?\n]?/g) || [text];
+          parts.forEach(p => {
+            if (!p.trim()) return;
+            try { sock.send(JSON.stringify({ event: 'text', text: p })); } catch (e) { }
+          });
+          try { sock.send(JSON.stringify({ event: 'finish_text' })); } catch (e) { }
+        };
+        sock.onmessage = ev => {
+          if (my !== sess) return;
+          if (typeof ev.data === 'string') {
+            let msg = null;
+            try { msg = JSON.parse(ev.data); } catch (e) { }
+            if (!msg || msg.event !== 'finish') return;
+            finished = true;
+            if (msg.code === 'success') { if (played) done(); else fail(); }
+            else if (!played) { stopAll(); resolve(false); toast(codeMsg(msg.code), 'err', 2600); }
+            else { stopAll(); toast(codeMsg(msg.code), 'err', 2600); }
+            return;
+          }
+          if (ev.data instanceof ArrayBuffer) playPcm(ev.data);
+          else if (ev.data && typeof ev.data.arrayBuffer === 'function') ev.data.arrayBuffer().then(playPcm);
+        };
+        sock.onerror = () => { if (!played) fail(); };
+        sock.onclose = () => { if (!finished && !played) fail(); };
+      });
+    }
+
+    /* ── 整段：一次性合成 wav，作为流式不可用时的回退 ── */
+    async function speakBuffer(text, my) {
       ctrl = new AbortController();
       try {
         const res = await fetch(TTS_URL, {
@@ -28485,6 +28924,7 @@ function bindAI() {
                   : '朗读失败（HTTP ' + res.status + '）');
         const blob = await res.blob();
         if (!blob.size) throw new Error('朗读没有返回音频');
+        if (my !== sess) return;
         url = URL.createObjectURL(blob);
         audio = new Audio(url);
         audio.onended = () => {
@@ -28492,19 +28932,36 @@ function bindAI() {
           if (url) { try { URL.revokeObjectURL(url); } catch (e) { } url = null; }
           if (curBtn) { btnIdle(curBtn); curBtn = null; }
         };
-        audio.onerror = () => { stop(); toast('音频播放失败', 'err', 2400); };
-        btn.classList.remove('busy');
-        btn.classList.add('on');
-        btn.title = '停止朗读';
-        btn.setAttribute('aria-label', '停止朗读');
+        audio.onerror = () => { stopAll(); toast('音频播放失败', 'err', 2400); };
+        if (curBtn) btnPlaying(curBtn);
         await audio.play();
       } catch (e) {
         const aborted = e && e.name === 'AbortError';
-        stop();
+        if (my !== sess) return;
+        stopAll();
         if (!aborted) toast((e && e.message) || '朗读失败', 'err', 2800);
       } finally {
         ctrl = null;
       }
+    }
+
+    async function speak(btn, bubble) {
+      const text = plain(bubble);
+      if (!text) return;
+      if (curBtn === btn) { halt(); return; }   /* 再点一次 = 停止 */
+      halt();
+      if (!AI_CONF.key) { toast('先点余额卡填入 DeepSeek API Key', 'err'); return; }
+      const my = sess;
+      curBtn = btn;
+      btn.classList.add('busy');
+      btn.title = '正在合成…';
+      if (stream && window.WebSocket) {
+        const ok = await speakStream(text, my);
+        if (my !== sess) return;
+        if (ok) return;      /* 已经流式播完 / 正在播 */
+      }
+      if (my !== sess) return;   /* 流式失败时 stopAll 不改 session，这里继续走整段 */
+      await speakBuffer(text, my);
     }
 
     /* 消息头是流式插入的，逐条绑会漏；统一委托到 document 一次 */
@@ -28530,17 +28987,23 @@ function bindAI() {
     window.__tts = {
       getAuto: () => auto,
       getVoice: () => voice,
+      getStream: () => stream,
       setAuto(on) {
         auto = !!on;
         try { localStorage.setItem(LS_AUTO, auto ? '1' : '0'); } catch (e) { }
-        if (!auto) stop();
+        if (!auto) halt();
+      },
+      setStream(on) {
+        stream = !!on;
+        try { localStorage.setItem(LS_STREAM, stream ? '1' : '0'); } catch (e) { }
+        if (curBtn) halt();   /* 播放中断开流式，避免新旧两条混着播 */
       },
       setVoice(v) {
         voice = v === 'tide' ? 'tide' : 'stella';
         try { localStorage.setItem(LS_VOICE, voice); } catch (e) { }
-        if (curBtn) stop();   /* 换声音后，下次朗读按新声音重来 */
+        if (curBtn) halt();   /* 换声音后，下次朗读按新声音重来 */
       },
-      stop: stop
+      stop: halt
     };
   })();
 
@@ -30114,6 +30577,18 @@ async function aiSend() {
     '朗读': 'Read aloud', '朗读这条回复': 'Read this reply aloud', '停止朗读': 'Stop reading',
     '正在合成…': 'Synthesizing…', '自动朗读回复': 'Auto-read replies',
     '声音': 'Voice', '朗读声音': 'Reading voice', '女声 · Stella': 'Female · Stella', '男声 · Tide': 'Male · Tide',
+    /* 设置分类 */
+    '通用': 'General', '视图': 'View', '对象': 'Object', '计算': 'Calculation', '语音': 'Speech',
+    '外观': 'Appearance', '智能': 'AI', '绘图区': 'Canvas', '对象样式': 'Object style',
+    '计算精度': 'Precision', '界面语言': 'Interface language',
+    '浅色': 'Light', '深色': 'Dark', '度 (°)': 'Degrees (°)', '弧度': 'Radians',
+    '算到循环节': 'Recurring decimal', '固定位数': 'Fixed digits',
+    '流式朗读': 'Streaming playback', '边说边播，第一句更快出声': 'Play while synthesizing — the first sentence starts sooner',
+    '只读正常答完的回复，中止或报错不读': 'Only completed replies; stopped or failed ones are skipped',
+    '朗读音色': 'Reading voice', '星海': 'Stella', '潮汐': 'Tide', '音色温柔': 'Gentle', '音色沉稳': 'Deep',
+    '切换后立即生效，选择会记在本机。': 'Applies immediately; your choice is saved on this device.',
+    '动态数学画板': 'Dynamic math board', '代数 / 绘图 / CAS / 命令 / 表格': 'Algebra / Graphics / CAS / Commands / Sheet',
+    '设置分类': 'Settings categories',
     'API Key 无效或已失效': 'API Key is invalid or expired',
     '这段内容无法朗读（没有可读文字或未通过内容审核）': 'This text cannot be read (no readable text or failed content review)',
     '朗读请求太频繁，稍后再试': 'Too many reading requests — try again later',
