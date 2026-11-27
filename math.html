@@ -1455,9 +1455,9 @@ body.dark .eff-warn{color:#c39bff}
 }
 .eff-css:hover{background:var(--hover);color:var(--accent)}
 .eff-css:active{transform:scale(.94)}
-.eff-css svg{width:17px;height:17px}
-.eff-css.on{color:#fff;background:var(--accent);box-shadow:0 2px 10px var(--accent-soft)}
-.eff-css.on:hover{background:var(--accent-h);color:#fff}
+.eff-css svg{width:18px;height:18px}
+.eff-css.on{color:#fff;background:linear-gradient(135deg,#3a83f7,#b47cff);box-shadow:0 2px 10px rgba(100,120,255,.42)}
+.eff-css.on:hover{background:linear-gradient(135deg,#2f74e4,#a568f5);color:#fff}
 /* 臻彩模式：滑条变成流动的彩虹光，提示行跟着点亮 */
 .eff-pop.beautify .eff-fill{
   background-image:linear-gradient(90deg,#ff6b6b,#ffb84d,#7bd88a,#4facfe,#b47cff,#ff6b6b)!important;
@@ -1470,20 +1470,22 @@ body.dark .eff-warn{color:#c39bff}
   animation:effKnobGlow 2.6s ease-in-out infinite;
 }
 @keyframes effKnobGlow{0%,100%{filter:hue-rotate(0)}50%{filter:hue-rotate(80deg)}}
-/* 臻彩模式的提示：和「更快消耗使用额度」同一套位置 / 字重 / 淡入方式 */
+/* 臻彩模式的提示：与「更快消耗使用额度」同一处、同样 18px 行高、同样 .18s 淡入，
+   1.8 秒后自动淡出、标题回来——只是多一行动作说明，避免挤到左上角的开关 */
 .eff-beautify{
-  position:absolute;top:8px;left:12px;right:42px;height:42px;display:flex;align-items:center;
-  justify-content:center;font-size:var(--fs-xs);font-weight:600;line-height:18px;text-align:center;
-  color:var(--accent);opacity:0;pointer-events:none;transition:opacity .18s ease;
+  position:absolute;top:8px;left:40px;right:40px;height:42px;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;font-size:var(--fs-xs);font-weight:600;line-height:18px;
+  text-align:center;color:var(--accent);opacity:0;pointer-events:none;transition:opacity .18s ease;
 }
-.eff-pop.beautify .eff-pop-txt{opacity:0}
-.eff-pop.beautify .eff-beautify{opacity:1}
+.eff-beautify span{font-size:var(--fs-2xs);font-weight:500;line-height:16px;color:var(--text-3)}
+.eff-pop.showhint .eff-pop-txt{opacity:0}
+.eff-pop.showhint .eff-beautify{opacity:1}
 .eff-pop.warn .eff-beautify{opacity:0}
 /* 思考强度面板：参考 ChatGPT 模型强度滑条——毛玻璃浮层、离散档位、
    拖动时旋钮跟手，松手吸附；更换档位时标题做一次淡入淡出 */
-.eff-pop{background:rgba(255,255,255,.62);
+.eff-pop{background:rgba(255,255,255,.8);
   -webkit-backdrop-filter:blur(40px) saturate(190%);backdrop-filter:blur(40px) saturate(190%)}
-body.dark .eff-pop{background:rgba(28,30,36,.64)}
+body.dark .eff-pop{background:rgba(28,30,36,.82)}
 /* 标题 / 副标题换档时淡入，像参考里「5.6 High → 5.5 Instant」的切换 */
 .eff-pop-txt.xfade .eff-pop-ttl,.eff-pop-txt.xfade .eff-pop-sub{animation:effLabel .24s var(--ease-out) both}
 @keyframes effLabel{from{opacity:0;transform:translateY(3px)}to{opacity:1;transform:none}}
@@ -3830,7 +3832,9 @@ try {
               <div class="eff-pop-head">
                 <button class="eff-css" id="effCssOpen" type="button" title="臻彩模式：画完图，配一张好看的卡片" aria-label="臻彩模式" aria-pressed="false" aria-haspopup="false">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                    <path d="M12 3.4l2.42 5.2 5.7.74-4.18 3.96 1.07 5.66L12 16.2l-5.01 2.76 1.07-5.66L3.88 9.34l5.7-.74z" fill="currentColor" fill-opacity=".16"></path>
+                    <path d="M9.4 4.5l1.65 3.95 3.95 1.65-3.95 1.65L9.4 15.7l-1.65-3.95L3.8 10.1l3.95-1.65z" fill="currentColor" fill-opacity=".2"></path>
+                    <path d="M17.1 13.2l.72 1.73 1.73.72-1.73.72-.72 1.73-.72-1.73-1.73-.72 1.73-.72z" fill="currentColor" fill-opacity=".2"></path>
+                    <path d="M17.4 3.6l.52 1.25 1.25.52-1.25.52-.52 1.25-.52-1.25-1.25-.52 1.25-.52z"></path>
                   </svg>
                 </button>
                 <div class="eff-pop-txt">
@@ -3838,7 +3842,7 @@ try {
                   <div class="eff-pop-sub" id="effPopDesc">默认档，响应快，适合日常作图与简单计算</div>
                 </div>
                 <div class="eff-warn" id="effPopWarn">更快消耗使用额度</div>
-                <div class="eff-beautify" id="effPopBeautify">臻彩模式 · 画完图配一张好看的卡片</div>
+                <div class="eff-beautify" id="effPopBeautify">臻彩模式已开启<span>画完图，配一张好看的卡片</span></div>
                 <button class="eff-pop-reset" id="effPopReset" title="恢复默认（Low）" aria-label="恢复默认（Low）"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11a8 8 0 1 0-1.2 5.5"></path><path d="M20 5v5.6h-5.4"></path></svg></button>
               </div>
               <span class="eff-slider" id="effSliderBig">
@@ -4678,9 +4682,9 @@ const APP_VERSION = '2.2.2';
 const APP_CHANGELOG = [
   {
     v: '2.2.2', date: '2026-11-27', tag: '臻彩模式', code: '约 4.3 万行 · 2.7 MB',
-    lead: '思考强度面板左上角多了一枚星标：一键打开「臻彩模式」——滑条亮起彩虹流光，之后 AI 画完图会再配一张好看的卡片。',
+    lead: '思考强度面板左上角多了一枚微光星标：一键打开「臻彩模式」——滑条亮起彩虹流光，之后 AI 画完图会再配一张好看的卡片。',
     notes: [
-      '点开后滑条变成流动的彩虹光、旋钮带柔光，面板标题处一行小字说明「画完图配一张好看的卡片」；再点一次关闭，提示随之恢复',
+      '点开后滑条变成流动的彩虹光、旋钮带柔光，面板标题处短暂亮起「臻彩模式已开启」与一行说明，1.8 秒后自动淡出、恢复档位文字；再点一次关闭',
       '打开时给模型追加一段指令：主体图形画完后输出一个 ```html 块，做一张与题目呼应的标题 / 结论 / 公式卡片（可带动画），不遮挡关键图形',
       '偏好记在本机；切换时一条轻提示说明当前状态',
       '修复：卡片编辑器的「取消」与右上 ✕ 点不动——动态插入的模态没被初始化时的 data-close 扫描覆盖，现在自行绑定',
@@ -13590,16 +13594,27 @@ const CSSM = (() => {
   try { return Object.assign({ on: false }, JSON.parse(localStorage.getItem(CSSM_KEY) || '{}')); }
   catch (e) { return { on: false }; }
 })();
+let cssHintT = 0;
 function applyCssMode() {
   const b = $('#effCssOpen');
   if (b) { b.classList.toggle('on', !!CSSM.on); b.setAttribute('aria-pressed', CSSM.on ? 'true' : 'false'); }
   const pop = $('#effPop');
-  if (pop) pop.classList.toggle('beautify', !!CSSM.on);
+  if (pop) {
+    pop.classList.toggle('beautify', !!CSSM.on);
+    if (!CSSM.on) { clearTimeout(cssHintT); pop.classList.remove('showhint'); }
+  }
   try { localStorage.setItem(CSSM_KEY, JSON.stringify(CSSM)); } catch (e) { }
 }
+/* 和「更快消耗使用额度」同一条节奏：短暂顶替标题，1.8 秒后淡出、标题回来 */
 function toggleCssMode() {
   CSSM.on = !CSSM.on;
   applyCssMode();
+  const pop = $('#effPop');
+  if (CSSM.on && pop) {
+    clearTimeout(cssHintT);
+    pop.classList.add('showhint');
+    cssHintT = setTimeout(() => pop.classList.remove('showhint'), 1800);
+  }
   toast(CSSM.on ? '臻彩模式已开启：画完图，AI 会配一张好看的卡片' : '臻彩模式已关闭：AI 只画图', 'ok', 2200);
 }
 let cardIdSeq = 0;
@@ -32357,18 +32372,23 @@ async function runUITest() {
     if (!$('#cardBackdrop').classList.contains('on')) throw new Error('卡片编辑器没有打开');
     $('#cardBackdrop .modal-foot [data-close]').click(); await sleep(0);
     if ($('#cardBackdrop').classList.contains('on')) throw new Error('编辑器取消按钮点不动');
-    /* 「美化模式」开关：点亮图标、滑条亮起彩虹流光，并把配卡指令写进系统提示 */
+    /* 「臻彩模式」开关：点亮图标、滑条亮起彩虹流光，并把配卡指令写进系统提示 */
     CSSM.on = false; applyCssMode();
     if (aiSystemPrompt().indexOf('CSS 配图模式') >= 0) throw new Error('默认不该带配 CSS 指令');
     $('#effortBox').click(); await sleep(0);
     $('#effCssOpen').click(); await sleep(0);
     if (!CSSM.on || !$('#effCssOpen').classList.contains('on')) throw new Error('开关没有激活');
     if (!$('#effPop').classList.contains('beautify')) throw new Error('滑条没有亮起彩虹流光');
+    if (!$('#effPop').classList.contains('showhint')) throw new Error('开启时没有顶替标题做提示');
     if (!$('#effPop').classList.contains('on')) throw new Error('点开关不该关掉面板');
     if (aiSystemPrompt().indexOf('CSS 配图模式') < 0) throw new Error('开启后系统提示没有加指令');
+    await sleep(1950);
+    if ($('#effPop').classList.contains('showhint')) throw new Error('提示文字没有自动消失');
+    if (!$('#effPop').classList.contains('beautify')) throw new Error('提示消失后流光也跟着没了');
     $('#effCssOpen').click(); await sleep(0);
     if (CSSM.on || aiSystemPrompt().indexOf('CSS 配图模式') >= 0) throw new Error('再点一次没有关闭');
     if ($('#effPop').classList.contains('beautify')) throw new Error('关闭后流光没有停');
+    if ($('#effPop').classList.contains('showhint')) throw new Error('关闭后提示没有收起');
     $('#effortBox').click(); await sleep(0);
     if ($('#cssMode')) throw new Error('不该有二级面板');
     clearAll(); await sleep(0);
@@ -39180,7 +39200,7 @@ function bindAI() {
     });
     rst.addEventListener('animationend', () => rst.classList.remove('spin'));
   }
-  /* 面板左上角的小图标：切换「美化模式」，滑条会亮起彩虹流光，面板保持打开 */
+  /* 面板左上角的小图标：切换「臻彩模式」，滑条会亮起彩虹流光，面板保持打开 */
   const cssBtn = $('#effCssOpen');
   if (cssBtn) cssBtn.addEventListener('click', () => { toggleCssMode(); });
   /* 浅 / 深色切换时按另一套深色色板重绘（色板在 JS 里，不是 CSS 变量） */
