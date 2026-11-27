@@ -13588,6 +13588,13 @@ function buildCardEl(c) {
   el.querySelector('.edit').addEventListener('click', e => { e.preventDefault(); e.stopPropagation(); openHtmlCardEditor(c.id); });
   el.querySelector('.del').addEventListener('click', e => { e.preventDefault(); e.stopPropagation(); deleteCanvasCard(c.id); });
   el.addEventListener('dblclick', e => { e.preventDefault(); e.stopPropagation(); openHtmlCardEditor(c.id); });
+  /* 键盘：Tab 到卡片即选中，Enter 编辑，Delete 删除（和画布对象一致的直觉） */
+  el.addEventListener('focus', () => selectCanvasCard(c.id));
+  el.addEventListener('keydown', e => {
+    if (e.key === 'Enter') { e.preventDefault(); openHtmlCardEditor(c.id); }
+    else if (e.key === 'Delete' || e.key === 'Backspace') { e.preventDefault(); deleteCanvasCard(c.id); }
+    else if (e.key === ' ') { e.preventDefault(); }
+  });
   el.addEventListener('pointerdown', e => startCardDrag(e, c.id));
   return el;
 }
@@ -13639,10 +13646,12 @@ function addCanvasCard(code, opts) {
   const w = clamp(Math.round(o.w || 420), 80, 2400);
   const h = clamp(Math.round(o.h || 240), 40, 2400);
   const n = state.cards.length % 5;
+  const s = state.view.scale || CARD_BASE;
   const c = {
     id: nextCardId(),
-    x: o.x != null ? o.x : state.view.cx - (w / 2) / CARD_BASE + n * 18 / CARD_BASE,
-    y: o.y != null ? o.y : state.view.cy + (h / 2) / CARD_BASE - n * 14 / CARD_BASE,
+    /* 放在当前视图中心；按「当前每单位像素」换算，缩放后新建也不会落到视野外 */
+    x: o.x != null ? o.x : state.view.cx - (w / 2) / s + n * 18 / s,
+    y: o.y != null ? o.y : state.view.cy + (h / 2) / s - n * 14 / s,
     w, h, code: sanitizeCardCode(code),
   };
   state.cards.push(c);
@@ -13722,8 +13731,8 @@ function saveCardFromEditor() {
   else {
     addCanvasCard(code, {
       w, h,
-      x: state.view.cx - (w / 2) / CARD_BASE,
-      y: state.view.cy + (h / 2) / CARD_BASE,
+      x: state.view.cx - (w / 2) / (state.view.scale || CARD_BASE),
+      y: state.view.cy + (h / 2) / (state.view.scale || CARD_BASE),
     });
   }
   closeBackdrop('cardBackdrop');
@@ -19214,7 +19223,11 @@ function canvasShotRegion(x1, y1, x2, y2) {
     view: { ...state.view }, sel: state.selection.slice(), hov: state.hover,
   };
   let data = '';
+  const cardLayerEl = $('#cardLayer');
+  const cardVis = cardLayerEl ? cardLayerEl.style.visibility : '';
   try {
+    /* 卡片是 DOM 层，截不到画布里；先藏起来，免得截屏期间它们按临时视图跳位闪一下 */
+    if (cardLayerEl) cardLayerEl.style.visibility = 'hidden';
     canvas.style.width = outW + 'px';
     canvas.style.height = outH + 'px';
     canvas.width = Math.round(outW * dpr);
@@ -19238,6 +19251,7 @@ function canvasShotRegion(x1, y1, x2, y2) {
     state.selection = saved.sel;
     state.hover = saved.hov;
     ctx.setTransform(baseDpr, 0, 0, baseDpr, 0, 0);
+    if (cardLayerEl) cardLayerEl.style.visibility = cardVis;
     draw();
   }
   const bytes = Math.round((data.length - data.indexOf(',') - 1) * 3 / 4);
@@ -27615,8 +27629,11 @@ function bindShare() {
 function exportPng() {
   if (basicBlocked('导出图片')) return;
   const prev = state.selection; state.selection = []; draw();
+  const nCards = state.cards.length;
   canvas.toBlob(blob => {
-    downloadBlob(blob, '绘图-' + stamp() + '.png'); toast('已导出 PNG', 'ok');
+    downloadBlob(blob, '绘图-' + stamp() + '.png');
+    /* 卡片是 DOM 层，画布导不出来：明说一声，别让用户以为图里少了东西 */
+    toast(nCards ? '已导出 PNG（不含 ' + nCards + ' 张 HTML 卡片）' : '已导出 PNG', 'ok', nCards ? 2600 : 1600);
     /* 编码是异步的：期间用户可能已经改了选区，甚至删掉了对象。
        只在当前仍为空时还原，且丢掉已不存在的 id，别把新选择覆盖回旧值。 */
     if (!state.selection.length) {
@@ -40521,15 +40538,21 @@ function aiAllBlocks(text) {
 /* 把 HTML 卡片块贴到画布上，返回与命令结果同构的记录，好让 AI 的 Observation 一起看到 */
 function applyAiCardBlocks(blocks) {
   const rs = [];
-  for (const b of blocks) {
+  const s = state.view.scale || CARD_BASE;
+  blocks.forEach((b, i) => {
     try {
       if (!String(b.code || '').trim()) throw new Error('卡片内容是空的');
-      const c = addCanvasCard(b.code, { x: state.view.cx - 210 / CARD_BASE, y: state.view.cy + 120 / CARD_BASE, w: 420, h: 240 });
+      /* 多张卡片依次错开，别叠在同一处 */
+      const c = addCanvasCard(b.code, {
+        w: 420, h: 240,
+        x: state.view.cx - 210 / s + i * 16 / s,
+        y: state.view.cy + 120 / s - i * 12 / s,
+      });
       rs.push({ line: 'HTML 卡片', ok: true, label: c.id, err: '' });
     } catch (e) {
       rs.push({ line: 'HTML 卡片', ok: false, label: '', err: (e && e.message) || String(e) });
     }
-  }
+  });
   renderCards();
   return rs;
 }
@@ -40561,14 +40584,17 @@ function extractGeoCommands(text) {
 function isAiDoneLine(t) { return /^(done|finish(ed)?|完成|结束|作图完成)[.。!！]?$/i.test(String(t || '').trim()); }
 function buildCanvasContext() {
   const list = state.objects.filter(o => !o.aux);
-  if (!list.length) return '【当前画布】空（还没有任何对象）';
+  const cardLine = state.cards.length
+    ? '\n【画布卡片】已有 ' + state.cards.length + ' 张 HTML / CSS 卡片（装饰与说明；要换内容就重新输出一个 ```html 块）'
+    : '';
+  if (!list.length) return '【当前画布】空（还没有任何对象）' + cardLine;
   /* 单行超过 160 字符就截断：CAS 生成的 π 几万位这类长结果不能整段回传给模型，太费 token */
   const lines = list.map(o => {
     let s = '· ' + o.label + '：' + defText(o);
     if (s.length > 160) s = s.slice(0, 160) + '…（共 ' + s.length + ' 字符，完整值在画布 / CAS 面板）';
     return s;
   });
-  return '【当前画布】共 ' + list.length + ' 个对象：\n' + lines.join('\n');
+  return '【当前画布】共 ' + list.length + ' 个对象：\n' + lines.join('\n') + cardLine;
 }
 function stopAI() { if (state.aiAbort) state.aiAbort.abort(); }
 /* ── 上下文用量 ──
@@ -41293,12 +41319,13 @@ async function aiSend() {
       ];
       const obsText = (rs, raw) => {
         const labels = state.objects.filter(o => !o.aux).map(o => o.label).filter(Boolean);
+        const cardNote = state.cards.length ? '；另有 ' + state.cards.length + ' 张 HTML 卡片' : '';
         if (!rs.length) return 'Observation: 没有可执行的命令。' + (raw ? '' : '代码块是空的。') +
-          '请输出一个 ```geogebra 动作（1~4 条命令），或已经画完就输出 ```done。\n当前画布对象（' + labels.length + ' 个）：' + (labels.join(', ') || '空');
+          '请输出一个 ```geogebra 动作（1~4 条命令）或 ```html 卡片，已经画完就输出 ```done。\n当前画布对象（' + labels.length + ' 个）：' + (labels.join(', ') || '空') + cardNote;
         const lines = rs.map(r => '· ' + r.line + ' → ' + (r.ok ? '成功' + (r.label ? '，生成 ' + r.label : '') : '失败：' + r.err));
         const failed = rs.filter(r => !r.ok).length;
         return 'Observation:\n' + lines.join('\n') +
-          '\n当前画布对象（' + labels.length + ' 个）：' + (labels.join(', ') || '空') +
+          '\n当前画布对象（' + labels.length + ' 个）：' + (labels.join(', ') || '空') + cardNote +
           (failed ? '\n其中 ' + failed + ' 条失败：请换一种构造或改用正确的对象名，不要原样重发同一条命令。'
             : '\n继续下一步；如果整幅图已经画完，就输出 ```done 结束。');
       };
@@ -41406,7 +41433,12 @@ async function aiSend() {
         }
         const sigBefore = canvasSig();
         const rs = [];
-        if (rawCards.length) rs.push(...applyAiCardBlocks(rawCards));
+        if (rawCards.length) {
+          if (!undoPushed) { pushUndo(); undoPushed = true; turnBefore = new Set(state.objects.map(o => o.id)); }
+          const cardRs = applyAiCardBlocks(rawCards);
+          renderExec(cardRs, stepEl);
+          rs.push(...cardRs);
+        }
         if (cmds.length) rs.push(...execLines(cmds, stepEl));
         const canvasChanged = canvasSig() !== sigBefore;
         const bad = rs.filter(r => !r.ok);
