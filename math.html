@@ -1006,7 +1006,7 @@ body.tool-folded .tool-head{padding-bottom:0}
 .hcard-tools button{
   pointer-events:auto;width:26px;height:26px;border-radius:8px;display:flex;align-items:center;justify-content:center;
   background:rgba(255,255,255,.92);color:#1c1c1e;border:.5px solid rgba(0,0,0,.14);
-  box-shadow:0 2px 8px rgba(0,0,0,.18);font-size:13px;line-height:1;
+  box-shadow:0 2px 8px rgba(0,0,0,.18);font-size:var(--fs-xs);line-height:1;
 }
 .hcard-tools button:active{transform:scale(.94)}
 .hcard-tools button.del{color:#c3271e}
@@ -1031,7 +1031,7 @@ body.tool-folded .tool-head{padding-bottom:0}
 }
 .ce-code{
   width:100%;height:300px;resize:vertical;background:var(--panel-2);border:.5px solid var(--border);
-  border-radius:12px;padding:11px 12px;font-family:var(--mono);font-size:12.5px;line-height:1.55;
+  border-radius:12px;padding:11px 12px;font-family:var(--mono);font-size:var(--fs-2xs);line-height:1.55;
   color:var(--text);tab-size:2;white-space:pre;overflow:auto;
 }
 .ce-code:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-dim)}
@@ -3389,11 +3389,15 @@ body.kb-open .ai-dock.sheet-open .ai-sheet{max-height:max(140px,calc(100dvh - va
   /* 侧栏浮层展开时，画布左缘的菜单键与 AI 输入条一起让到它右侧 */
   body:has(#sidebar:not(.hidden)) .fmenu-bar{left:calc(var(--sb-w) + 24px + env(safe-area-inset-left,0px))}
   body:has(#sidebar:not(.hidden)) .ai-dock{
-    left:calc(var(--sb-w) + 24px + env(safe-area-inset-left,0px));right:22px;
+    /* 右边留出缩放 / 图层竖条的宽度：窗口不够宽时（常见 1024×600）
+       输入条以前会一直顶到右边缘，把图层键和缩放键整条盖住 */
+    left:calc(var(--sb-w) + 24px + env(safe-area-inset-left,0px));
+    right:calc(64px + env(safe-area-inset-right,0px));
     width:auto;max-width:760px;margin-left:auto;margin-right:auto;transform:none;
   }
   body:has(#sidebar:not(.hidden)):has(.ai-dock.sheet-open) .ai-dock{
-    left:calc(var(--sb-w) + 24px + env(safe-area-inset-left,0px));right:22px;
+    left:calc(var(--sb-w) + 24px + env(safe-area-inset-left,0px));
+    right:calc(64px + env(safe-area-inset-right,0px));
     width:auto;max-width:880px;
   }
   /* 提示条 / 恢复卡在「剩余画布」里居中，不被玻璃卡片压住 */
@@ -4631,8 +4635,21 @@ const state = {
    版本号在左上角 GeoAI 打开的「更新与版本」弹窗里展示。改完版本号后，在
    APP_CHANGELOG 最上面补一条（版本、日期、类型、一句摘要、几条说明），
    新版本会自动出现在版本历史里。 */
-const APP_VERSION = '2.1.0';
+const APP_VERSION = '2.2.0';
 const APP_CHANGELOG = [
+  {
+    v: '2.2.0', date: '2026-11-27', tag: '画布卡片', code: '约 4.3 万行 · 2.7 MB',
+    lead: '画布上可以直接渲染 HTML / CSS：写一段自包含的排版或动画，就成了一张随缩放平移、可拖动编辑的卡片；AI 也能用 ```html 代码块生成它。',
+    notes: [
+      '画布 HTML / CSS 卡片：菜单「编辑 → 插入 HTML / CSS 卡片…」，或命令 HTMLCard() 打开编辑器；左侧实时预览，右侧写 HTML + <style>，支持 @keyframes 动画、渐变、圆角与阴影',
+      '卡片跟随画布：按世界坐标定位、随缩放平移一起变换，设计稿按标准视图 1:1 排版；拖动卡片可移动并自动置顶，双击编辑，✕ 删除，选中后按 Delete 也能删',
+      '安全隔离：内容跑在 Shadow DOM 里，样式不会漏到主界面；<script>、<iframe>、表单与 on* 事件属性在入口处一律剥掉',
+      'AI 作图新增 ```html 动作：模型可以在讲解里直接贴一张标题卡 / 说明卡，生成结果和命令一起回传 Observation，下一步能接着改；系统提示写明了排版约定与禁用项',
+      '命令：HTMLCard("HTML+CSS", 宽, 高) 直接建卡；ClearCards() 清空全部卡片；卡片随构造文件、在线分享、自动保存、撤销 / 重做一起走',
+      '修复：移动端（2~3 倍屏）AI 截屏后画布整体缩小到一角——截图结束时按原设备像素比重设变换矩阵，不再用固定的 1x',
+      '修复：窄窗口（如 1024×600）侧栏展开时 AI 输入条一直顶到右边缘，把缩放与图层竖条整条盖住；现在右侧留出竖条宽度的安全区',
+    ],
+  },
   {
     v: '2.1.0', date: '2026-11-27', tag: '手机布局', code: '约 4.1 万行 · 2.5 MB',
     lead: '手机与平板的输入体验重做：不打开侧栏也能直接写公式，绘图提示条升级成可输入的操作条，Pad 上的回车在软键盘与手写输入法下都能真正执行。',
@@ -12219,6 +12236,8 @@ function draw() {
   for (const o of objs) if (sel(o.id)) withReveal(o, () => highlightObject(o));
   /* 9. 预览 */
   drawPreview();
+  /* 9.4 HTML / CSS 卡片：DOM 层，随视图缩放平移 */
+  renderCards();
   /* 9.5 悬停提示 */
   drawHoverTip(W, H);
   updateBadge();
@@ -13378,7 +13397,9 @@ function canvasRestorePrompt(force) {
   const when = (w.getMonth() + 1) + '月' + w.getDate() + '日 ' + pad(w.getHours()) + ':' + pad(w.getMinutes());
   card.innerHTML =
     '<span class="cr-ic">' + ICON.layers + '</span>' +
-    '<div class="cr-txt"><b>上次的画布</b><span>' + (rec.n || (d.o.length + ((d.h && d.h.length) || 0))) + ' 个元素 · ' + when + ' 自动保存</span></div>' +
+    '<div class="cr-txt"><b>上次的画布</b><span>' + (d.o.length || 0) + ' 个对象'
+      + (((d.h && d.h.length) ? ' · ' + d.h.length + ' 张卡片' : ''))
+      + ' · ' + when + ' 自动保存</span></div>' +
     '<button class="cr-ok" type="button">恢复</button>' +
     '<button class="cr-no" type="button">丢弃</button>';
   host.appendChild(card);
@@ -18679,6 +18700,19 @@ C('Delete', 'Delete(对象)', '删除对象及其后代', (a) => {
 }, ['删除']);
 COMMANDS['delete'].tolerant = true;   /* 删除列表里可以夹不存在的名字 */
 C('DeleteAll', 'DeleteAll()', '清空所有对象', () => { clearAll(); return []; }, ['清空']);
+C('HTMLCard', 'HTMLCard() 或 HTMLCard("HTML+CSS", 宽, 高)', '画布上插入一张 HTML / CSS 卡片（支持 CSS 动画）；不写内容则打开编辑器', (a) => {
+  const raw = a.length && typeof a[0].val === 'string' ? String(a[0].val) : '';
+  if (!raw.trim()) { openHtmlCardEditor(); return []; }
+  addCanvasCard(raw, {
+    w: a[1] ? Math.round(AN(a[1])) : 420,
+    h: a[2] ? Math.round(AN(a[2])) : 240,
+  });
+  return [];
+}, ['卡片', 'HTML卡片']);
+C('ClearCards', 'ClearCards()', '删除画布上的全部 HTML / CSS 卡片', () => {
+  if (state.cards.length) { pushUndo(); state.cards = []; state.cardSel = null; renderCards(); }
+  return [];
+}, ['清空卡片']);
 C('SetColor', 'SetColor(对象, "#ff0000")', '设置颜色', (a) => {
   const c = String(a[1].val ?? a[1].src).replace(/"/g, '');
   if (!/^#[0-9a-f]{6}$/i.test(c)) return [];
@@ -19168,6 +19202,9 @@ function canvasShotRegion(x1, y1, x2, y2) {
   const outW = Math.max(48, Math.round(wW * k)), outH = Math.max(48, Math.round(wH * k));
   /* 固定 1x：AI 只看内容，不需要视网膜精度，2x 会让 JPEG 编码耗时翻四倍 */
   const dpr = 1;
+  /* 手机 / 平板是 2~3 倍屏，canvas 的 backing store 比 CSS 尺寸大；
+     截图结束后必须按「原来的」比例恢复变换矩阵，否则整张画布会缩到左上角一小块。 */
+  const baseDpr = canvas.clientWidth ? (canvas.width / canvas.clientWidth) : (window.devicePixelRatio || 1);
   const saved = {
     w: canvas.width, h: canvas.height, cssW: canvas.style.width, cssH: canvas.style.height,
     view: { ...state.view }, sel: state.selection.slice(), hov: state.hover,
@@ -19196,7 +19233,7 @@ function canvasShotRegion(x1, y1, x2, y2) {
     state.view = saved.view;
     state.selection = saved.sel;
     state.hover = saved.hov;
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.setTransform(baseDpr, 0, 0, baseDpr, 0, 0);
     draw();
   }
   const bytes = Math.round((data.length - data.indexOf(',') - 1) * 3 / 4);
@@ -22653,6 +22690,8 @@ function bindCanvas() {
   }
   /* 指针按下：桌面鼠标与单指触屏共用同一套逻辑（触屏在下面转成这个事件对象的形状） */
   function onCanvasDown(e) {
+    /* 点画布空白处 = 取消卡片选中，卡片上的键盘删除随之失效，不会误删 */
+    if (state.cardSel) { state.cardSel = null; renderCards(); }
     if (e.button === 1 || e.button === 2 || TOOLS[state.tool].kind === 'pan' || e.shiftKey && state.tool === 'move') {
       panning = { x: e.clientX, y: e.clientY, cx: state.view.cx, cy: state.view.cy };
       canvas.style.cursor = 'grabbing'; e.preventDefault(); return;
@@ -26951,6 +26990,7 @@ function doMenuAction(a) {
       break;
     }
     case 'rename': renameSelected(); break;
+    case 'htmlcard': openHtmlCardEditor(); break;
     case 'clear': doClearAll(); break;
     case 'toggleGrid': SET.grid = !SET.grid; draw(); syncMenuChecks(); saveSET(); break;
     case 'toggleAxes': SET.axes = !SET.axes; draw(); syncMenuChecks(); saveSET(); break;
@@ -27283,7 +27323,7 @@ function exportCmdText() {
 }
 function saveFile() {
   if (basicBlocked('下载构造文件')) return;
-  const data = { app: 'GeoGebraAI', version: 1, saved: new Date().toISOString(), settings: SET, view: state.view, objects: serializeAll(), sheet: state.sheet.cells, layers: state.layers, curLayer: state.curLayer };
+  const data = { app: 'GeoGebraAI', version: 1, saved: new Date().toISOString(), settings: SET, view: state.view, objects: serializeAll(), cards: state.cards.map(c => ({ ...c })), sheet: state.sheet.cells, layers: state.layers, curLayer: state.curLayer };
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
   downloadBlob(blob, '构造-' + stamp() + '.json');
   toast('已下载构造文件', 'ok');
@@ -27333,7 +27373,7 @@ function parseShareKey(raw) {
 function shareSnapshotText() {
   return JSON.stringify({
     app: 'GeoGebraAI', version: 1, saved: new Date().toISOString(),
-    view: state.view, objects: serializeAll(), sheet: state.sheet.cells,
+    view: state.view, objects: serializeAll(), cards: state.cards.map(c => ({ ...c })), sheet: state.sheet.cells,
     layers: state.layers, curLayer: state.curLayer,
   });
 }
@@ -27385,7 +27425,7 @@ async function loadShare(rawOrKey) {
   if (!key) throw new Error('标识码不对：应为 geoai- 加 8 位字符，或一条分享链接');
   const d = await shareDownload(key);
   pushUndo();
-  loadSnapshot(JSON.stringify({ o: d.objects, v: d.view || state.view, s: d.sheet || {}, ly: d.layers, cl: d.curLayer }));
+  loadSnapshot(JSON.stringify({ o: d.objects, v: d.view || state.view, s: d.sheet || {}, ly: d.layers, cl: d.curLayer, h: d.cards || [] }));
   if (d.settings) Object.assign(SET, d.settings);
   recomputeAll(); refreshAlgebra(); setTool('move'); draw();
   lastShareKey = '';      /* 载入别人的分享后，再分享应生成新码，别把原记录覆盖掉 */
@@ -28357,7 +28397,7 @@ function downloadBlob(blob, name) {
 /* 载入一份「下载构造文件」格式的数据。调用方负责先 pushUndo 并保留载入前的快照；
    这里只做载入本身。文件声称有对象却一个都没建出来时抛错，交给调用方回滚。 */
 function loadConstructionData(d) {
-  loadSnapshot(JSON.stringify({ o: d.objects, v: d.view || state.view, s: d.sheet || {}, ly: d.layers, cl: d.curLayer }));
+  loadSnapshot(JSON.stringify({ o: d.objects, v: d.view || state.view, s: d.sheet || {}, ly: d.layers, cl: d.curLayer, h: d.cards || [] }));
   if (d.objects.length && !state.objects.length) throw new Error('文件里的对象格式无法识别');
   if (d.settings) Object.assign(SET, d.settings);
   lastShareKey = '';
@@ -30043,7 +30083,11 @@ function bindShortcuts() {
         const d = { ArrowLeft: [-step, 0], ArrowRight: [step, 0], ArrowUp: [0, step], ArrowDown: [0, -step] }[e.key];
         if (d && nudgeSelection(d[0], d[1])) { e.preventDefault(); return; }
       }
-      if (e.key === 'Delete' || e.key === 'Backspace') { if (state.selection.length) { e.preventDefault(); doMenuAction('deleteSel'); } return; }
+      if (e.key === 'Delete' || e.key === 'Backspace') {
+        if (state.cardSel && !state.selection.length) { e.preventDefault(); deleteCanvasCard(state.cardSel); return; }
+        if (state.selection.length) { e.preventDefault(); doMenuAction('deleteSel'); }
+        return;
+      }
       if (e.key === 'F2') { renameSelected(); return; }
       return;
     }
@@ -30581,7 +30625,7 @@ async function runUITest() {
     /* 确认框 / 输入框是 Promise：只把 DOM 关掉会留下悬挂的回调，得走各自的 resolve 正常收尾 */
     if ($('#confirmBackdrop').classList.contains('on')) resolveConfirm(false);
     if ($('#promptBackdrop').classList.contains('on')) resolvePrompt(false);
-    ['settingsBackdrop', 'changelogBackdrop', 'layerBackdrop', 'probBackdrop', 'confirmBackdrop', 'promptBackdrop', 'shareBackdrop'].forEach(closeBackdrop);
+    ['settingsBackdrop', 'changelogBackdrop', 'layerBackdrop', 'probBackdrop', 'confirmBackdrop', 'promptBackdrop', 'shareBackdrop', 'cardBackdrop'].forEach(closeBackdrop);
     setFmenu(false);          /* 抽屉是浮层，用例之间也要收掉，免得挡住后续点击 */
     const bd = $('#changelogBackdrop'); if (bd) { bd.classList.remove('booting'); clearTimeout(bd._bootT); }
     $('#ctxMenu').classList.remove('on');
@@ -32178,6 +32222,25 @@ async function runUITest() {
     if ($('#cvsRestore')) throw new Error('点丢弃后卡片没有消失');
     if (localStorage.getItem('geoai_canvas_autosave')) throw new Error('点丢弃后存档应被清掉');
     state.objects = []; recomputeAll();
+  });
+  /* 画布 HTML / CSS 卡片：渲染到 DOM 层、脚本被剥掉、随撤销恢复 */
+  await A('画布卡片:渲染、隔离与撤销', async () => {
+    executeLine('DeleteAll()'); await sleep(0);
+    const c = addCanvasCard('<style>.x{color:red}</style><div class="x">卡片</div>', { x: 0, y: 0, w: 200, h: 120 });
+    await sleep(0);
+    const el = $('#cardLayer .hcard[data-cid="' + c.id + '"]');
+    if (!el) throw new Error('卡片没有渲染到画布层');
+    if (!el.shadowRoot || !el.shadowRoot.textContent.includes('卡片')) throw new Error('卡片内容没有进 Shadow DOM');
+    if (el.style.transform.indexOf('translate3d') !== 0) throw new Error('卡片没有按视图定位');
+    const bad = addCanvasCard('<img src=x onerror="window.__x=1"><script>window.__x=2<\/script>', { x: 0, y: 0, w: 100, h: 80 });
+    if (/onerror|<script/i.test(bad.code)) throw new Error('卡片里的脚本没有剥掉');
+    if (aiCardBlocks('```html\n<b>x</b>\n```').length !== 1) throw new Error('AI 的 html 块没有识别');
+    if (extractGeoCommands('```html\n<b>x</b>\n```').length) throw new Error('html 块被当成作图命令执行了');
+    const n0 = state.cards.length;
+    pushUndo(); state.cards = []; renderCards(); await sleep(0);
+    undo(); await sleep(0);
+    if (state.cards.length !== n0) throw new Error('撤销没有恢复卡片：' + state.cards.length + ' ≠ ' + n0);
+    clearAll(); await sleep(0);
   });
   /* CAS 精确数值：大整数幂按科学计数 + 位数显示，π 给足小数位 */
   await A('CAS:大数与科学计算器', async () => {
@@ -38215,6 +38278,12 @@ ask 会变成一张澄清卡片等用户选择；done 只写一句结论，表�
 - 手写题目：识别手写内容后按常规解题流程处理。
 - 几何图形：识别点、线、圆、三角形关系，必要时用命令重建。
 
+【画布 HTML / CSS 卡片】
+- 需要漂亮的排版、色块、标题卡或 CSS 动画时，单独输出一个 \`\`\`html 代码块，块里是一段自包含的 HTML + \`<style>\`，控件会把它变成画布上一张可拖动、可编辑的卡片。
+- 写法：根容器用 class="card"，并给 \`height:100%\`；卡片默认 420×240 设计像素，按标准视图 1:1 排版，随画布缩放。用背景渐变、圆角、阴影、@keyframes 做质感，字体用 -apple-system / PingFang SC / system-ui。
+- 不要写 \`<script>\`、事件属性、\`<iframe>\`、表单或外部 JS（会被剥掉）；文字用简体中文，内容要和当前题目相关，不要挡住关键图形。
+- 卡片是装饰与说明，不能替代数学对象：几何关系仍然用 geogebra 命令画。
+
 【语法与命名】
 - 点：A = (1, 2)，也可以 Point(1, 2)；想让人能拖动就写成这种坐标点。
 - 数值 / 滑动条：a = 3   ；   a = Slider(-5, 5, 0.1)
@@ -38323,10 +38392,11 @@ const AI_STEP_SYSTEM = `你是「GeoAI」动态几何画板的作图执行器：
 
 【每次回复的格式（严格遵守）】
 第一行：Thought: 一句话说明这一步做什么、依赖画布上哪些对象（从零开始就直说）。
-然后只输出一个代码块，从三种动作里选一种：
+然后只输出一个代码块，从四种动作里选一种：
 1. \`\`\`geogebra —— 执行 1~4 条命令（每行一条），把这一小步画出来；
 2. \`\`\`search —— 确实缺条件 / 需要外部资料时，写一行检索词；
-3. \`\`\`done —— 整幅图已经完整时结束，块里写一句结论。可以和最后一个 geogebra 块同时出现（命令会先执行）。
+3. \`\`\`html —— 贴一张 HTML / CSS 卡片（自包含 HTML + <style>，可带 @keyframes 动画；不要 <script>）；用户要排版 / 标题卡 / 动画时用；
+4. \`\`\`done —— 整幅图已经完整时结束，块里写一句结论。可以和最后一个 geogebra 块同时出现（命令会先执行）。
 
 【执行原则】
 1. 先读 Observation：它告诉你每条命令成功还是失败、现在画布上有哪些对象。据此决定下一步。
@@ -40412,6 +40482,53 @@ function stepsCardHtml(code) {
    旧正则用了空的语言分支（```(?:geogebra|…|)），会把 ```js 里的 js 当成命令首行、
    把整段示例代码送进执行器 —— 误建对象、触发纠错重试，甚至让分步作图空转。 */
 const AI_GEO_LANG = /^(geogebra|ggb|ggbscript|ggbcode|ggbcmd)$/;
+/* 画布 HTML / CSS 卡片：模型把这个块里的整段代码当成一张卡片贴到画布上 */
+const AI_CARD_LANG = /^(html|css|card|htmlcss|web)$/;
+function aiCardBlocks(text) {
+  const src = String(text).replace(/```(search|ask|steps|done|geogebra|ggb|ggbscript|ggbcode|ggbcmd)\s*\n?[\s\S]*?```/gi, '');
+  const out = [];
+  const re = /```([A-Za-z][\w+.-]*)[ \t]*\r?\n([\s\S]*?)```/g;
+  let m, last = 0;
+  while ((m = re.exec(src)) !== null) {
+    const lang = (m[1] || '').toLowerCase();
+    const block = { lang, code: m[2], pre: src.slice(last, m.index) };
+    last = re.lastIndex;
+    if (!AI_CARD_LANG.test(lang)) continue;
+    out.push(block);
+  }
+  return out;
+}
+/* 按文档顺序拿到所有「会产生画布效果」的块，供首轮流式执行用 */
+function aiAllBlocks(text) {
+  const src = String(text).replace(/```(search|ask|steps|done)\s*\n?[\s\S]*?```/gi, '');
+  const out = [];
+  const re = /```(?:([A-Za-z][\w+.-]*)[ \t]*\r?\n)?([\s\S]*?)```/g;
+  let m, last = 0;
+  while ((m = re.exec(src)) !== null) {
+    const lang = (m[1] || '').toLowerCase();
+    const block = { lang, code: m[2], pre: src.slice(last, m.index) };
+    last = re.lastIndex;
+    if (lang && AI_CARD_LANG.test(lang)) { out.push({ kind: 'card', code: block.code, pre: block.pre }); continue; }
+    if (lang && !AI_GEO_LANG.test(lang)) continue;
+    out.push({ kind: 'geo', code: block.code, pre: block.pre });
+  }
+  return out;
+}
+/* 把 HTML 卡片块贴到画布上，返回与命令结果同构的记录，好让 AI 的 Observation 一起看到 */
+function applyAiCardBlocks(blocks) {
+  const rs = [];
+  for (const b of blocks) {
+    try {
+      if (!String(b.code || '').trim()) throw new Error('卡片内容是空的');
+      const c = addCanvasCard(b.code, { x: state.view.cx - 210 / CARD_BASE, y: state.view.cy + 120 / CARD_BASE, w: 420, h: 240 });
+      rs.push({ line: 'HTML 卡片', ok: true, label: c.id, err: '' });
+    } catch (e) {
+      rs.push({ line: 'HTML 卡片', ok: false, label: '', err: (e && e.message) || String(e) });
+    }
+  }
+  renderCards();
+  return rs;
+}
 function aiGeoBlocks(text) {
   const src = String(text).replace(/```(search|ask|steps|done)\s*\n?[\s\S]*?```/gi, '');
   const out = [];
@@ -40966,6 +41083,13 @@ async function aiSend() {
     renderExec(rs, host);   /* 每步单独一条执行结果，画布同步更新 */
     return rs;
   };
+  /* 卡片结果也要进执行清单，模型下一步才知道卡片建成了没有 */
+  const rsFromCards = (rs, host) => {
+    if (!undoPushed) { pushUndo(); undoPushed = true; turnBefore = new Set(state.objects.map(o => o.id)); }
+    streamResults.push(...rs);
+    renderExec(rs, host);
+    return rs;
+  };
   let lastExecLen = -1;
   streamExec = (full) => {
     const s = String(full);
@@ -40973,9 +41097,15 @@ async function aiSend() {
     lastExecLen = s.length;
     /* 出现分步计划就说明这轮要走「逐步单独请求」：规划轮不执行任何命令，免得和后续步骤重复 */
     if (/```steps\b/i.test(s)) return;
-    const blocks = geoBlocks(s);
+    const blocks = aiAllBlocks(s);
     for (; execCount < blocks.length; execCount++) {
       const b = blocks[execCount];
+      if (b.kind === 'card') {
+        if (!String(b.code || '').trim()) continue;
+        const card = mkStepCard(++streamSteps, thoughtOf(b.pre));
+        rsFromCards(applyAiCardBlocks([b]), card);
+        continue;
+      }
       const cmds = parseCmds(b.code);
       /* 只有 done 的块不建空步骤，也别让步骤号跳号 */
       if (!cmds.length) continue;
@@ -41131,7 +41261,7 @@ async function aiSend() {
        首轮回复里的 geogebra 块在流式阶段就已经画上图了。只要它真的动手画了，
        后面就进入循环：每次单独请求一步 → 执行 → 把 Observation 回传，直到它输出 ```done。
        没有「先列计划再照计划执行」的规划轮 —— 画一步看一步，失败了立刻换构造。 */
-    const stepMode = !asked && extractGeoCommands(curContent).length > 0;
+    const stepMode = !asked && (extractGeoCommands(curContent).length > 0 || aiCardBlocks(curContent).length > 0);
     let stepOk = 0, stepBadN = 0, stepTotal = 0, stepAborted = false;
     let stepEarlyStop = false;   /* 没有 done、靠「没有进展」兜底停下：终态别报成完成 */
     let reactDone = false;   /* 模型是否用 ```done 明确收尾（收尾后中途失败不再算作未完成） */
@@ -41191,7 +41321,7 @@ async function aiSend() {
         o.lineWidth, o.lineStyle, o.fillOpacity, o.showLabel ? 1 : 0,
         o.value != null && isNum(o.value) ? o.value
           : (o.value && isNum(o.value.x) ? o.value.x + ',' + o.value.y : ''),
-      ].join('~')).join('|');
+      ].join('~')).join('|') + '#' + state.cards.map(c => [c.id, c.x.toFixed(3), c.y.toFixed(3), c.w, c.h, c.code.length].join('~')).join('|');
       let idleRounds = 0, stopNote = '', lastStepEl = null, noProgressStop = false;
       let lastCmdsKey = firstCmds.join('\n');   /* 用来识别「原样重发同一批失败命令」 */
       while (!reactDone) {
@@ -41234,7 +41364,8 @@ async function aiSend() {
            否则最后一步画的东西会被 done 提前拦下、整段丢掉。 */
         const wantDone = /```done\b/i.test(raw);
         const doneNote = wantDone ? extractBlockList(raw, 'done').join(' ').replace(/\s+/g, ' ').trim() : '';
-        if (wantDone && !extractGeoCommands(raw).length) {
+        const rawCards = aiCardBlocks(raw);
+        if (wantDone && !extractGeoCommands(raw).length && !rawCards.length) {
           reactDone = true;
           stepEl.querySelector('.ai-step-go').textContent = doneNote ? doneNote.slice(0, 120) : '作图完成';
           planMsgs.push({ role: 'assistant', content: raw });
@@ -41270,7 +41401,9 @@ async function aiSend() {
           await new Promise(r => setTimeout(r, 60));
         }
         const sigBefore = canvasSig();
-        const rs = cmds.length ? execLines(cmds, stepEl) : [];
+        const rs = [];
+        if (rawCards.length) rs.push(...applyAiCardBlocks(rawCards));
+        if (cmds.length) rs.push(...execLines(cmds, stepEl));
         const canvasChanged = canvasSig() !== sigBefore;
         const bad = rs.filter(r => !r.ok);
         const okN = rs.filter(r => r.ok).length;
@@ -41280,6 +41413,7 @@ async function aiSend() {
            只要某一轮的命令全部成功，就把计数清零；一直失败的则保留最后一轮的数。 */
         if (rs.length) stepBadN = bad.length;
         if (cmds.length) stepLog.push('第 ' + actionNo + ' 步：' + cmds.join('; '));
+        else if (rawCards.length) stepLog.push('第 ' + actionNo + ' 步：HTML / CSS 卡片 ×' + rawCards.length);
         planMsgs.push({ role: 'assistant', content: raw });
         planMsgs.push({ role: 'user', content: obsText(rs, raw) });
         /* done 和最后一批命令同回复：命令已经执行完，这里收尾 */
@@ -41289,8 +41423,8 @@ async function aiSend() {
         }
         /* 进展判定：这一轮有命令、成功，且画布真的变了（新对象 / 改定义 / 改样式）。
            同名重定义成功后签名不变，不能算进展，否则复读同一批命令会无限循环。 */
-        const cmdsKey = cmds.join('\n');
-        if (!cmds.length) {
+        const cmdsKey = cmds.join('\n') + (rawCards.length ? '\n[card]' + rawCards.map(c => c.code.length).join(',') : '');
+        if (!cmds.length && !rawCards.length) {
           stepEl.querySelector('.ai-step-go').textContent = '没有给出作图命令';
           if (++idleRounds >= 2) { stopNote = '（AI 没有再给出作图命令，先停在这里）'; break; }
         } else if (!okN) {
