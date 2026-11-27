@@ -1483,9 +1483,9 @@ body.dark .eff-warn{color:#c39bff}
 .eff-pop.warn .eff-beautify{opacity:0}
 /* 思考强度面板：参考 ChatGPT 模型强度滑条——毛玻璃浮层、离散档位、
    拖动时旋钮跟手，松手吸附；更换档位时标题做一次淡入淡出 */
-.eff-pop{background:rgba(255,255,255,.8);
+.eff-pop{background:rgba(255,255,255,.92);
   -webkit-backdrop-filter:blur(40px) saturate(190%);backdrop-filter:blur(40px) saturate(190%)}
-body.dark .eff-pop{background:rgba(28,30,36,.82)}
+body.dark .eff-pop{background:rgba(28,30,36,.94)}
 /* 标题 / 副标题换档时淡入，像参考里「5.6 High → 5.5 Instant」的切换 */
 .eff-pop-txt.xfade .eff-pop-ttl,.eff-pop-txt.xfade .eff-pop-sub{animation:effLabel .24s var(--ease-out) both}
 @keyframes effLabel{from{opacity:0;transform:translateY(3px)}to{opacity:1;transform:none}}
@@ -1802,12 +1802,19 @@ body.aiHelloPlayed .ai-hello .ink-char{animation:none!important;filter:none!impo
   border:.5px solid var(--border);transition:border-color var(--t),background var(--t);
 }
 .effort:hover,.effort:focus-within{border-color:var(--accent-dim);background:var(--accent-dim)}
-/* 臻彩模式在折叠态也要看得出来：仪表盘缓缓流转彩虹色，外圈带一点柔光 */
-.effort.beautify{border-color:transparent;background:linear-gradient(135deg,rgba(58,131,247,.16),rgba(180,124,255,.2));
-  box-shadow:0 0 0 1px rgba(180,124,255,.32),0 0 10px rgba(120,150,255,.32)}
-.effort.beautify:hover{background:linear-gradient(135deg,rgba(58,131,247,.24),rgba(180,124,255,.28))}
-.effort.beautify .eff-gauge{color:var(--accent);animation:effGaugeFlow 3.4s linear infinite}
-@keyframes effGaugeFlow{from{filter:hue-rotate(0)}to{filter:hue-rotate(360deg)}}
+/* 臻彩模式在折叠态也要看得出来：仪表盘变成流动的彩虹圆片，指针与刻度转成白色 */
+.effort.beautify{
+  border-color:transparent;color:#fff;
+  background-image:linear-gradient(100deg,#ff6b6b,#ffb84d,#7bd88a,#4facfe,#b47cff,#ff6b6b);
+  background-size:300% 100%;animation:effGaugeFlow 4s linear infinite;
+  box-shadow:0 2px 10px rgba(120,150,255,.42);
+}
+.effort.beautify:hover{background-image:linear-gradient(100deg,#ff6b6b,#ffb84d,#7bd88a,#4facfe,#b47cff,#ff6b6b);
+  box-shadow:0 3px 14px rgba(120,150,255,.55)}
+.effort.beautify .eff-gauge{color:rgba(255,255,255,.95)}
+.effort.beautify .eff-arc{stroke:#fff;stroke-opacity:.45}
+.effort.beautify .eff-prog,.effort.beautify .eff-needle,.effort.beautify .eff-hub{stroke:#fff}
+@keyframes effGaugeFlow{from{background-position:0% 50%}to{background-position:300% 50%}}
 .eff-gauge{width:17px;height:17px;color:var(--text-3);transition:color .18s ease}
 /* 仪表盘：270° 轨道 + 按档位生长的进度弧 + 会转的指针与中央圆环（仿 60fps 参考图） */
 .eff-prog{stroke-dasharray:100;stroke-dashoffset:calc(100 - var(--pn,.3333) * 100);
@@ -1990,6 +1997,16 @@ body:has(.aii-eff.on) .ai-dock{z-index:230}
 .aii-time{font-size:var(--fs-3xs);color:var(--text-3);font-variant-numeric:tabular-nums}
 .ai-island.busy .aii-label,.ai-island.is-done .aii-label,
 .ai-island.is-error .aii-label,.ai-island.is-stopped .aii-label{color:var(--orb)}
+/* 臻彩模式：折叠成小岛后，「思考深度」这行字继续走彩虹，状态一眼可见 */
+.ai-island.beautify:not(.busy):not(.is-done):not(.is-error):not(.is-stopped) .aii-label{
+  background:linear-gradient(90deg,#ff6b6b,#ffb84d,#7bd88a,#4facfe,#b47cff,#ff6b6b);
+  background-size:300% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;
+  animation:effRainbowLabel 3.2s linear infinite;
+}
+.ai-island.beautify .aii-label:hover,.ai-island.beautify .aii-label[aria-expanded="true"]{
+  background:linear-gradient(90deg,#ff6b6b,#ffb84d,#7bd88a,#4facfe,#b47cff,#ff6b6b);background-size:300% 100%;
+}
+@keyframes effRainbowLabel{from{background-position:0% 50%}to{background-position:300% 50%}}
 .ai-dock.mini .ai-sheet,.ai-dock.mini .ai-input{display:none}
 /* 收起态整条 dock 只剩中间那颗 blob，容器却仍铺满一行（760px 宽、100px 高）：
    这块透明区域会拦掉画布与右下角缩放条的点击（1024 宽时缩放下半截正好在里面）。
@@ -3455,6 +3472,8 @@ body.kb-open .ai-dock.sheet-open .ai-sheet{max-height:max(140px,calc(100dvh - va
    这里在画布底部常驻一条轻量输入，AI 球上移一行，两者分层不打架。 */
 @media (max-width:600px){
   .m-input-bar{display:block}
+  /* 恢复卡在两排工具栏之下铺满左右 12px 边距，和品牌 / 右上控件同一条边线 */
+  .cvs-restore{width:calc(100% - 24px);max-width:none}
   .ai-dock.mini{bottom:calc(66px + env(safe-area-inset-bottom,0px))!important}
   body:has(#sidebar:not(.hidden)) .m-input-bar,
   body:has(.ai-dock.sheet-open) .m-input-bar{display:none}
@@ -4692,8 +4711,10 @@ const APP_CHANGELOG = [
     notes: [
       '点开后滑条变成流动的彩虹光、旋钮带柔光，面板标题处短暂亮起「臻彩模式已开启」与一行说明，1.8 秒后自动淡出、恢复档位文字；再点一次关闭',
       '提示词按需配卡：题目不适合就不画；内容多时可以给 2~3 张，也允许 :hover / @keyframes 这类纯 CSS 交互',
+      '折叠态也亮着：输入条左侧的强度仪表盘变成流动的彩虹圆片，收起成小岛后「思考深度」一行也走彩虹',
       '每次进入应用都从关闭开始，避免忘了关一直多消耗额度；切换时一条轻提示说明当前状态',
       '思考档位的说明统一缩短成一行：不思考最快 / 默认档日常作图 / 中等推理多步计算 / 强推理难题证明',
+      '手机窄屏：恢复上次画布的卡片让到比例徽标下方、左右各留 12px，不再压住品牌与右上控件',
       '修复：卡片编辑器的「取消」与右上 ✕ 点不动——动态插入的模态没被初始化时的 data-close 扫描覆盖，现在自行绑定',
     ],
   },
@@ -13607,6 +13628,9 @@ function applyCssMode() {
     pop.classList.toggle('beautify', !!CSSM.on);
     if (!CSSM.on) { clearTimeout(cssHintT); pop.classList.remove('showhint'); }
   }
+  /* 折叠态也要看得出：仪表盘与小岛的状态文字一起点亮 */
+  const gauge = $('#effortBox'); if (gauge) gauge.classList.toggle('beautify', !!CSSM.on);
+  const island = $('#aiIsland'); if (island) island.classList.toggle('beautify', !!CSSM.on);
 }
 /* 和「更快消耗使用额度」同一条节奏：短暂顶替标题，1.8 秒后淡出、标题回来 */
 function toggleCssMode() {
@@ -22514,6 +22538,13 @@ function toolUndoPick() {
 function layoutCanvasRestore() {
   const card = $('#cvsRestore'), wrap = $('#graphicsWrap');
   if (!card || !wrap) return;
+  /* 手机 / 极窄窗口：顶栏与右上工具排成两行，正中放不下——让到比例徽标下方 */
+  if (window.innerWidth <= 600) {
+    const badge = $('#viewBadge');
+    const top = badge ? badge.getBoundingClientRect().bottom - wrap.getBoundingClientRect().top + 8 : 140;
+    card.style.top = Math.round(Math.max(14, top)) + 'px';
+    return;
+  }
   const hint = $('.tool-hint');
   if (!hint) { card.style.top = '14px'; return; }
   /* 两者都在 graphicsWrap 里，直接用布局坐标（offsetTop / offsetHeight），
@@ -32382,6 +32413,8 @@ async function runUITest() {
     $('#effCssOpen').click(); await sleep(0);
     if (!CSSM.on || !$('#effCssOpen').classList.contains('on')) throw new Error('开关没有激活');
     if (!$('#effPop').classList.contains('beautify')) throw new Error('滑条没有亮起彩虹流光');
+    if (!$('#effortBox').classList.contains('beautify')) throw new Error('折叠态仪表盘没有彩虹状态');
+    if (!$('#aiIsland').classList.contains('beautify')) throw new Error('折叠成小岛后没有彩虹状态');
     if (!$('#effPop').classList.contains('showhint')) throw new Error('开启时没有顶替标题做提示');
     if (!$('#effPop').classList.contains('on')) throw new Error('点开关不该关掉面板');
     if (aiSystemPrompt().indexOf('臻彩模式已开启') < 0) throw new Error('开启后系统提示没有加指令');
@@ -32391,6 +32424,7 @@ async function runUITest() {
     $('#effCssOpen').click(); await sleep(0);
     if (CSSM.on || aiSystemPrompt().indexOf('臻彩模式已开启') >= 0) throw new Error('再点一次没有关闭');
     if ($('#effPop').classList.contains('beautify')) throw new Error('关闭后流光没有停');
+    if ($('#effortBox').classList.contains('beautify') || $('#aiIsland').classList.contains('beautify')) throw new Error('关闭后折叠态还亮着彩虹');
     if ($('#effPop').classList.contains('showhint')) throw new Error('关闭后提示没有收起');
     $('#effortBox').click(); await sleep(0);
     if ($('#cssMode')) throw new Error('不该有二级面板');
