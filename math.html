@@ -13578,7 +13578,11 @@ function applyCssMode() {
   if (b) { b.classList.toggle('on', !!CSSM.clean); b.setAttribute('aria-pressed', CSSM.clean ? 'true' : 'false'); }
   try { localStorage.setItem(CSSM_KEY, JSON.stringify(CSSM)); } catch (e) { }
 }
-function toggleCssMode() { CSSM.clean = !CSSM.clean; applyCssMode(); }
+function toggleCssMode() {
+  CSSM.clean = !CSSM.clean;
+  applyCssMode();
+  toast(CSSM.clean ? 'CSS 优化显示：卡片只做展示，可继续画图' : '已恢复卡片编辑模式', 'ok', 1800);
+}
 let cardIdSeq = 0;
 const DEFAULT_CARD_CODE = `<style>
   .card{
