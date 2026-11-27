@@ -1446,15 +1446,15 @@ body.dark .eff-warn{color:#c39bff}
 @keyframes effSpin{from{transform:rotate(0)}to{transform:rotate(-360deg)}}
 /* 滑条：面板宽 272，左右各缩 12 → 轨道 248；上沿距卡片顶 65 */
 .eff-pop .eff-slider{width:auto;margin:9px 12px 0}
-/* 思考强度面板底部的入口：打开画布卡片的 CSS 显示优化 */
+/* 思考强度面板左上角的入口：打开画布卡片的 CSS 显示优化（小图标，不占文字） */
 .eff-css{
-  margin:8px 12px 10px;height:30px;border-radius:9px;display:flex;align-items:center;justify-content:center;gap:6px;
-  font-size:var(--fs-2xs);color:var(--text-2);background:var(--panel-3);border:.5px solid var(--border);
-  transition:var(--t-ui);width:calc(100% - 24px);
+  position:absolute;top:7px;left:7px;width:28px;height:28px;border-radius:8px;
+  display:flex;align-items:center;justify-content:center;color:var(--text-3);
+  transition:var(--t-ui);
 }
-.eff-css:hover{color:var(--accent);border-color:var(--accent-dim);background:var(--accent-dim)}
-.eff-css:active{transform:scale(.97)}
-.eff-css svg{width:13px;height:13px}
+.eff-css:hover{background:var(--hover);color:var(--accent)}
+.eff-css:active{transform:scale(.94)}
+.eff-css svg{width:16px;height:16px}
 /* CSS 显示优化面板：从 AI 输入条右下弹出，管卡片的显隐 / 动效 / 单个编辑 */
 .css-mode{
   position:fixed;right:calc(16px + env(safe-area-inset-right,0px));bottom:calc(124px + env(safe-area-inset-bottom,0px));
@@ -1478,7 +1478,7 @@ body.dark .eff-warn{color:#c39bff}
 .cm-item:hover{background:var(--hover)}
 .cm-item .cm-i{flex:0 0 auto;width:20px;text-align:center;color:var(--text-3);font-family:var(--mono)}
 .cm-item .cm-t{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.cm-item .cm-b{flex:0 0 auto;padding:2px 7px;border-radius:6px;font-size:var(--fs-3xs);color:var(--accent);background:var(--accent-dim)}
+.cm-item .cm-b{flex:0 0 auto;font-size:var(--fs-sm);color:var(--text-3);line-height:1}
 .cm-empty{padding:10px 12px;font-size:var(--fs-2xs);color:var(--text-3);text-align:center}
 .cm-foot{display:flex;gap:8px;padding:8px 12px 12px}
 .cm-foot button{flex:1;height:30px;border-radius:9px;font-size:var(--fs-2xs)}
@@ -3837,6 +3837,9 @@ try {
             <!-- 点思考强度按钮后展开面板：标题 / 重置 + 一条滑条 -->
             <div class="eff-pop" id="effPop" role="dialog" aria-label="思考强度">
               <div class="eff-pop-head">
+                <button class="eff-css" id="effCssOpen" type="button" title="CSS 显示优化" aria-label="CSS 显示优化" aria-haspopup="dialog">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m8 6-5 6 5 6M16 6l5 6-5 6M13.6 4l-3.2 16"></path></svg>
+                </button>
                 <div class="eff-pop-txt">
                   <div class="eff-pop-ttl" id="effPopName" style="color: rgb(47, 111, 208);">Low</div>
                   <div class="eff-pop-sub" id="effPopDesc">默认档，响应快，适合日常作图与简单计算</div>
@@ -3852,10 +3855,6 @@ try {
                 <span class="eff-knob" id="effKnobBig" style="left: calc(33.33% + 5.001px);"></span>
                 <input type="range" id="effortRangeBig" min="0" max="6" step="1" value="2" aria-label="思考强度" aria-valuetext="Low" title="思考强度：Low · 默认档，响应快，适合日常作图与简单计算">
               </span>
-              <button class="eff-css" id="effCssOpen" type="button" title="打开画布卡片的 CSS 显示优化" aria-haspopup="dialog">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m8 6-5 6 5 6M16 6l5 6-5 6M13.6 4l-3.2 16"></path></svg>
-                CSS 显示优化
-              </button>
             </div>
             <button class="ai-mic" id="aiMic" type="button" title="语音输入" aria-label="语音输入" aria-pressed="false">
               <span class="mic-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"></rect><path d="M5.5 11.5a6.5 6.5 0 0 0 13 0M12 18v3"></path></svg><i class="mic-sq" aria-hidden="true"></i></span>
@@ -13824,15 +13823,14 @@ function ensureCssModePanel() {
   p.setAttribute('role', 'dialog');
   p.setAttribute('aria-label', 'CSS 显示优化');
   p.innerHTML =
-    '<div class="cm-head"><b>CSS 显示优化</b>'
+    '<div class="cm-head"><b>CSS 显示</b>'
     + '<button class="cm-close" type="button" aria-label="关闭">✕</button></div>'
-    + '<label class="cm-row"><span>显示 HTML / CSS 卡片</span><input type="checkbox" id="cmShow" aria-label="显示卡片"></label>'
-    + '<label class="cm-row"><span>编辑按钮常显</span><input type="checkbox" id="cmTools" aria-label="编辑按钮常显"></label>'
-    + '<label class="cm-row"><span>保留动画与阴影</span><input type="checkbox" id="cmFx" aria-label="保留动画与阴影"></label>'
-    + '<div class="cm-sub"><span id="cmCount">0 张卡片</span><span>点一行即可编辑</span></div>'
+    + '<label class="cm-row"><span>显示卡片</span><input type="checkbox" id="cmShow" aria-label="显示卡片"></label>'
+    + '<label class="cm-row"><span>编辑键常显</span><input type="checkbox" id="cmTools" aria-label="编辑键常显"></label>'
+    + '<label class="cm-row"><span>动画与阴影</span><input type="checkbox" id="cmFx" aria-label="动画与阴影"></label>'
+    + '<div class="cm-sub"><span id="cmCount">0 张卡片</span></div>'
     + '<div class="cm-list" id="cssModeList"></div>'
-    + '<div class="cm-foot"><button class="pri" type="button" id="cmAdd">插入卡片</button>'
-    + '<button class="sec" type="button" id="cmClose2">关闭</button></div>';
+    + '<div class="cm-foot"><button class="pri" type="button" id="cmAdd">＋ 插入卡片</button></div>';
   document.body.appendChild(p);
   const sync = () => {
     $('#cmShow').checked = !!CSSM.show;
@@ -13851,7 +13849,6 @@ function ensureCssModePanel() {
   });
   $('#cmAdd').addEventListener('click', () => { closeCssMode(); openHtmlCardEditor(); });
   p.querySelector('.cm-close').addEventListener('click', closeCssMode);
-  $('#cmClose2').addEventListener('click', closeCssMode);
   document.addEventListener('pointerdown', e => {
     const pm = $('#cssMode');
     if (!pm || !pm.classList.contains('on')) return;
@@ -13868,15 +13865,15 @@ function renderCssModeList() {
   const list = $('#cssModeList'); if (!list) return;
   const n = $('#cmCount'); if (n) n.textContent = state.cards.length + ' 张卡片';
   if (!state.cards.length) {
-    list.innerHTML = '<div class="cm-empty">还没有卡片。点「插入卡片」写一段 HTML / CSS，或让 AI 输出 ```html 代码块。</div>';
+    list.innerHTML = '<div class="cm-empty">还没有卡片</div>';
     return;
   }
   list.innerHTML = state.cards.map((c, i) => {
-    const txt = String(c.code || '').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 40) || '（只有样式）';
+    const txt = String(c.code || '').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 40) || '（样式）';
     return '<div class="cm-item" data-i="' + i + '" role="button" tabindex="0">'
       + '<span class="cm-i">' + (i + 1) + '</span>'
       + '<span class="cm-t">' + esc(txt) + '</span>'
-      + '<span class="cm-b">编辑</span></div>';
+      + '<span class="cm-b" aria-hidden="true">›</span></div>';
   }).join('');
   list.querySelectorAll('.cm-item').forEach(row => {
     const act = () => {
