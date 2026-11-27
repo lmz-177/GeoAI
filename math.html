@@ -1458,7 +1458,7 @@ body.dark .eff-warn{color:#c39bff}
 .eff-css svg{width:17px;height:17px}
 .eff-css.on{color:#fff;background:var(--accent);box-shadow:0 2px 10px var(--accent-soft)}
 .eff-css.on:hover{background:var(--accent-h);color:#fff}
-/* 美化模式：滑条变成流动的彩虹光，提示行跟着点亮 */
+/* 臻彩模式：滑条变成流动的彩虹光，提示行跟着点亮 */
 .eff-pop.beautify .eff-fill{
   background-image:linear-gradient(90deg,#ff6b6b,#ffb84d,#7bd88a,#4facfe,#b47cff,#ff6b6b)!important;
   background-size:300% 100%!important;
@@ -1470,12 +1470,15 @@ body.dark .eff-warn{color:#c39bff}
   animation:effKnobGlow 2.6s ease-in-out infinite;
 }
 @keyframes effKnobGlow{0%,100%{filter:hue-rotate(0)}50%{filter:hue-rotate(80deg)}}
-.eff-hint{
-  margin:8px 12px 10px;padding:6px 9px;border-radius:9px;text-align:center;
-  font-size:var(--fs-3xs);line-height:1.5;color:var(--text-3);background:var(--panel-3);
-  transition:var(--t-ui);
+/* 臻彩模式的提示：和「更快消耗使用额度」同一套位置 / 字重 / 淡入方式 */
+.eff-beautify{
+  position:absolute;top:8px;left:12px;right:42px;height:42px;display:flex;align-items:center;
+  justify-content:center;font-size:var(--fs-xs);font-weight:600;line-height:18px;text-align:center;
+  color:var(--accent);opacity:0;pointer-events:none;transition:opacity .18s ease;
 }
-.eff-pop.beautify .eff-hint{color:var(--accent);background:var(--accent-dim)}
+.eff-pop.beautify .eff-pop-txt{opacity:0}
+.eff-pop.beautify .eff-beautify{opacity:1}
+.eff-pop.warn .eff-beautify{opacity:0}
 /* 思考强度面板：参考 ChatGPT 模型强度滑条——毛玻璃浮层、离散档位、
    拖动时旋钮跟手，松手吸附；更换档位时标题做一次淡入淡出 */
 .eff-pop{background:rgba(255,255,255,.62);
@@ -3825,11 +3828,9 @@ try {
             <!-- 点思考强度按钮后展开面板：标题 / 重置 + 一条滑条 -->
             <div class="eff-pop" id="effPop" role="dialog" aria-label="思考强度">
               <div class="eff-pop-head">
-                <button class="eff-css" id="effCssOpen" type="button" title="美化模式：画完图，顺手配张好看的卡片" aria-label="美化模式" aria-pressed="false" aria-haspopup="false">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                    <rect x="3.2" y="5.4" width="12.6" height="9.6" rx="2.6"></rect>
-                    <path d="M6.6 18.6h7.4" opacity=".6"></path>
-                    <path d="M18.4 3.1l.85 2.05 2.05.85-2.05.85-.85 2.05-.85-2.05-2.05-.85 2.05-.85z" fill="currentColor" stroke="none"></path>
+                <button class="eff-css" id="effCssOpen" type="button" title="臻彩模式：画完图，配一张好看的卡片" aria-label="臻彩模式" aria-pressed="false" aria-haspopup="false">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M12 3.4l2.42 5.2 5.7.74-4.18 3.96 1.07 5.66L12 16.2l-5.01 2.76 1.07-5.66L3.88 9.34l5.7-.74z" fill="currentColor" fill-opacity=".16"></path>
                   </svg>
                 </button>
                 <div class="eff-pop-txt">
@@ -3837,6 +3838,7 @@ try {
                   <div class="eff-pop-sub" id="effPopDesc">默认档，响应快，适合日常作图与简单计算</div>
                 </div>
                 <div class="eff-warn" id="effPopWarn">更快消耗使用额度</div>
+                <div class="eff-beautify" id="effPopBeautify">臻彩模式 · 画完图配一张好看的卡片</div>
                 <button class="eff-pop-reset" id="effPopReset" title="恢复默认（Low）" aria-label="恢复默认（Low）"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11a8 8 0 1 0-1.2 5.5"></path><path d="M20 5v5.6h-5.4"></path></svg></button>
               </div>
               <span class="eff-slider" id="effSliderBig">
@@ -3847,7 +3849,6 @@ try {
                 <span class="eff-knob" id="effKnobBig" style="left: calc(33.33% + 5.001px);"></span>
                 <input type="range" id="effortRangeBig" min="0" max="6" step="1" value="2" aria-label="思考强度" aria-valuetext="Low" title="思考强度：Low · 默认档，响应快，适合日常作图与简单计算">
               </span>
-              <div class="eff-hint" id="effCssHint">美化模式 · 画完图，顺手配张好看的卡片</div>
             </div>
             <button class="ai-mic" id="aiMic" type="button" title="语音输入" aria-label="语音输入" aria-pressed="false">
               <span class="mic-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"></rect><path d="M5.5 11.5a6.5 6.5 0 0 0 13 0M12 18v3"></path></svg><i class="mic-sq" aria-hidden="true"></i></span>
@@ -4676,10 +4677,10 @@ const state = {
 const APP_VERSION = '2.2.2';
 const APP_CHANGELOG = [
   {
-    v: '2.2.2', date: '2026-11-27', tag: '美化模式', code: '约 4.3 万行 · 2.7 MB',
-    lead: '思考强度面板左上角多了一枚小图标：一键打开「美化模式」——滑条亮起彩虹流光，之后 AI 画完图会再顺手配一张好看的卡片。',
+    v: '2.2.2', date: '2026-11-27', tag: '臻彩模式', code: '约 4.3 万行 · 2.7 MB',
+    lead: '思考强度面板左上角多了一枚星标：一键打开「臻彩模式」——滑条亮起彩虹流光，之后 AI 画完图会再配一张好看的卡片。',
     notes: [
-      '点开后滑条变成流动的彩虹光、旋钮带柔光，面板里一行小字说明「画完图，顺手配张好看的卡片」；再点一次关闭，提示随之恢复',
+      '点开后滑条变成流动的彩虹光、旋钮带柔光，面板标题处一行小字说明「画完图配一张好看的卡片」；再点一次关闭，提示随之恢复',
       '打开时给模型追加一段指令：主体图形画完后输出一个 ```html 块，做一张与题目呼应的标题 / 结论 / 公式卡片（可带动画），不遮挡关键图形',
       '偏好记在本机；切换时一条轻提示说明当前状态',
       '修复：卡片编辑器的「取消」与右上 ✕ 点不动——动态插入的模态没被初始化时的 data-close 扫描覆盖，现在自行绑定',
@@ -13599,7 +13600,7 @@ function applyCssMode() {
 function toggleCssMode() {
   CSSM.on = !CSSM.on;
   applyCssMode();
-  toast(CSSM.on ? '美化模式已开启：画完图，AI 会顺手配张好看的卡片' : '美化模式已关闭：AI 只画图', 'ok', 2200);
+  toast(CSSM.on ? '臻彩模式已开启：画完图，AI 会配一张好看的卡片' : '臻彩模式已关闭：AI 只画图', 'ok', 2200);
 }
 let cardIdSeq = 0;
 const DEFAULT_CARD_CODE = `<style>
