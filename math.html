@@ -1446,8 +1446,8 @@ body.dark .eff-warn{color:#c39bff}
 @keyframes effSpin{from{transform:rotate(0)}to{transform:rotate(-360deg)}}
 /* 滑条：面板宽 272，左右各缩 12 → 轨道 248；上沿距卡片顶 65 */
 .eff-pop .eff-slider{width:auto;margin:9px 12px 0}
-/* 思考强度面板左上角的入口：一键切换卡片的「CSS 优化显示」
-   （展示态：去掉描边与编辑键，卡片只做视觉呈现，不拦截画布手势） */
+/* 思考强度面板左上角的入口：切换「AI 配 CSS」——
+   打开后，AI 画完图会再附一张 HTML / CSS 排版卡（标题、结论、关键公式或动画） */
 .eff-css{
   position:absolute;top:7px;left:7px;width:28px;height:28px;border-radius:8px;
   display:flex;align-items:center;justify-content:center;color:var(--text-3);
@@ -1458,9 +1458,6 @@ body.dark .eff-warn{color:#c39bff}
 .eff-css svg{width:17px;height:17px}
 .eff-css.on{color:#fff;background:var(--accent);box-shadow:0 2px 10px var(--accent-soft)}
 .eff-css.on:hover{background:var(--accent-h);color:#fff}
-/* 展示态：卡片不描边、不显示工具、不接收指针，画布手势照常 */
-body.css-clean .hcard{outline-color:transparent!important;pointer-events:none!important;cursor:default}
-body.css-clean .hcard-tools{display:none!important}
 /* 思考强度面板：参考 ChatGPT 模型强度滑条——毛玻璃浮层、离散档位、
    拖动时旋钮跟手，松手吸附；更换档位时标题做一次淡入淡出 */
 .eff-pop{background:rgba(255,255,255,.62);
@@ -3810,7 +3807,7 @@ try {
             <!-- 点思考强度按钮后展开面板：标题 / 重置 + 一条滑条 -->
             <div class="eff-pop" id="effPop" role="dialog" aria-label="思考强度">
               <div class="eff-pop-head">
-                <button class="eff-css" id="effCssOpen" type="button" title="CSS 优化显示" aria-label="CSS 优化显示" aria-pressed="false" aria-haspopup="false">
+                <button class="eff-css" id="effCssOpen" type="button" title="AI 配 CSS：画完图后附一张排版卡片" aria-label="AI 配 CSS" aria-pressed="false" aria-haspopup="false">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                     <rect x="3.2" y="5.4" width="12.6" height="9.6" rx="2.6"></rect>
                     <path d="M6.6 18.6h7.4" opacity=".6"></path>
@@ -4660,11 +4657,12 @@ const state = {
 const APP_VERSION = '2.2.2';
 const APP_CHANGELOG = [
   {
-    v: '2.2.2', date: '2026-11-27', tag: '展示态', code: '约 4.3 万行 · 2.7 MB',
-    lead: '思考强度面板左上角多了一枚小图标：一键切换卡片的 CSS 优化显示——去掉描边与编辑键，卡片只做视觉呈现，画布手势照常。',
+    v: '2.2.2', date: '2026-11-27', tag: 'AI 配 CSS', code: '约 4.3 万行 · 2.7 MB',
+    lead: '思考强度面板左上角多了一枚小图标：一键开启「AI 配 CSS」——之后 AI 画完图，会再附一张与题目呼应的 HTML / CSS 排版卡。',
     notes: [
-      '开关直接生效，不再展开二级面板；激活时图标点亮（主色实心），再点一次恢复编辑态',
-      '展示态下卡片不描边、不显示 ✎ / ✕、不拦截指针，拖动 / 缩放 / 画图都不会被卡片挡住；偏好记在本机',
+      '开关直接生效，不再展开二级面板；激活时图标点亮（主色实心），并把一段「配图卡」指令追加进系统提示，再点一次关闭',
+      '开启后 AI 会在主体图形画完后输出一个 ```html 块：标题 / 结论 / 关键公式 / 动画卡片，可与图形同屏；关闭后恢复只画图',
+      '偏好记在本机；切换时用一条轻提示说明当前状态，不写多余说明文字',
       '修复：卡片编辑器的「取消」与右上 ✕ 点不动——动态插入的模态没被初始化时的 data-close 扫描覆盖，现在自行绑定',
     ],
   },
@@ -13566,22 +13564,21 @@ function loadSnapshot(json) {
    控件把它渲染成画布上的一块卡片：随缩放平移，可拖动、双击编辑、删除。
    内容放在 Shadow DOM 里，样式不会污染主界面；<script> 与事件属性在入口处剥掉。 */
 const CARD_BASE = 46;   /* 设计像素与标准视图 1:1 的基准 scale */
-/* CSS 优化显示（展示态）：一键关掉卡片的描边、编辑键与指针拦截，只做视觉呈现 */
-const CSSM_KEY = 'ggai_cssclean';
+/* 「AI 配 CSS」：打开后给模型加一段指令，画完图再附一张排版卡 */
+const CSSM_KEY = 'ggai_aicss';
 const CSSM = (() => {
-  try { return Object.assign({ clean: false }, JSON.parse(localStorage.getItem(CSSM_KEY) || '{}')); }
-  catch (e) { return { clean: false }; }
+  try { return Object.assign({ on: false }, JSON.parse(localStorage.getItem(CSSM_KEY) || '{}')); }
+  catch (e) { return { on: false }; }
 })();
 function applyCssMode() {
-  document.body.classList.toggle('css-clean', !!CSSM.clean);
   const b = $('#effCssOpen');
-  if (b) { b.classList.toggle('on', !!CSSM.clean); b.setAttribute('aria-pressed', CSSM.clean ? 'true' : 'false'); }
+  if (b) { b.classList.toggle('on', !!CSSM.on); b.setAttribute('aria-pressed', CSSM.on ? 'true' : 'false'); }
   try { localStorage.setItem(CSSM_KEY, JSON.stringify(CSSM)); } catch (e) { }
 }
 function toggleCssMode() {
-  CSSM.clean = !CSSM.clean;
+  CSSM.on = !CSSM.on;
   applyCssMode();
-  toast(CSSM.clean ? 'CSS 优化显示：卡片只做展示，可继续画图' : '已恢复卡片编辑模式', 'ok', 1800);
+  toast(CSSM.on ? '已开启：AI 画图后会配一张 HTML / CSS 卡片' : '已关闭：AI 只画图，不配 CSS 卡片', 'ok', 2200);
 }
 let cardIdSeq = 0;
 const DEFAULT_CARD_CODE = `<style>
@@ -32338,14 +32335,15 @@ async function runUITest() {
     if (!$('#cardBackdrop').classList.contains('on')) throw new Error('卡片编辑器没有打开');
     $('#cardBackdrop .modal-foot [data-close]').click(); await sleep(0);
     if ($('#cardBackdrop').classList.contains('on')) throw new Error('编辑器取消按钮点不动');
-    /* CSS 优化显示：一枚图标直接开关，不出二级面板 */
-    CSSM.clean = false; applyCssMode();
+    /* 「AI 配 CSS」开关：点亮图标，并把配卡指令写进系统提示 */
+    CSSM.on = false; applyCssMode();
+    if (aiSystemPrompt().indexOf('CSS 配图模式') >= 0) throw new Error('默认不该带配 CSS 指令');
     $('#effCssOpen').click(); await sleep(0);
-    if (!document.body.classList.contains('css-clean')) throw new Error('CSS 优化显示没有激活');
-    if (!$('#effCssOpen').classList.contains('on')) throw new Error('激活后图标没有点亮');
+    if (!CSSM.on || !$('#effCssOpen').classList.contains('on')) throw new Error('开关没有激活');
+    if (aiSystemPrompt().indexOf('CSS 配图模式') < 0) throw new Error('开启后系统提示没有加指令');
     $('#effCssOpen').click(); await sleep(0);
-    if (document.body.classList.contains('css-clean')) throw new Error('再点一次没有关闭');
-    if ($('#cssMode')) throw new Error('不该再有二级面板');
+    if (CSSM.on || aiSystemPrompt().indexOf('CSS 配图模式') >= 0) throw new Error('再点一次没有关闭');
+    if ($('#cssMode')) throw new Error('不该有二级面板');
     clearAll(); await sleep(0);
   });
   /* CAS 精确数值：大整数幂按科学计数 + 位数显示，π 给足小数位 */
@@ -38488,8 +38486,11 @@ const AI_CAS_SYSTEM = `【精确计算（需要时由你自行调用）】
 · 绝对不要在正文里抄写或复述长数字（几十位以上都算长）：需要在正文展示时，写占位符 «CAS:π(5000)» 或 «CAS:2^2000»，前端会算好并展开显示。
 · 一次只算一个算式；需要多步就分多条 CAS 命令，一条一行。
 · 计算与作图可以同时进行：题目里既有计算又有图形时，先给计算结果，再按需画图（作图规则同平常）。`;
+/* 用户点了「AI 配 CSS」才追加：画完主体图形后，再附一张排版卡 */
+const AI_CSS_HINT = `【CSS 配图模式已开启】画完主体图形后，再单独输出一个 \`\`\`html 代码块，用一段自包含 HTML + <style> 做一张与题目呼应的卡片（标题 / 结论 / 关键公式 / 简短说明，可带 CSS 动画）。要求：根容器用 class="card" 并给 height:100%；配色克制、与图形区分开，不要遮住关键图形；不要写 <script>、事件属性、iframe 或表单；一次回答最多一张卡片；卡片只是装饰与说明，不能替代数学对象。`;
+
 /* 实际发给模型的系统提示：作图规则 + 精确计算规则始终都在，由 AI 自己判断何时调用 CAS */
-function aiSystemPrompt() { return AI_SYSTEM + '\n\n' + AI_CAS_SYSTEM; }
+function aiSystemPrompt() { return AI_SYSTEM + '\n\n' + AI_CAS_SYSTEM + (CSSM.on ? '\n\n' + AI_CSS_HINT : ''); }
 
 /* 分步作图执行器：ReAct（Thought → Action → Observation）循环，每次请求只做一个动作。
    参考 ReAct (Yao et al., 2022) 的 thought/action/observation 三元组，以及 Reflexion 的
@@ -41425,7 +41426,7 @@ async function aiSend() {
          相比「照事先写好的计划硬走」，画到一半发现两线不相交时它能立刻换构造，
          而不是把错误一路带到最后。 */
       const planMsgs = [
-        { role: 'system', content: AI_STEP_SYSTEM + '\n\n' + AI_CAS_SYSTEM },
+        { role: 'system', content: AI_STEP_SYSTEM + '\n\n' + AI_CAS_SYSTEM + (CSSM.on ? '\n\n' + AI_CSS_HINT : '') },
         { role: 'user', content: userContent },
       ];
       const obsText = (rs, raw) => {
