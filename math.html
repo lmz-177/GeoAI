@@ -4635,8 +4635,20 @@ const state = {
    版本号在左上角 GeoAI 打开的「更新与版本」弹窗里展示。改完版本号后，在
    APP_CHANGELOG 最上面补一条（版本、日期、类型、一句摘要、几条说明），
    新版本会自动出现在版本历史里。 */
-const APP_VERSION = '2.2.0';
+const APP_VERSION = '2.2.1';
 const APP_CHANGELOG = [
+  {
+    v: '2.2.1', date: '2026-11-27', tag: '卡片读写', code: '约 4.3 万行 · 2.7 MB',
+    lead: 'AI 现在能读到画布上每张卡片的完整 HTML / CSS 源码，也能按序号原地改写，而不是只能新建一张。',
+    notes: [
+      '画布上下文带上卡片清单：每张卡片的序号、id、尺寸与源码（过长的截断并注明总长），AI 改样式前先看得到原代码',
+      '新增 @card 指令：在 ```html 块第一行写 @card 1（或 @card id），下面是完整替换代码，就原地更新那张卡片；序号越界才新建',
+      '改卡片也算画布变化：内容签名加了代码哈希，等长改动（换颜色 / 换字）不会被当成「没有进展」而提前收尾',
+      '卡片结果直接写进当前步骤的执行清单（以前只在 Observation 里），失败原因看得见',
+      '卡片支持键盘：Tab 到卡片即选中，Enter 打开编辑器，Delete 删除；PNG 导出会提示「不含 N 张 HTML 卡片」',
+      '新建卡片按当前视图缩放居中，不再在高倍缩放下落到视野外；截图期间暂时隐藏卡片层，画布不再闪一下',
+    ],
+  },
   {
     v: '2.2.0', date: '2026-11-27', tag: '画布卡片', code: '约 4.3 万行 · 2.7 MB',
     lead: '画布上可以直接渲染 HTML / CSS：写一段自包含的排版或动画，就成了一张随缩放平移、可拖动编辑的卡片；AI 也能用 ```html 代码块生成它。',
@@ -32257,6 +32269,13 @@ async function runUITest() {
     if (/onerror|<script/i.test(bad.code)) throw new Error('卡片里的脚本没有剥掉');
     if (aiCardBlocks('```html\n<b>x</b>\n```').length !== 1) throw new Error('AI 的 html 块没有识别');
     if (extractGeoCommands('```html\n<b>x</b>\n```').length) throw new Error('html 块被当成作图命令执行了');
+    /* AI 能读到卡片源码，并能按序号原地改写 */
+    if (buildCanvasContext().indexOf('卡片') < 0) throw new Error('画布上下文没有列出卡片');
+    const nBefore = state.cards.length;
+    const ru = applyAiCardBlocks([{ code: '@card 1\n<b>改过了</b>', pre: '' }]);
+    if (!ru[0].ok || state.cards.length !== nBefore) throw new Error('@card 没有原地改写');
+    if (state.cards[0].code !== '<b>改过了</b>') throw new Error('@card 改写的代码不对：' + state.cards[0].code);
+    if (buildCanvasContext().indexOf('改过了') < 0) throw new Error('画布上下文没有带上卡片源码');
     const n0 = state.cards.length;
     pushUndo(); state.cards = []; renderCards(); await sleep(0);
     undo(); await sleep(0);
@@ -38304,6 +38323,7 @@ ask 会变成一张澄清卡片等用户选择；done 只写一句结论，表�
 - 写法：根容器用 class="card"，并给 \`height:100%\`；卡片默认 420×240 设计像素，按标准视图 1:1 排版，随画布缩放。用背景渐变、圆角、阴影、@keyframes 做质感，字体用 -apple-system / PingFang SC / system-ui。
 - 不要写 \`<script>\`、事件属性、\`<iframe>\`、表单或外部 JS（会被剥掉）；文字用简体中文，内容要和当前题目相关，不要挡住关键图形。
 - 卡片是装饰与说明，不能替代数学对象：几何关系仍然用 geogebra 命令画。
+- 画布上已有卡片时，「当前画布」会列出它们的序号、id 与完整源码。要改其中一张，就在 \`\`\`html 块的第一行写 @card 序号（或 @card id），下面写整段替换代码；不要新建第二张重复的卡片。
 
 【语法与命名】
 - 点：A = (1, 2)，也可以 Point(1, 2)；想让人能拖动就写成这种坐标点。
@@ -38416,7 +38436,7 @@ const AI_STEP_SYSTEM = `你是「GeoAI」动态几何画板的作图执行器：
 然后只输出一个代码块，从四种动作里选一种：
 1. \`\`\`geogebra —— 执行 1~4 条命令（每行一条），把这一小步画出来；
 2. \`\`\`search —— 确实缺条件 / 需要外部资料时，写一行检索词；
-3. \`\`\`html —— 贴一张 HTML / CSS 卡片（自包含 HTML + <style>，可带 @keyframes 动画；不要 <script>）；用户要排版 / 标题卡 / 动画时用；
+3. \`\`\`html —— 贴一张 HTML / CSS 卡片（自包含 HTML + <style>，可带 @keyframes 动画；不要 <script>）；用户要排版 / 标题卡 / 动画时用；改已有卡片时第一行写 @card 序号，下面是完整替换代码；
 4. \`\`\`done —— 整幅图已经完整时结束，块里写一句结论。可以和最后一个 geogebra 块同时出现（命令会先执行）。
 
 【执行原则】
@@ -40535,15 +40555,30 @@ function aiAllBlocks(text) {
   }
   return out;
 }
-/* 把 HTML 卡片块贴到画布上，返回与命令结果同构的记录，好让 AI 的 Observation 一起看到 */
+/* 把 HTML 卡片块贴到画布上，返回与命令结果同构的记录，好让 AI 的 Observation 一起看到。
+   块首行可以是 @card n 或 @card hc123：表示「替换第 n 张 / 指定 id 的卡片」，而不是新建。 */
 function applyAiCardBlocks(blocks) {
   const rs = [];
   const s = state.view.scale || CARD_BASE;
   blocks.forEach((b, i) => {
     try {
-      if (!String(b.code || '').trim()) throw new Error('卡片内容是空的');
+      let code = String(b.code || '');
+      let target = null;
+      const m = code.match(/^\s*@card\s+([\w-]+)\s*\r?\n/);
+      if (m) {
+        const key = m[1];
+        const idx = /^\d+$/.test(key) ? (+key - 1) : -1;
+        target = idx >= 0 ? state.cards[idx] : state.cards.find(c => c.id === key);
+        code = code.slice(m[0].length);
+      }
+      if (!code.trim()) throw new Error('卡片内容是空的');
+      if (target) {
+        target.code = sanitizeCardCode(code);
+        rs.push({ line: 'HTML 卡片（改 ' + target.id + '）', ok: true, label: target.id, err: '' });
+        return;
+      }
       /* 多张卡片依次错开，别叠在同一处 */
-      const c = addCanvasCard(b.code, {
+      const c = addCanvasCard(code, {
         w: 420, h: 240,
         x: state.view.cx - 210 / s + i * 16 / s,
         y: state.view.cy + 120 / s - i * 12 / s,
@@ -40584,9 +40619,16 @@ function extractGeoCommands(text) {
 function isAiDoneLine(t) { return /^(done|finish(ed)?|完成|结束|作图完成)[.。!！]?$/i.test(String(t || '').trim()); }
 function buildCanvasContext() {
   const list = state.objects.filter(o => !o.aux);
-  const cardLine = state.cards.length
-    ? '\n【画布卡片】已有 ' + state.cards.length + ' 张 HTML / CSS 卡片（装饰与说明；要换内容就重新输出一个 ```html 块）'
-    : '';
+  let cardLine = '';
+  if (state.cards.length) {
+    /* 把每张卡片的源码一并给模型：只报数量它既看不到样式也没法改 */
+    const items = state.cards.map((c, i) => {
+      let code = String(c.code || '');
+      if (code.length > 420) code = code.slice(0, 420) + '…（共 ' + code.length + ' 字符）';
+      return (i + 1) + ' · ' + c.id + ' · ' + c.w + '×' + c.h + '：' + code;
+    });
+    cardLine = '\n【画布卡片】共 ' + state.cards.length + ' 张 HTML / CSS 卡片。要修改其中第 n 张，就输出一个 ```html 块，第一行写 @card n，下面写完整的替换代码（不是片段）：\n' + items.join('\n');
+  }
   if (!list.length) return '【当前画布】空（还没有任何对象）' + cardLine;
   /* 单行超过 160 字符就截断：CAS 生成的 π 几万位这类长结果不能整段回传给模型，太费 token */
   const lines = list.map(o => {
@@ -41352,7 +41394,12 @@ async function aiSend() {
         o.lineWidth, o.lineStyle, o.fillOpacity, o.showLabel ? 1 : 0,
         o.value != null && isNum(o.value) ? o.value
           : (o.value && isNum(o.value.x) ? o.value.x + ',' + o.value.y : ''),
-      ].join('~')).join('|') + '#' + state.cards.map(c => [c.id, c.x.toFixed(3), c.y.toFixed(3), c.w, c.h, c.code.length].join('~')).join('|');
+      ].join('~')).join('|') + '#' + state.cards.map(c => {
+        /* 卡片内容也进签名：等长改写（改颜色 / 改字）同样算「画布变了」 */
+        let h = 0; const t = String(c.code || '');
+        for (let i = 0; i < t.length; i++) h = (h * 31 + t.charCodeAt(i)) | 0;
+        return [c.id, c.x.toFixed(3), c.y.toFixed(3), c.w, c.h, t.length, h].join('~');
+      }).join('|');
       let idleRounds = 0, stopNote = '', lastStepEl = null, noProgressStop = false;
       let lastCmdsKey = firstCmds.join('\n');   /* 用来识别「原样重发同一批失败命令」 */
       while (!reactDone) {
