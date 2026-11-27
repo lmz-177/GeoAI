@@ -4685,8 +4685,9 @@ const APP_CHANGELOG = [
     lead: '思考强度面板左上角多了一枚微光星标：一键打开「臻彩模式」——滑条亮起彩虹流光，之后 AI 画完图会再配一张好看的卡片。',
     notes: [
       '点开后滑条变成流动的彩虹光、旋钮带柔光，面板标题处短暂亮起「臻彩模式已开启」与一行说明，1.8 秒后自动淡出、恢复档位文字；再点一次关闭',
-      '打开时给模型追加一段指令：主体图形画完后输出一个 ```html 块，做一张与题目呼应的标题 / 结论 / 公式卡片（可带动画），不遮挡关键图形',
-      '偏好记在本机；切换时一条轻提示说明当前状态',
+      '提示词按需配卡：题目不适合就不画；内容多时可以给 2~3 张，也允许 :hover / @keyframes 这类纯 CSS 交互',
+      '每次进入应用都从关闭开始，避免忘了关一直多消耗额度；切换时一条轻提示说明当前状态',
+      '思考档位的说明统一缩短成一行：不思考最快 / 默认档日常作图 / 中等推理多步计算 / 强推理难题证明',
       '修复：卡片编辑器的「取消」与右上 ✕ 点不动——动态插入的模态没被初始化时的 data-close 扫描覆盖，现在自行绑定',
     ],
   },
@@ -7700,14 +7701,14 @@ function bindProvModal() {
    档位不是越多越好 —— 七档里「Minimal 与 Low」「High 与 XHigh」的差别用户根本分不出来，
    滑条反而变成长长一条点不准。四档每档都有明确的使用场景，滑条也只有四个落点。 */
 const EFFORTS = [
-  { id: 'off', label: 'Off', api: null, effort: null, desc: '不产生思维链，响应最快',
-    descEn: 'No reasoning chain — fastest responses' },
-  { id: 'low', label: 'Low', api: true, effort: 'low', desc: '默认档，响应快，适合日常作图与简单计算',
-    descEn: 'Default — fast, good for everyday plotting and simple math' },
-  { id: 'medium', label: 'Medium', api: true, effort: 'high', desc: '中等推理，适合多步计算与作图',
-    descEn: 'Moderate reasoning for multi-step math and constructions' },
-  { id: 'high', label: 'High', api: true, effort: 'max', desc: '强推理，适合复杂几何证明与压轴题',
-    descEn: 'Deep reasoning for complex geometry proofs and hard problems' },
+  { id: 'off', label: 'Off', api: null, effort: null, desc: '不思考，最快',
+    descEn: 'No reasoning — fastest' },
+  { id: 'low', label: 'Low', api: true, effort: 'low', desc: '默认档，日常作图',
+    descEn: 'Default — everyday plotting' },
+  { id: 'medium', label: 'Medium', api: true, effort: 'high', desc: '中等推理，多步计算',
+    descEn: 'Moderate reasoning, multi-step' },
+  { id: 'high', label: 'High', api: true, effort: 'max', desc: '强推理，难题证明',
+    descEn: 'Deep reasoning, hard proofs' },
 ];
 /* 默认档位（Low）：设置页的「恢复默认」、缺省状态、AI 抬头显示都从这一处取。 */
 const EFFORT_DEFAULT = EFFORTS.findIndex(e => e.id === 'low');
@@ -13588,12 +13589,9 @@ function loadSnapshot(json) {
    控件把它渲染成画布上的一块卡片：随缩放平移，可拖动、双击编辑、删除。
    内容放在 Shadow DOM 里，样式不会污染主界面；<script> 与事件属性在入口处剥掉。 */
 const CARD_BASE = 46;   /* 设计像素与标准视图 1:1 的基准 scale */
-/* 「AI 配 CSS」：打开后给模型加一段指令，画完图再附一张排版卡 */
-const CSSM_KEY = 'ggai_aicss';
-const CSSM = (() => {
-  try { return Object.assign({ on: false }, JSON.parse(localStorage.getItem(CSSM_KEY) || '{}')); }
-  catch (e) { return { on: false }; }
-})();
+/* 「AI 配 CSS」：打开后给模型加一段指令，画完图再附一张排版卡。
+   每次进入应用都从关闭开始，免得忘了关、白白多消耗额度。 */
+const CSSM = { on: false };
 let cssHintT = 0;
 function applyCssMode() {
   const b = $('#effCssOpen');
@@ -13603,7 +13601,6 @@ function applyCssMode() {
     pop.classList.toggle('beautify', !!CSSM.on);
     if (!CSSM.on) { clearTimeout(cssHintT); pop.classList.remove('showhint'); }
   }
-  try { localStorage.setItem(CSSM_KEY, JSON.stringify(CSSM)); } catch (e) { }
 }
 /* 和「更快消耗使用额度」同一条节奏：短暂顶替标题，1.8 秒后淡出、标题回来 */
 function toggleCssMode() {
@@ -32374,19 +32371,19 @@ async function runUITest() {
     if ($('#cardBackdrop').classList.contains('on')) throw new Error('编辑器取消按钮点不动');
     /* 「臻彩模式」开关：点亮图标、滑条亮起彩虹流光，并把配卡指令写进系统提示 */
     CSSM.on = false; applyCssMode();
-    if (aiSystemPrompt().indexOf('CSS 配图模式') >= 0) throw new Error('默认不该带配 CSS 指令');
+    if (aiSystemPrompt().indexOf('臻彩模式已开启') >= 0) throw new Error('默认不该带配 CSS 指令');
     $('#effortBox').click(); await sleep(0);
     $('#effCssOpen').click(); await sleep(0);
     if (!CSSM.on || !$('#effCssOpen').classList.contains('on')) throw new Error('开关没有激活');
     if (!$('#effPop').classList.contains('beautify')) throw new Error('滑条没有亮起彩虹流光');
     if (!$('#effPop').classList.contains('showhint')) throw new Error('开启时没有顶替标题做提示');
     if (!$('#effPop').classList.contains('on')) throw new Error('点开关不该关掉面板');
-    if (aiSystemPrompt().indexOf('CSS 配图模式') < 0) throw new Error('开启后系统提示没有加指令');
+    if (aiSystemPrompt().indexOf('臻彩模式已开启') < 0) throw new Error('开启后系统提示没有加指令');
     await sleep(1950);
     if ($('#effPop').classList.contains('showhint')) throw new Error('提示文字没有自动消失');
     if (!$('#effPop').classList.contains('beautify')) throw new Error('提示消失后流光也跟着没了');
     $('#effCssOpen').click(); await sleep(0);
-    if (CSSM.on || aiSystemPrompt().indexOf('CSS 配图模式') >= 0) throw new Error('再点一次没有关闭');
+    if (CSSM.on || aiSystemPrompt().indexOf('臻彩模式已开启') >= 0) throw new Error('再点一次没有关闭');
     if ($('#effPop').classList.contains('beautify')) throw new Error('关闭后流光没有停');
     if ($('#effPop').classList.contains('showhint')) throw new Error('关闭后提示没有收起');
     $('#effortBox').click(); await sleep(0);
@@ -38533,8 +38530,13 @@ const AI_CAS_SYSTEM = `【精确计算（需要时由你自行调用）】
 · 绝对不要在正文里抄写或复述长数字（几十位以上都算长）：需要在正文展示时，写占位符 «CAS:π(5000)» 或 «CAS:2^2000»，前端会算好并展开显示。
 · 一次只算一个算式；需要多步就分多条 CAS 命令，一条一行。
 · 计算与作图可以同时进行：题目里既有计算又有图形时，先给计算结果，再按需画图（作图规则同平常）。`;
-/* 用户点了「AI 配 CSS」才追加：画完主体图形后，再附一张排版卡 */
-const AI_CSS_HINT = `【CSS 配图模式已开启】画完主体图形后，再单独输出一个 \`\`\`html 代码块，用一段自包含 HTML + <style> 做一张与题目呼应的卡片（标题 / 结论 / 关键公式 / 简短说明，可带 CSS 动画）。要求：根容器用 class="card" 并给 height:100%；配色克制、与图形区分开，不要遮住关键图形；不要写 <script>、事件属性、iframe 或表单；一次回答最多一张卡片；卡片只是装饰与说明，不能替代数学对象。`;
+/* 用户点了「臻彩模式」才追加：画完主体图形后，按需再附排版卡 */
+const AI_CSS_HINT = `【臻彩模式已开启】画完主体图形后，可以再输出 \`\`\`html 代码块，用自包含 HTML + <style> 做一张与题目呼应的卡片（标题 / 结论 / 关键公式 / 简短说明）。要求：
+· 可选：不适合配卡（纯计算、一句话能说清、用户只想要图）就不画，不要为凑格式硬加。
+· 数量按需：一张通常够；内容确实多时可给 2~3 张，每张一个代码块，别让卡片盖过正文。
+· 可以加纯 CSS 交互：:hover / :active 过渡、悬停高亮、渐变流光、@keyframes 循环动画都行；不要写 <script>、事件属性、iframe 或表单。
+· 根容器用 class="card" 并给 height:100%；配色克制、与图形区分开，不遮住关键图形。
+· 卡片只是装饰与说明，不能替代数学对象。`;
 
 /* 实际发给模型的系统提示：作图规则 + 精确计算规则始终都在，由 AI 自己判断何时调用 CAS */
 function aiSystemPrompt() { return AI_SYSTEM + '\n\n' + AI_CAS_SYSTEM + (CSSM.on ? '\n\n' + AI_CSS_HINT : ''); }
