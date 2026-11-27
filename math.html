@@ -1446,7 +1446,8 @@ body.dark .eff-warn{color:#c39bff}
 @keyframes effSpin{from{transform:rotate(0)}to{transform:rotate(-360deg)}}
 /* 滑条：面板宽 272，左右各缩 12 → 轨道 248；上沿距卡片顶 65 */
 .eff-pop .eff-slider{width:auto;margin:9px 12px 0}
-/* 思考强度面板左上角的入口：打开画布卡片的 CSS 显示优化（小图标，不占文字） */
+/* 思考强度面板左上角的入口：一键切换卡片的「CSS 优化显示」
+   （展示态：去掉描边与编辑键，卡片只做视觉呈现，不拦截画布手势） */
 .eff-css{
   position:absolute;top:7px;left:7px;width:28px;height:28px;border-radius:8px;
   display:flex;align-items:center;justify-content:center;color:var(--text-3);
@@ -1454,40 +1455,12 @@ body.dark .eff-warn{color:#c39bff}
 }
 .eff-css:hover{background:var(--hover);color:var(--accent)}
 .eff-css:active{transform:scale(.94)}
-.eff-css svg{width:16px;height:16px}
-/* CSS 显示优化面板：从 AI 输入条右下弹出，管卡片的显隐 / 动效 / 单个编辑 */
-.css-mode{
-  position:fixed;right:calc(16px + env(safe-area-inset-right,0px));bottom:calc(124px + env(safe-area-inset-bottom,0px));
-  width:302px;max-width:calc(100vw - 24px);z-index:640;display:none;
-  background:var(--pop-bg);border:.5px solid var(--glass-brd);border-radius:16px;
-  box-shadow:var(--shadow-lg),var(--hi-strong);
-  -webkit-backdrop-filter:blur(26px) saturate(180%);backdrop-filter:blur(26px) saturate(180%);
-  overflow:hidden;
-}
-.css-mode.on{display:block;animation:effPopIn .16s var(--ease-out) both}
-.cm-head{display:flex;align-items:center;gap:8px;padding:11px 12px 8px}
-.cm-head b{font-size:var(--fs-sm);flex:1}
-.cm-close{width:26px;height:26px;border-radius:8px;display:flex;align-items:center;justify-content:center;color:var(--text-3)}
-.cm-close:hover{background:var(--hover);color:var(--text)}
-.cm-row{display:flex;align-items:center;gap:10px;padding:8px 12px;font-size:var(--fs-xs);color:var(--text-2)}
-.cm-row span{flex:1}
-.cm-row input{width:17px;height:17px;accent-color:var(--accent)}
-.cm-sub{padding:6px 12px 4px;font-size:var(--fs-3xs);color:var(--text-3);display:flex;align-items:center;justify-content:space-between}
-.cm-list{max-height:184px;overflow:auto;padding:0 8px 6px}
-.cm-item{display:flex;align-items:center;gap:8px;padding:7px 8px;border-radius:9px;font-size:var(--fs-2xs);color:var(--text-2)}
-.cm-item:hover{background:var(--hover)}
-.cm-item .cm-i{flex:0 0 auto;width:20px;text-align:center;color:var(--text-3);font-family:var(--mono)}
-.cm-item .cm-t{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.cm-item .cm-b{flex:0 0 auto;font-size:var(--fs-sm);color:var(--text-3);line-height:1}
-.cm-empty{padding:10px 12px;font-size:var(--fs-2xs);color:var(--text-3);text-align:center}
-.cm-foot{display:flex;gap:8px;padding:8px 12px 12px}
-.cm-foot button{flex:1;height:30px;border-radius:9px;font-size:var(--fs-2xs)}
-.cm-foot .pri{background:var(--accent);color:#fff}
-.cm-foot .pri:hover{background:var(--accent-h)}
-.cm-foot .sec{background:var(--panel-3);color:var(--text-2)}
-/* 显示模式：隐藏全部卡片 / 编辑键常显 */
-body.cards-hidden .hcard{display:none!important}
-body.cards-tools-always .hcard-tools{opacity:1}
+.eff-css svg{width:17px;height:17px}
+.eff-css.on{color:#fff;background:var(--accent);box-shadow:0 2px 10px var(--accent-soft)}
+.eff-css.on:hover{background:var(--accent-h);color:#fff}
+/* 展示态：卡片不描边、不显示工具、不接收指针，画布手势照常 */
+body.css-clean .hcard{outline-color:transparent!important;pointer-events:none!important;cursor:default}
+body.css-clean .hcard-tools{display:none!important}
 /* 思考强度面板：参考 ChatGPT 模型强度滑条——毛玻璃浮层、离散档位、
    拖动时旋钮跟手，松手吸附；更换档位时标题做一次淡入淡出 */
 .eff-pop{background:rgba(255,255,255,.62);
@@ -3837,8 +3810,12 @@ try {
             <!-- 点思考强度按钮后展开面板：标题 / 重置 + 一条滑条 -->
             <div class="eff-pop" id="effPop" role="dialog" aria-label="思考强度">
               <div class="eff-pop-head">
-                <button class="eff-css" id="effCssOpen" type="button" title="CSS 显示优化" aria-label="CSS 显示优化" aria-haspopup="dialog">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m8 6-5 6 5 6M16 6l5 6-5 6M13.6 4l-3.2 16"></path></svg>
+                <button class="eff-css" id="effCssOpen" type="button" title="CSS 优化显示" aria-label="CSS 优化显示" aria-pressed="false" aria-haspopup="false">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <rect x="3.2" y="5.4" width="12.6" height="9.6" rx="2.6"></rect>
+                    <path d="M6.6 18.6h7.4" opacity=".6"></path>
+                    <path d="M18.4 3.1l.85 2.05 2.05.85-2.05.85-.85 2.05-.85-2.05-2.05-.85 2.05-.85z" fill="currentColor" stroke="none"></path>
+                  </svg>
                 </button>
                 <div class="eff-pop-txt">
                   <div class="eff-pop-ttl" id="effPopName" style="color: rgb(47, 111, 208);">Low</div>
@@ -4680,8 +4657,17 @@ const state = {
    版本号在左上角 GeoAI 打开的「更新与版本」弹窗里展示。改完版本号后，在
    APP_CHANGELOG 最上面补一条（版本、日期、类型、一句摘要、几条说明），
    新版本会自动出现在版本历史里。 */
-const APP_VERSION = '2.2.1';
+const APP_VERSION = '2.2.2';
 const APP_CHANGELOG = [
+  {
+    v: '2.2.2', date: '2026-11-27', tag: '展示态', code: '约 4.3 万行 · 2.7 MB',
+    lead: '思考强度面板左上角多了一枚小图标：一键切换卡片的 CSS 优化显示——去掉描边与编辑键，卡片只做视觉呈现，画布手势照常。',
+    notes: [
+      '开关直接生效，不再展开二级面板；激活时图标点亮（主色实心），再点一次恢复编辑态',
+      '展示态下卡片不描边、不显示 ✎ / ✕、不拦截指针，拖动 / 缩放 / 画图都不会被卡片挡住；偏好记在本机',
+      '修复：卡片编辑器的「取消」与右上 ✕ 点不动——动态插入的模态没被初始化时的 data-close 扫描覆盖，现在自行绑定',
+    ],
+  },
   {
     v: '2.2.1', date: '2026-11-27', tag: '卡片读写', code: '约 4.3 万行 · 2.7 MB',
     lead: 'AI 现在能读到画布上每张卡片的完整 HTML / CSS 源码，也能按序号原地改写，而不是只能新建一张。',
@@ -13580,18 +13566,19 @@ function loadSnapshot(json) {
    控件把它渲染成画布上的一块卡片：随缩放平移，可拖动、双击编辑、删除。
    内容放在 Shadow DOM 里，样式不会污染主界面；<script> 与事件属性在入口处剥掉。 */
 const CARD_BASE = 46;   /* 设计像素与标准视图 1:1 的基准 scale */
-/* CSS 显示优化（卡片层）：显隐 / 编辑键常显 / 动效开关，偏好存本机 */
-const CSSM_KEY = 'ggai_cssmode';
+/* CSS 优化显示（展示态）：一键关掉卡片的描边、编辑键与指针拦截，只做视觉呈现 */
+const CSSM_KEY = 'ggai_cssclean';
 const CSSM = (() => {
-  try { return Object.assign({ show: true, tools: false, fx: true }, JSON.parse(localStorage.getItem(CSSM_KEY) || '{}')); }
-  catch (e) { return { show: true, tools: false, fx: true }; }
+  try { return Object.assign({ clean: false }, JSON.parse(localStorage.getItem(CSSM_KEY) || '{}')); }
+  catch (e) { return { clean: false }; }
 })();
-function saveCssMode() { try { localStorage.setItem(CSSM_KEY, JSON.stringify(CSSM)); } catch (e) { } }
 function applyCssMode() {
-  document.body.classList.toggle('cards-hidden', !CSSM.show);
-  document.body.classList.toggle('cards-tools-always', !!CSSM.tools);
-  saveCssMode();
+  document.body.classList.toggle('css-clean', !!CSSM.clean);
+  const b = $('#effCssOpen');
+  if (b) { b.classList.toggle('on', !!CSSM.clean); b.setAttribute('aria-pressed', CSSM.clean ? 'true' : 'false'); }
+  try { localStorage.setItem(CSSM_KEY, JSON.stringify(CSSM)); } catch (e) { }
 }
+function toggleCssMode() { CSSM.clean = !CSSM.clean; applyCssMode(); }
 let cardIdSeq = 0;
 const DEFAULT_CARD_CODE = `<style>
   .card{
@@ -13627,9 +13614,7 @@ const CARD_SHADOW_BASE = ':host{display:block;width:100%;height:100%;overflow:hi
 function paintCardHost(host, code) {
   let sr = host.shadowRoot;
   if (!sr) sr = host.attachShadow({ mode: 'open' });
-  /* 省电 / 静态模式：关掉卡片里的动画、过渡、滤镜与阴影（部分场景下渲染更稳） */
-  const noFx = CSSM.fx ? '' : '*,*::before,*::after{animation:none!important;transition:none!important;filter:none!important;backdrop-filter:none!important;box-shadow:none!important}';
-  sr.innerHTML = '<style>' + CARD_SHADOW_BASE + noFx + '</style><div class="hc-body">' + sanitizeCardCode(code) + '</div>';
+  sr.innerHTML = '<style>' + CARD_SHADOW_BASE + '</style><div class="hc-body">' + sanitizeCardCode(code) + '</div>';
 }
 function cardCssScale() { return state.view.scale / CARD_BASE; }
 function renderCards() {
@@ -13646,8 +13631,6 @@ function renderCards() {
     el.classList.toggle('sel', state.cardSel === c.id);
     if (el._code !== c.code) { paintCardHost(el, c.code); el._code = c.code; }
   }
-  /* 面板开着时同步列表，新建 / 删除 / AI 改卡片都能立刻看到 */
-  if ($('#cssMode') && $('#cssMode').classList.contains('on')) renderCssModeList();
 }
 function buildCardEl(c) {
   const el = document.createElement('div');
@@ -13755,6 +13738,10 @@ function ensureCardEditor() {
     + '</div>';
   document.body.appendChild(wrap);
   wrap.addEventListener('click', e => { if (e.target === wrap) closeBackdrop('cardBackdrop'); });
+  /* 动态插入的模态：取消 / ✕ 需要自己绑，页面初始化时那轮 data-close 扫描扫不到这里 */
+  wrap.querySelectorAll('[data-close="cardBackdrop"]').forEach(b => {
+    b.addEventListener('click', () => closeBackdrop('cardBackdrop'));
+  });
   const codeEl = $('#cardCode');
   codeEl.addEventListener('input', () => {
     clearTimeout(cardPreviewTimer);
@@ -13812,84 +13799,6 @@ function saveCardFromEditor() {
   renderCards();
   toast(c ? '卡片已更新' : '已插入卡片', 'ok');
 }
-/* ── CSS 显示优化面板 ──
-   从「思考强度」面板底部的按钮打开：管卡片显隐、编辑键是否常显、
-   动画与阴影是否保留，并能逐张打开编辑器。 */
-function ensureCssModePanel() {
-  if ($('#cssMode')) return;
-  const p = document.createElement('div');
-  p.className = 'css-mode';
-  p.id = 'cssMode';
-  p.setAttribute('role', 'dialog');
-  p.setAttribute('aria-label', 'CSS 显示优化');
-  p.innerHTML =
-    '<div class="cm-head"><b>CSS 显示</b>'
-    + '<button class="cm-close" type="button" aria-label="关闭">✕</button></div>'
-    + '<label class="cm-row"><span>显示卡片</span><input type="checkbox" id="cmShow" aria-label="显示卡片"></label>'
-    + '<label class="cm-row"><span>编辑键常显</span><input type="checkbox" id="cmTools" aria-label="编辑键常显"></label>'
-    + '<label class="cm-row"><span>动画与阴影</span><input type="checkbox" id="cmFx" aria-label="动画与阴影"></label>'
-    + '<div class="cm-sub"><span id="cmCount">0 张卡片</span></div>'
-    + '<div class="cm-list" id="cssModeList"></div>'
-    + '<div class="cm-foot"><button class="pri" type="button" id="cmAdd">＋ 插入卡片</button></div>';
-  document.body.appendChild(p);
-  const sync = () => {
-    $('#cmShow').checked = !!CSSM.show;
-    $('#cmTools').checked = !!CSSM.tools;
-    $('#cmFx').checked = !!CSSM.fx;
-  };
-  sync();
-  $('#cmShow').addEventListener('change', e => { CSSM.show = e.target.checked; applyCssMode(); renderCards(); });
-  $('#cmTools').addEventListener('change', e => { CSSM.tools = e.target.checked; applyCssMode(); });
-  $('#cmFx').addEventListener('change', e => {
-    CSSM.fx = e.target.checked; applyCssMode();
-    /* 动画开关要重写 Shadow DOM 里的样式，逐张强制重绘 */
-    const layer = $('#cardLayer');
-    if (layer) Array.from(layer.children).forEach(el => { el._code = null; });
-    renderCards();
-  });
-  $('#cmAdd').addEventListener('click', () => { closeCssMode(); openHtmlCardEditor(); });
-  p.querySelector('.cm-close').addEventListener('click', closeCssMode);
-  document.addEventListener('pointerdown', e => {
-    const pm = $('#cssMode');
-    if (!pm || !pm.classList.contains('on')) return;
-    if (pm.contains(e.target) || (e.target.closest && e.target.closest('#effCssOpen'))) return;
-    closeCssMode();
-  }, true);
-  document.addEventListener('keydown', e => {
-    if (e.key !== 'Escape') return;
-    const pm = $('#cssMode');
-    if (pm && pm.classList.contains('on') && !document.querySelector('.backdrop.on')) closeCssMode();
-  });
-}
-function renderCssModeList() {
-  const list = $('#cssModeList'); if (!list) return;
-  const n = $('#cmCount'); if (n) n.textContent = state.cards.length + ' 张卡片';
-  if (!state.cards.length) {
-    list.innerHTML = '<div class="cm-empty">还没有卡片</div>';
-    return;
-  }
-  list.innerHTML = state.cards.map((c, i) => {
-    const txt = String(c.code || '').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 40) || '（样式）';
-    return '<div class="cm-item" data-i="' + i + '" role="button" tabindex="0">'
-      + '<span class="cm-i">' + (i + 1) + '</span>'
-      + '<span class="cm-t">' + esc(txt) + '</span>'
-      + '<span class="cm-b" aria-hidden="true">›</span></div>';
-  }).join('');
-  list.querySelectorAll('.cm-item').forEach(row => {
-    const act = () => {
-      const c = state.cards[+row.dataset.i]; if (!c) return;
-      closeCssMode(); openHtmlCardEditor(c.id);
-    };
-    row.addEventListener('click', act);
-    row.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); act(); } });
-  });
-}
-function openCssMode() {
-  ensureCssModePanel();
-  renderCssModeList();
-  $('#cssMode').classList.add('on');
-}
-function closeCssMode() { const p = $('#cssMode'); if (p) p.classList.remove('on'); }
 applyCssMode();
 function undo() { if (!state.undo.length) return; state.redo.push(snapshotNow()); loadSnapshot(state.undo.pop()); updateUndoButtons(); toast('已撤销'); }
 function redo() { if (!state.redo.length) return; state.undo.push(snapshotNow()); loadSnapshot(state.redo.pop()); updateUndoButtons(); toast('已重做'); }
@@ -32420,14 +32329,19 @@ async function runUITest() {
     pushUndo(); state.cards = []; renderCards(); await sleep(0);
     undo(); await sleep(0);
     if (state.cards.length !== n0) throw new Error('撤销没有恢复卡片：' + state.cards.length + ' ≠ ' + n0);
-    /* CSS 显示优化面板：能打开、列出卡片、隐藏开关生效 */
-    openCssMode(); await sleep(0);
-    if (!$('#cssMode').classList.contains('on')) throw new Error('CSS 显示优化面板没有打开');
-    if (!$('#cssModeList').querySelector('.cm-item')) throw new Error('面板没有列出卡片');
-    $('#cmShow').click(); await sleep(0);
-    if (!document.body.classList.contains('cards-hidden')) throw new Error('隐藏卡片开关没有生效');
-    $('#cmShow').click(); await sleep(0);
-    closeCssMode();
+    /* 编辑器「取消」要真的能点（动态模态的 data-close 自己绑） */
+    openHtmlCardEditor(); await sleep(0);
+    if (!$('#cardBackdrop').classList.contains('on')) throw new Error('卡片编辑器没有打开');
+    $('#cardBackdrop .modal-foot [data-close]').click(); await sleep(0);
+    if ($('#cardBackdrop').classList.contains('on')) throw new Error('编辑器取消按钮点不动');
+    /* CSS 优化显示：一枚图标直接开关，不出二级面板 */
+    CSSM.clean = false; applyCssMode();
+    $('#effCssOpen').click(); await sleep(0);
+    if (!document.body.classList.contains('css-clean')) throw new Error('CSS 优化显示没有激活');
+    if (!$('#effCssOpen').classList.contains('on')) throw new Error('激活后图标没有点亮');
+    $('#effCssOpen').click(); await sleep(0);
+    if (document.body.classList.contains('css-clean')) throw new Error('再点一次没有关闭');
+    if ($('#cssMode')) throw new Error('不该再有二级面板');
     clearAll(); await sleep(0);
   });
   /* CAS 精确数值：大整数幂按科学计数 + 位数显示，π 给足小数位 */
@@ -39234,9 +39148,9 @@ function bindAI() {
     });
     rst.addEventListener('animationend', () => rst.classList.remove('spin'));
   }
-  /* 面板底部的入口：关掉思考强度，打开卡片的 CSS 显示优化 */
+  /* 面板左上角的小图标：直接切换卡片的 CSS 优化显示，不再展开二级面板 */
   const cssBtn = $('#effCssOpen');
-  if (cssBtn) cssBtn.addEventListener('click', () => { effOpen(false); openCssMode(); });
+  if (cssBtn) cssBtn.addEventListener('click', () => { toggleCssMode(); effOpen(false); });
   /* 浅 / 深色切换时按另一套深色色板重绘（色板在 JS 里，不是 CSS 变量） */
   let wasDark = effDark();
   new MutationObserver(() => {
