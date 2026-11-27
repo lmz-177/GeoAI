@@ -43,6 +43,8 @@
      太透会让文字对比度跟着背景漂；保留模糊与高光，只把底色提到可读区间。 */
   --pop-bg:rgba(255,255,255,.88);
   --modal-bg:#ffffff;
+  /* 浮在画布上的侧栏：比普通玻璃更透，模糊也更轻，这样网格与函数曲线能透出来 */
+  --float-glass:rgba(255,255,255,.26);
   /* 高光 / 厚度：上沿是镜面反射的亮线，下沿压一点暗，玻璃才有「一片」的厚度，
      而不是贴纸。 */
   --hi:inset 0 .5px 0 rgba(255,255,255,.92), inset 0 -.5px 0 rgba(0,0,0,.035);
@@ -103,6 +105,7 @@ body.dark{
   --glass-brd:rgba(255,255,255,.18);
   --pop-bg:rgba(32,34,40,.90);
   --modal-bg:#1b1d23;
+  --float-glass:rgba(28,30,36,.34);
   --hi:inset 0 .5px 0 rgba(255,255,255,.26), inset 0 -.5px 0 rgba(0,0,0,.3);
   --hi-strong:inset 0 1px 0 rgba(255,255,255,.32), inset 0 -1px 1px rgba(0,0,0,.38), inset 0 0 0 .5px rgba(255,255,255,.12);
 }
@@ -923,6 +926,8 @@ body.tool-folded .tool-head{padding-bottom:0}
 .tool-hint.omni .th-act.done{color:var(--accent);background:var(--accent-dim)}
 .tool-hint.omni .th-act.done:hover{background:var(--accent);color:#fff}
 .tool-hint.omni .th-act.cancel:hover{color:var(--danger-ink);background:rgba(255,59,48,.12)}
+/* 桌面输入行常驻，不需要再点「输入」；窄屏收起输入行时它才出现 */
+.tool-hint.omni .th-act.type{display:none}
 .tool-hint.omni .th-type{display:flex;align-items:center;gap:6px;flex:1 1 260px;min-width:0}
 .tool-hint.omni .th-input{
   flex:1 1 auto;min-width:0;width:auto;max-width:none;background:var(--panel);border:.5px solid var(--border-2);
@@ -944,7 +949,7 @@ body.tool-folded .tool-head{padding-bottom:0}
   cursor:pointer;list-style:none;display:flex;align-items:center;gap:6px;
 }
 .pf-adv summary::-webkit-details-marker{display:none}
-.pf-adv summary::before{content:'▸';font-size:11px;color:var(--text-3);transition:transform var(--t)}
+.pf-adv summary::before{content:'▸';font-size:var(--fs-3xs);color:var(--text-3);transition:transform var(--t)}
 .pf-adv[open] summary::before{transform:rotate(90deg)}
 .pf-adv summary span{margin-left:auto;font-weight:400;font-size:var(--fs-3xs);color:var(--text-3);white-space:nowrap}
 .pf-adv .pf-row{margin:0 12px 10px}
@@ -978,7 +983,7 @@ body.tool-folded .tool-head{padding-bottom:0}
 .m-input-bar input::placeholder{color:var(--text-3);font-family:var(--font);font-size:var(--fs-xs)}
 .m-input-bar .m-send{
   flex:0 0 auto;width:36px;height:36px;border-radius:12px;background:var(--accent);color:#fff;
-  display:flex;align-items:center;justify-content:center;font-size:17px;line-height:1;
+  display:flex;align-items:center;justify-content:center;font-size:var(--fs-md);line-height:1;
   box-shadow:0 2px 8px var(--accent-soft);transition:var(--t-ui);
 }
 .m-input-bar .m-send:active{transform:scale(.94)}
@@ -2575,6 +2580,9 @@ body:has(#aiPanel:not(.mini):not(.hidden)) .toast{animation:toastInTop var(--t-s
   /* 手机上侧栏几乎铺满屏：按钮再「右让」到侧栏右边（302 + 12）会整枚跑到屏幕外，
      手机上就再也点不到菜单。宽屏那套让位逻辑在这里换成「原地留图标 + 页签让位」。 */
   body:has(#sidebar:not(.hidden)) .fmenu-bar{left:12px}
+  /* 抽屉几乎铺满屏时，右上角的设置 / 分享 / 收起三连正好压在抽屉自己的关闭键上；
+     收起它们，让抽屉的 X 露出来，关闭动作只有一个明确入口。 */
+  body:has(#sidebar:not(.hidden)) .persp-float{opacity:0;pointer-events:none}
   /* 手机上侧栏几乎铺满屏，GeoAI 胶囊没有地方待：先收起，版本内容从侧栏的「更新」页签进 */
   body:has(#sidebar:not(.hidden)) .fmenu-ver{display:none}
   body:has(#sidebar:not(.hidden)) .panel-tabs{padding-left:62px}
@@ -3299,6 +3307,49 @@ body.kb-open .modal{max-height:calc(100dvh - var(--kb-inset) - 32px)}
 body.kb-open .modal-body{min-height:0}
 /* AI 对话区在键盘打开时按可见高度重新限高，历史消息不会顶到屏幕外 */
 body.kb-open .ai-dock.sheet-open .ai-sheet{max-height:max(140px,calc(100dvh - var(--kb-inset) - 180px))}
+/* ── 电脑端：侧栏改成浮在坐标系之上的液态玻璃卡片 ──
+   画布铺满整个工作区，侧栏以圆角玻璃片叠在左上角；网格与函数图会透过玻璃，
+   再叠加 JS 的边缘折射（initLiquidGlass）形成真实的厚度感。
+   收起时整块向左滑出，而不是把画布挤窄。 */
+@media (min-width:821px){
+  .workspace{position:relative}
+  .sidebar{
+    position:absolute;left:calc(12px + env(safe-area-inset-left,0px));top:12px;bottom:12px;z-index:185;
+    width:var(--sb-w);flex:0 0 auto;min-width:0;
+    border:.5px solid var(--glass-brd);border-radius:20px;
+    box-shadow:var(--shadow-lg),var(--hi-strong);
+    /* 透视：更低的底色不透明度 + 5px 轻模糊，网格与函数曲线能真正透出来；
+       大面板每帧都要采样背后的画布，模糊半径不能大，否则会拖慢逐位计算这类长任务。 */
+    background:var(--float-glass);
+    -webkit-backdrop-filter:blur(5px) saturate(180%);
+    backdrop-filter:blur(5px) saturate(180%);
+  }
+  .sidebar.hidden{
+    width:var(--sb-w)!important;flex-basis:auto!important;min-width:0!important;
+    transform:translateX(calc(-100% - 24px));opacity:0;pointer-events:none;
+    border-color:transparent;box-shadow:none;
+  }
+  #splitterL{display:none}
+  .fmenu-bar{transition:left var(--t-slow)}
+  /* 侧栏浮层展开时，画布左缘的菜单键与 AI 输入条一起让到它右侧 */
+  body:has(#sidebar:not(.hidden)) .fmenu-bar{left:calc(var(--sb-w) + 24px + env(safe-area-inset-left,0px))}
+  body:has(#sidebar:not(.hidden)) .ai-dock{
+    left:calc(var(--sb-w) + 24px + env(safe-area-inset-left,0px));right:22px;
+    width:auto;max-width:760px;margin-left:auto;margin-right:auto;transform:none;
+  }
+  body:has(#sidebar:not(.hidden)):has(.ai-dock.sheet-open) .ai-dock{
+    left:calc(var(--sb-w) + 24px + env(safe-area-inset-left,0px));right:22px;
+    width:auto;max-width:880px;
+  }
+  /* 提示条 / 恢复卡在「剩余画布」里居中，不被玻璃卡片压住 */
+  body:has(#sidebar:not(.hidden)) .tool-hint.omni{left:calc(50% + 163px)}
+  body:has(#sidebar:not(.hidden)) .cvs-restore{left:calc(50% + 163px)}
+}
+/* 821–999 的桌面窗口原来把缩放条放左下角；侧栏改成浮层后那里被盖住，
+   侧栏展开时改回右上角，与宽屏一致。 */
+@media (min-width:821px) and (max-width:999px){
+  body:has(#sidebar:not(.hidden)) .gv-zoom{left:auto;right:calc(14px + env(safe-area-inset-right,0px))}
+}
 /* ── 手机布局（≤600）：底部常驻公式条 + 提示条收成顶栏胶囊 ──
    侧栏抽屉里的输入条在手机上要先开抽屉才摸得到，日常写一条 A=(1,2) 太重；
    这里在画布底部常驻一条轻量输入，AI 球上移一行，两者分层不打架。 */
@@ -3307,20 +3358,25 @@ body.kb-open .ai-dock.sheet-open .ai-sheet{max-height:max(140px,calc(100dvh - va
   .ai-dock.mini{bottom:calc(66px + env(safe-area-inset-bottom,0px))!important}
   body:has(#sidebar:not(.hidden)) .m-input-bar,
   body:has(.ai-dock.sheet-open) .m-input-bar{display:none}
-  /* 提示条：顶栏让出菜单与右上控件，只留中间一段；动作键收成图标 */
+  /* 手机上顶栏已经没有空位（菜单 + 品牌胶囊 + 右上控件），提示条改到底部，
+     紧贴快速公式条上方；它出现时收起 AI 球，避免和快捷符号行互相压住。 */
   .tool-hint.omni{
-    left:64px;right:104px;top:10px;transform:none;max-width:none;
+    left:10px;right:10px;top:auto;transform:none;max-width:none;
+    bottom:calc(66px + env(safe-area-inset-bottom,0px));
     padding:5px 6px 5px 11px;gap:4px;border-radius:14px;
   }
   .tool-hint.omni .th-line{flex:1 1 auto;gap:6px}
   .tool-hint.omni .th-txt{font-size:var(--fs-2xs)}
   .tool-hint.omni .th-acts .th-lbl{display:none}
   .tool-hint.omni .th-act{padding:0 6px}
+  .tool-hint.omni .th-act.type{display:flex}
   .tool-hint.omni:not(.ask):not(.open) .th-type{display:none}
-  /* 展开输入时铺满一行：点「⌨」或参数步骤会自动落到这里 */
-  .tool-hint.omni.ask,.tool-hint.omni.open{left:10px;right:10px;top:58px}
-  .tool-hint.omni.ask .th-line,.tool-hint.omni.open .th-line{flex:1 1 100%}
-  .tool-hint.omni.ask .th-type,.tool-hint.omni.open .th-type{flex:1 1 100%}
+  /* 展开输入时输入行独占一行；说明与图标仍并排，少一行高度 */
+  .tool-hint.omni.ask .th-line,.tool-hint.omni.open .th-line{flex:1 1 auto}
+  .tool-hint.omni.ask .th-type,.tool-hint.omni.open .th-type{display:flex;flex:1 1 100%}
+  body:has(.tool-hint) .ai-dock.mini,
+  body:has(.m-input-bar:focus-within) .ai-dock.mini{opacity:0!important;pointer-events:none!important}
+  body:has(.m-input-bar:focus-within) .tool-hint.omni{display:none}
 }
 </style>
 <meta name="theme-color" id="metaThemeColor" content="#f2f2f7">
@@ -4052,13 +4108,7 @@ const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;'
    点键盘的回车只会换行，永远执行不了。 */
 function guardImeEnter(el, onEnter) {
   if (!el) return;
-  let until = 0, last = 0;
-  const fire = e => {
-    const now = performance.now();
-    if (now - last < 80) return;   /* keydown 与 beforeinput 双发时只执行一次 */
-    last = now;
-    onEnter(e);
-  };
+  let until = 0;
   const isEnterKey = e => e.key === 'Enter' || e.keyCode === 13 || e.which === 13;
   el.addEventListener('compositionstart', () => { until = Infinity; });
   el.addEventListener('compositionend', () => { until = performance.now() + 500; });
@@ -4066,15 +4116,16 @@ function guardImeEnter(el, onEnter) {
     if (!isEnterKey(e)) return;
     if (e.isComposing || e.keyCode === 229) return;
     if (performance.now() < until) { e.preventDefault(); return; }
-    fire(e);
+    onEnter(e);
   });
-  /* 软键盘回车（不产生 keydown 的实现） */
+  /* 软键盘回车（不产生 keydown 的实现）。keydown 分支会 preventDefault，
+     正常情况下浏览器不会再补发 beforeinput，不用另外去重。 */
   el.addEventListener('beforeinput', e => {
     const t = e.inputType;
     if (t !== 'insertLineBreak' && t !== 'insertParagraph') return;
     if (performance.now() < until) { e.preventDefault(); return; }
     e.preventDefault();
-    fire(e);
+    onEnter(e);
   });
 }
 
@@ -4529,7 +4580,8 @@ const APP_CHANGELOG = [
       '绘图提示条升级为操作条：多步工具可在条里直接输入数值、文本、坐标 (x,y)、对象名，甚至整条命令；附带撤销一步、完成、取消三个键，不再只靠 Esc',
       '数学键盘的数字页右下角改为「执行 ↵」，触屏上不用再去点输入框旁那枚小按钮；iOS 输入框的软键盘回车文案改为「前往」',
       '模型配置简化：预设服务商只留 API Key 与默认模型，Base URL、协议、模型列表、上下文长度收进「高级设置」折叠区；默认模型留空时自动取列表第一项',
-      '手机布局：提示条收成顶栏小胶囊、动作键只留图标；底部输入与 AI 球分层摆放，软键盘弹出时随布局一起上移',
+      '手机布局：提示条收到快速公式条上方（动作键只留图标），展开输入时向上生长，软键盘弹出不会被顶掉；AI 球在输入时临时让位',
+      '电脑端侧栏改为浮在坐标系之上的圆角液态玻璃卡片：画布铺满整个工作区，网格与函数曲线透过玻璃可见，收起时整块滑出而不是把画布挤窄；菜单键与 AI 输入条自动让到侧栏右侧',
     ],
   },
   {
@@ -6985,7 +7037,7 @@ function provFormView(conn) {
         '<div class="pf-picker" id="pfPicker" hidden></div>' +
         modelsRow + modelRow + ctxRow
       : '<div class="pf-quick">粘贴 API Key 就能用：地址、协议与推荐模型已按 ' + esc(p.name) + ' 预设填好。</div>' +
-        keyRow + keyLink + modelRow +
+        keyRowHtml + keyLink + modelRow +
         '<details class="pf-adv"><summary>高级设置<span>名称 · 地址 · 协议 · 模型列表 · 上下文</span></summary>' +
         nameRow + baseRow + protoRow + modelsRow + ctxRow + '</details>') +
     dupRow + '</div>';
@@ -7127,8 +7179,9 @@ function provFormView(conn) {
       });
     });
   }
-  /* 表单渲染后焦点落到第一个字段，键盘用户不必先绕过右上角关闭键 */
-  const nf = $('#pfName'); if (nf) nf.focus({ preventScroll: true });
+  /* 表单渲染后焦点落到 Key 输入框：预设服务的名称 / 地址已收进折叠区，
+     直接停在唯一必填项上，键盘用户不必先绕过折叠区 */
+  const nf = $('#pfKey') || $('#pfName'); if (nf) nf.focus({ preventScroll: true });
 }
 /* 表单 → 连接对象 */
 function provReadForm() {
@@ -21907,9 +21960,9 @@ function updateToolHint() {
     else if (e.key === 'Escape') { e.preventDefault(); setTool('move'); }
   });
   ok.addEventListener('click', e => { e.preventDefault(); commit(); });
-  div.appendChild(typeRow);
 
-  /* 第二组：撤销一步 / 输入（窄屏展开用）/ 完成 / 取消 */
+  /* 第二组：撤销一步 / 输入（窄屏展开用）/ 完成 / 取消。放在输入行之前，
+     桌面上一眼就是「说明 + 动作」在上、输入在下，不会出现只有两个按钮的空行。 */
   const acts = document.createElement('div');
   acts.className = 'th-acts';
   if (picked) {
@@ -21921,7 +21974,7 @@ function updateToolHint() {
   }
   if (!isAsk) {
     const typeBtn = document.createElement('button');
-    typeBtn.type = 'button'; typeBtn.className = 'th-act'; typeBtn.title = '用键盘输入当前步骤';
+    typeBtn.type = 'button'; typeBtn.className = 'th-act type'; typeBtn.title = '用键盘输入当前步骤';
     typeBtn.innerHTML = '<span aria-hidden="true">⌨</span><span class="th-lbl">输入</span>';
     typeBtn.addEventListener('click', e => {
       e.preventDefault();
@@ -21930,7 +21983,7 @@ function updateToolHint() {
     });
     acts.appendChild(typeBtn);
   }
-  if (picked && (tool.repeat || remain.length === 1)) {
+  if (picked && tool.repeat) {
     const done = document.createElement('button');
     done.type = 'button'; done.className = 'th-act done'; done.title = '完成（Enter）';
     done.innerHTML = '<span aria-hidden="true">✓</span><span class="th-lbl">完成</span>';
@@ -21943,6 +21996,7 @@ function updateToolHint() {
   cancel.addEventListener('click', e => { e.preventDefault(); setTool('move'); });
   acts.appendChild(cancel);
   div.appendChild(acts);
+  div.appendChild(typeRow);
 
   $('#graphicsWrap').appendChild(div);
   /* 参数步骤自动聚焦输入框；自测环境不抢焦点（工具回归用的是 askNumber / askText 的替身） */
@@ -33246,9 +33300,15 @@ async function runUITest() {
     const overlapsKey = mr && mr.width && mr.height &&
       gTop.x0 + gTop.w > (mr.left - rect.left) - 8 && gTop.x0 < (mr.right - rect.left) + 8;
     if (overlapsKey && gTop.y < 60) throw new Error('滑动条没有让开浮动菜单键：y=' + gTop.y);
-    /* 窄屏侧栏是盖在画布上的抽屉：抽屉开着时画布本来就点不到，
-       这不是滑动条被别的浮层挡住，跳过落点可点性检查 */
-    const sbOverlay = innerWidth <= 820 && !$('#sidebar').classList.contains('hidden');
+    /* 侧栏现在在桌面端也是画布上的浮层：落在它覆盖范围内的滑动条，
+       本来就被玻璃片挡住（收起侧栏即可操作），这属于布局约定，不是 z-index 错乱。 */
+    const sbEl = $('#sidebar');
+    let sbOverlay = false;
+    if (sbEl && !sbEl.classList.contains('hidden')) {
+      const sr = sbEl.getBoundingClientRect();
+      const px = rect.left + gTop.kx, py = rect.top + gTop.y;
+      sbOverlay = px >= sr.left && px <= sr.right && py >= sr.top && py <= sr.bottom;
+    }
     if (!sbOverlay) {
       const et = document.elementFromPoint(rect.left + gTop.kx, rect.top + gTop.y);
       if (et && et !== cv && !cv.contains(et)) throw new Error('滑动条落点被浮层盖住：' + (et.id || et.tagName));
