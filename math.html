@@ -987,6 +987,61 @@ body.tool-folded .tool-head{padding-bottom:0}
   box-shadow:0 2px 8px var(--accent-soft);transition:var(--t-ui);
 }
 .m-input-bar .m-send:active{transform:scale(.94)}
+/* ---------- 画布 HTML / CSS 卡片 ----------
+   卡片是画布之上的 DOM 层：内容跑在 Shadow DOM 里，样式与页面互不污染，
+   CSS 动画由浏览器合成器直接播放，不占画布重绘。
+   位置 / 尺寸挂在世界坐标上，随画布缩放平移，但设计稿按「标准视图 1:1」写。 */
+.card-layer{position:absolute;inset:0;z-index:6;pointer-events:none;overflow:hidden}
+.hcard{
+  position:absolute;left:0;top:0;transform-origin:0 0;pointer-events:auto;
+  border-radius:14px;overflow:hidden;cursor:grab;touch-action:none;user-select:none;
+  will-change:transform;outline:1.5px solid transparent;outline-offset:3px;
+  transition:outline-color .15s ease;
+}
+.hcard:hover,.hcard.sel{outline-color:var(--accent)}
+.hcard:active{cursor:grabbing}
+.hcard-tools{position:absolute;top:6px;right:6px;z-index:2;display:flex;gap:4px;opacity:0;transition:opacity .15s ease}
+.hcard:hover .hcard-tools,.hcard.sel .hcard-tools{opacity:1}
+@media (pointer:coarse){.hcard-tools{opacity:.92}}
+.hcard-tools button{
+  pointer-events:auto;width:26px;height:26px;border-radius:8px;display:flex;align-items:center;justify-content:center;
+  background:rgba(255,255,255,.92);color:#1c1c1e;border:.5px solid rgba(0,0,0,.14);
+  box-shadow:0 2px 8px rgba(0,0,0,.18);font-size:13px;line-height:1;
+}
+.hcard-tools button:active{transform:scale(.94)}
+.hcard-tools button.del{color:#c3271e}
+/* 卡片编辑器：左预览右代码，手机上上下排 */
+.modal.card-modal{width:min(900px,calc(100vw - 28px))}
+.ce-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px;align-items:start}
+.ce-preview{
+  position:relative;min-height:230px;border-radius:14px;overflow:hidden;display:flex;align-items:center;justify-content:center;
+  background:
+    linear-gradient(45deg,var(--panel-3) 25%,transparent 25%,transparent 75%,var(--panel-3) 75%),
+    linear-gradient(45deg,var(--panel-3) 25%,transparent 25%,transparent 75%,var(--panel-3) 75%);
+  background-size:18px 18px;background-position:0 0,9px 9px;
+  border:.5px solid var(--border);
+}
+.ce-preview .ce-stage{transform-origin:center center;box-shadow:0 12px 40px rgba(0,0,0,.18);border-radius:14px;overflow:hidden}
+.ce-col{display:flex;flex-direction:column;gap:8px;min-width:0}
+.ce-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.ce-row label{font-size:var(--fs-2xs);color:var(--text-3);white-space:nowrap}
+.ce-row input[type="number"]{
+  width:82px;height:30px;padding:0 8px;border-radius:8px;background:var(--panel-2);
+  border:.5px solid var(--border);font-size:var(--fs-2xs);color:var(--text);
+}
+.ce-code{
+  width:100%;height:300px;resize:vertical;background:var(--panel-2);border:.5px solid var(--border);
+  border-radius:12px;padding:11px 12px;font-family:var(--mono);font-size:12.5px;line-height:1.55;
+  color:var(--text);tab-size:2;white-space:pre;overflow:auto;
+}
+.ce-code:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-dim)}
+.ce-tip{font-size:var(--fs-3xs);color:var(--text-3);line-height:1.55}
+.ce-tip code{font-family:var(--mono);font-size:var(--fs-3xs);background:var(--panel-3);padding:1px 5px;border-radius:5px}
+@media (max-width:760px){
+  .ce-grid{grid-template-columns:minmax(0,1fr)}
+  .ce-preview{min-height:180px}
+  .ce-code{height:210px}
+}
 
 /* ---------- AI 助手：悬浮在画布下方，可折叠 ---------- */
 .ai-dock{
@@ -3444,6 +3499,7 @@ try {
           <button class="dd-item" data-act="rename">重命名选中… <span class="k">F2</span></button>
           <button class="dd-item" data-act="objProps">对象设置…</button>
           <div class="dd-sep"></div>
+          <button class="dd-item" data-act="htmlcard">插入 HTML / CSS 卡片…</button>
           <button class="dd-item" data-act="clear">清空全部对象</button>
         </div>
       </div>
@@ -3569,6 +3625,8 @@ try {
     <!-- ══════════ 中间：绘图区 ══════════ -->
     <main class="graphics" id="graphicsWrap">
       <canvas id="canvas" width="480" height="854" tabindex="0" aria-label="数学画布（Shift+F10 打开右键菜单）" style="cursor: default;"></canvas>
+      <!-- HTML / CSS 卡片层：压在画布之上、工具栏之下；内容在 Shadow DOM 里，样式不会漏到页面 -->
+      <div class="card-layer" id="cardLayer" aria-live="off"></div>
       <!-- 菜单按钮挂在画布层：宽屏有侧栏时它落在画布左缘（侧栏右外侧），
            不会盖住「代数 / CAS / 命令 / 表格」这排页签；窄屏侧栏变成浮层时，
            媒体查询把它改回固定定位并抬到浮层之上，同时给页签行留出它占的宽度。 -->
@@ -4534,6 +4592,10 @@ function loadSET() {
 }
 const state = {
   objects: [],           // GeoObject[]
+  /* HTML / CSS 卡片：{ id, x, y, w, h, code }。x/y 是世界坐标左上角，
+     w/h 是「标准视图 1:1」下的设计像素；渲染时按 view.scale / 46 整体缩放。 */
+  cards: [],
+  cardSel: null,
   view: { cx: 0, cy: 0, scale: 46 },   // 世界坐标中心 + 每单位像素
   selection: [],         // 选中对象 id
   tool: 'move',
@@ -13267,7 +13329,7 @@ function serializeObject(o) {
 }
 function serializeAll() { return state.objects.map(serializeObject); }
 /* 快照里连图层一起存，撤销 / 重做才能把「新建了一层」这类操作也退回去 */
-function snapshotNow() { return JSON.stringify({ o: serializeAll(), v: { ...state.view }, s: { ...state.sheet.cells }, ly: state.layers, cl: state.curLayer }); }
+function snapshotNow() { return JSON.stringify({ o: serializeAll(), v: { ...state.view }, s: { ...state.sheet.cells }, ly: state.layers, cl: state.curLayer, h: state.cards.map(c => ({ ...c })) }); }
 /* 可选传入一份「操作前的快照」：有的操作要先执行一遍新定义、成功了才该记一步撤销，
    那时再调 snapshotNow() 拍到的已经是改完的状态，所以由调用方把事前快照递进来。 */
 function pushUndo(snap) {
@@ -13289,8 +13351,8 @@ function canvasAutoSave(force) {
   try {
     const objs = serializeAll().filter(s => s.type !== 'image');
     localStorage.setItem(AI_CANVAS_KEY, JSON.stringify({
-      t: Date.now(), n: objs.length,
-      snap: JSON.stringify({ o: objs, v: { ...state.view }, s: { ...state.sheet.cells }, ly: state.layers, cl: state.curLayer }),
+      t: Date.now(), n: objs.length + state.cards.length,
+      snap: JSON.stringify({ o: objs, v: { ...state.view }, s: { ...state.sheet.cells }, ly: state.layers, cl: state.curLayer, h: state.cards.map(c => ({ ...c })) }),
     }));
   } catch (e) { /* 配额满 / 隐私模式：静默放弃，不影响画图 */ }
 }
@@ -13304,8 +13366,8 @@ function canvasRestorePrompt(force) {
   if (!rec || typeof rec.snap !== 'string') return;
   let d = null;
   try { d = JSON.parse(rec.snap); } catch (e) {}
-  if (!d || !Array.isArray(d.o) || !d.o.length) return;
-  if (state.objects.length) return;             /* 画布已有内容：不打扰 */
+  if (!d || ((!Array.isArray(d.o) || !d.o.length) && (!Array.isArray(d.h) || !d.h.length))) return;
+  if (state.objects.length || state.cards.length) return;             /* 画布已有内容：不打扰 */
   const host = $('#graphicsWrap'); if (!host) return;
   const card = document.createElement('div');
   card.className = 'cvs-restore'; card.id = 'cvsRestore';
@@ -13316,7 +13378,7 @@ function canvasRestorePrompt(force) {
   const when = (w.getMonth() + 1) + '月' + w.getDate() + '日 ' + pad(w.getHours()) + ':' + pad(w.getMinutes());
   card.innerHTML =
     '<span class="cr-ic">' + ICON.layers + '</span>' +
-    '<div class="cr-txt"><b>上次的画布</b><span>' + (rec.n || d.o.length) + ' 个对象 · ' + when + ' 自动保存</span></div>' +
+    '<div class="cr-txt"><b>上次的画布</b><span>' + (rec.n || (d.o.length + ((d.h && d.h.length) || 0))) + ' 个元素 · ' + when + ' 自动保存</span></div>' +
     '<button class="cr-ok" type="button">恢复</button>' +
     '<button class="cr-no" type="button">丢弃</button>';
   host.appendChild(card);
@@ -13411,6 +13473,16 @@ function loadSnapshot(json) {
   endBatch();
   state.view = Object.assign({ cx: 0, cy: 0, scale: 46 }, d.v || {});
   state.selection = [];
+  /* HTML / CSS 卡片随快照一起还原；旧存档没有 h 字段时就是空数组 */
+  state.cards = (Array.isArray(d.h) ? d.h : []).filter(c => c && typeof c.code === 'string').map(c => ({
+    id: String(c.id || nextCardId()),
+    x: isNum(c.x) ? c.x : 0, y: isNum(c.y) ? c.y : 0,
+    w: clamp(Math.round(isNum(c.w) ? c.w : 420), 80, 2400),
+    h: clamp(Math.round(isNum(c.h) ? c.h : 240), 40, 2400),
+    code: String(c.code),
+  }));
+  state.cardSel = null;
+  renderCards();
   /* 表格随快照一起还原（撤销 / 重做 / 打开文件共用这条路径） */
   state.sheet.cells = (d.s && typeof d.s === 'object') ? Object.assign({}, d.s) : {};
   sheetNormalize();
@@ -13425,6 +13497,214 @@ function loadSnapshot(json) {
   /* 快照里若带着「动画中」状态，恢复后继续播放 */
   animKick();
 }
+/* ── 画布 HTML / CSS 卡片 ──
+   用户和 AI 都能写一段自包含的 HTML + <style>（含 @keyframes 动画），
+   控件把它渲染成画布上的一块卡片：随缩放平移，可拖动、双击编辑、删除。
+   内容放在 Shadow DOM 里，样式不会污染主界面；<script> 与事件属性在入口处剥掉。 */
+const CARD_BASE = 46;   /* 设计像素与标准视图 1:1 的基准 scale */
+let cardIdSeq = 0;
+const DEFAULT_CARD_CODE = `<style>
+  .card{
+    height:100%;display:flex;flex-direction:column;justify-content:center;gap:10px;
+    padding:30px 34px;border-radius:22px;color:#fff;position:relative;overflow:hidden;
+    background:radial-gradient(120% 140% at 0% 0%,#5ac8fa 0%,#0a84ff 46%,#5e5ce6 100%);
+    box-shadow:0 18px 60px rgba(10,60,140,.35);
+    font-family:-apple-system,'PingFang SC',system-ui,sans-serif;
+  }
+  .card::after{
+    content:'';position:absolute;width:230px;height:230px;border-radius:50%;
+    right:-64px;top:-86px;background:rgba(255,255,255,.22);
+    animation:float 6s ease-in-out infinite;
+  }
+  .card h1{margin:0;font-size:42px;line-height:1.02;letter-spacing:-.035em}
+  .card p{margin:0;font-size:15px;opacity:.82;letter-spacing:.01em}
+  @keyframes float{0%,100%{transform:translate3d(0,0,0)}50%{transform:translate3d(0,26px,0)}}
+</style>
+<div class="card"><h1>把想法<br>画到画布上</h1><p>GeoAI · 动态数学画板</p></div>`;
+function nextCardId() { cardIdSeq++; return 'hc' + Date.now().toString(36) + cardIdSeq; }
+/* 只保留排版 / 动画需要的东西：脚本、内嵌页面、事件属性、javascript: 全部剥掉。
+   CSS 本身不能执行代码；外链字体与图片仍然允许。 */
+function sanitizeCardCode(code) {
+  return String(code == null ? '' : code)
+    .replace(/<script\b[\s\S]*?<\/script\s*>/gi, '')
+    .replace(/<(iframe|object|embed|form)\b[\s\S]*?<\/\1\s*>/gi, '')
+    .replace(/<(iframe|object|embed|form)\b[^>]*\/?>/gi, '')
+    .replace(/\son[a-z]+\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi, '')
+    .replace(/javascript\s*:/gi, '');
+}
+const CARD_SHADOW_BASE = ':host{display:block;width:100%;height:100%;overflow:hidden}'
+  + '*,*::before,*::after{box-sizing:border-box}.hc-body{width:100%;height:100%}';
+function paintCardHost(host, code) {
+  let sr = host.shadowRoot;
+  if (!sr) sr = host.attachShadow({ mode: 'open' });
+  sr.innerHTML = '<style>' + CARD_SHADOW_BASE + '</style><div class="hc-body">' + sanitizeCardCode(code) + '</div>';
+}
+function cardCssScale() { return state.view.scale / CARD_BASE; }
+function renderCards() {
+  const layer = $('#cardLayer'); if (!layer) return;
+  const keep = new Set(state.cards.map(c => c.id));
+  for (const el of Array.from(layer.children)) if (!keep.has(el.dataset.cid)) el.remove();
+  const sc = cardCssScale();
+  for (const c of state.cards) {
+    let el = Array.from(layer.children).find(x => x.dataset.cid === c.id);
+    if (!el) { el = buildCardEl(c); layer.appendChild(el); }
+    el.style.width = c.w + 'px';
+    el.style.height = c.h + 'px';
+    el.style.transform = 'translate3d(' + toScreenX(c.x) + 'px,' + toScreenY(c.y) + 'px,0) scale(' + sc + ')';
+    el.classList.toggle('sel', state.cardSel === c.id);
+    if (el._code !== c.code) { paintCardHost(el, c.code); el._code = c.code; }
+  }
+}
+function buildCardEl(c) {
+  const el = document.createElement('div');
+  el.className = 'hcard';
+  el.dataset.cid = c.id;
+  el.tabIndex = 0;
+  el.setAttribute('role', 'group');
+  el.setAttribute('aria-label', 'HTML / CSS 卡片');
+  el.innerHTML = '<div class="hcard-tools"><button class="edit" type="button" title="编辑卡片" aria-label="编辑卡片">✎</button>'
+    + '<button class="del" type="button" title="删除卡片" aria-label="删除卡片">✕</button></div>';
+  el.querySelector('.edit').addEventListener('click', e => { e.preventDefault(); e.stopPropagation(); openHtmlCardEditor(c.id); });
+  el.querySelector('.del').addEventListener('click', e => { e.preventDefault(); e.stopPropagation(); deleteCanvasCard(c.id); });
+  el.addEventListener('dblclick', e => { e.preventDefault(); e.stopPropagation(); openHtmlCardEditor(c.id); });
+  el.addEventListener('pointerdown', e => startCardDrag(e, c.id));
+  return el;
+}
+function selectCanvasCard(id) {
+  state.cardSel = id;
+  const layer = $('#cardLayer');
+  if (layer) Array.from(layer.children).forEach(el => el.classList.toggle('sel', el.dataset.cid === id));
+}
+function startCardDrag(e, id) {
+  if (e.button !== 0 || (e.target.closest && e.target.closest('.hcard-tools'))) return;
+  const c = state.cards.find(x => x.id === id); if (!c) return;
+  e.preventDefault();
+  const snap = snapshotNow();
+  /* 拖到哪张卡片，就把它提到最上面一层 */
+  const idx = state.cards.indexOf(c);
+  if (idx >= 0 && idx !== state.cards.length - 1) { state.cards.splice(idx, 1); state.cards.push(c); }
+  selectCanvasCard(id); renderCards();
+  const sx = e.clientX, sy = e.clientY, ox = c.x, oy = c.y;
+  let moved = false;
+  const move = ev => {
+    const dx = (ev.clientX - sx) / state.view.scale;
+    const dy = (ev.clientY - sy) / state.view.scale;
+    if (!moved && Math.hypot(ev.clientX - sx, ev.clientY - sy) > 3) moved = true;
+    if (!moved) return;
+    c.x = ox + dx; c.y = oy - dy;
+    renderCards();
+  };
+  const up = () => {
+    window.removeEventListener('pointermove', move);
+    window.removeEventListener('pointerup', up);
+    window.removeEventListener('pointercancel', up);
+    if (moved) { pushUndo(snap); canvasAutoSaveSoon(); }
+  };
+  window.addEventListener('pointermove', move);
+  window.addEventListener('pointerup', up);
+  window.addEventListener('pointercancel', up);
+}
+function deleteCanvasCard(id) {
+  const c = state.cards.find(x => x.id === id); if (!c) return;
+  pushUndo();
+  state.cards = state.cards.filter(x => x.id !== id);
+  if (state.cardSel === id) state.cardSel = null;
+  renderCards(); canvasAutoSaveSoon();
+  toast('已删除卡片');
+}
+/* 新增一张卡片：默认放在当前视图中心，多张时依次错开一点 */
+function addCanvasCard(code, opts) {
+  const o = opts || {};
+  const w = clamp(Math.round(o.w || 420), 80, 2400);
+  const h = clamp(Math.round(o.h || 240), 40, 2400);
+  const n = state.cards.length % 5;
+  const c = {
+    id: nextCardId(),
+    x: o.x != null ? o.x : state.view.cx - (w / 2) / CARD_BASE + n * 18 / CARD_BASE,
+    y: o.y != null ? o.y : state.view.cy + (h / 2) / CARD_BASE - n * 14 / CARD_BASE,
+    w, h, code: sanitizeCardCode(code),
+  };
+  state.cards.push(c);
+  renderCards(); canvasAutoSaveSoon();
+  return c;
+}
+/* ── 卡片编辑器 ── */
+let cardEditId = null, cardPreviewTimer = 0;
+function ensureCardEditor() {
+  if ($('#cardBackdrop')) return;
+  const wrap = document.createElement('div');
+  wrap.className = 'backdrop';
+  wrap.id = 'cardBackdrop';
+  wrap.innerHTML =
+    '<div class="modal card-modal" role="dialog" aria-modal="true" aria-label="HTML / CSS 卡片">'
+    + '<div class="modal-head"><div><b id="cardTitle">插入 HTML / CSS 卡片</b>'
+    + '<div class="ce-tip">写一段自包含的 HTML + &lt;style&gt;，支持 CSS 动画；不要写 &lt;script&gt;。</div></div>'
+    + '<button class="icon-btn" type="button" data-close="cardBackdrop" aria-label="关闭">✕</button></div>'
+    + '<div class="modal-body"><div class="ce-grid">'
+    + '<div class="ce-col"><div class="ce-preview" id="cardPreview"><div class="ce-stage" id="cardStage"></div></div>'
+    + '<div class="ce-tip">用 <code>.card</code> 当根容器并设 <code>height:100%</code>；预览按卡片真实比例缩放。</div></div>'
+    + '<div class="ce-col"><div class="ce-row"><label>宽</label><input id="cardW" type="number" min="80" max="2400" step="10" value="420">'
+    + '<label>高</label><input id="cardH" type="number" min="40" max="2400" step="10" value="240"></div>'
+    + '<textarea class="ce-code" id="cardCode" spellcheck="false" aria-label="卡片 HTML 与 CSS"></textarea></div>'
+    + '</div></div>'
+    + '<div class="modal-foot"><button class="btn" type="button" data-close="cardBackdrop">取消</button>'
+    + '<button class="btn primary" type="button" id="cardSave">插入画布</button></div>'
+    + '</div>';
+  document.body.appendChild(wrap);
+  wrap.addEventListener('click', e => { if (e.target === wrap) closeBackdrop('cardBackdrop'); });
+  const codeEl = $('#cardCode');
+  codeEl.addEventListener('input', () => {
+    clearTimeout(cardPreviewTimer);
+    cardPreviewTimer = setTimeout(paintCardPreview, 120);
+  });
+  $('#cardW').addEventListener('input', () => { clearTimeout(cardPreviewTimer); cardPreviewTimer = setTimeout(paintCardPreview, 120); });
+  $('#cardH').addEventListener('input', () => { clearTimeout(cardPreviewTimer); cardPreviewTimer = setTimeout(paintCardPreview, 120); });
+  $('#cardSave').addEventListener('click', saveCardFromEditor);
+}
+function paintCardPreview() {
+  const stage = $('#cardStage'); if (!stage) return;
+  const box = $('#cardPreview');
+  const w = clamp(Math.round(+$('#cardW').value || 420), 80, 2400);
+  const h = clamp(Math.round(+$('#cardH').value || 240), 40, 2400);
+  paintCardHost(stage, $('#cardCode').value);
+  stage.style.width = w + 'px';
+  stage.style.height = h + 'px';
+  const bw = box.clientWidth - 24, bh = box.clientHeight - 24;
+  const s = Math.min(1, bw / w, bh / h);
+  stage.style.transform = 'scale(' + Math.max(.05, s) + ')';
+}
+function openHtmlCardEditor(id) {
+  ensureCardEditor();
+  cardEditId = id || null;
+  const c = id ? state.cards.find(x => x.id === id) : null;
+  $('#cardTitle').textContent = c ? '编辑 HTML / CSS 卡片' : '插入 HTML / CSS 卡片';
+  $('#cardCode').value = c ? c.code : DEFAULT_CARD_CODE;
+  $('#cardW').value = c ? c.w : 420;
+  $('#cardH').value = c ? c.h : 240;
+  $('#cardSave').textContent = c ? '保存修改' : '插入画布';
+  openBackdrop('cardBackdrop');
+  paintCardPreview();
+  setTimeout(() => { try { $('#cardCode').focus(); } catch (e) { } }, 60);
+}
+function saveCardFromEditor() {
+  const code = sanitizeCardCode($('#cardCode').value);
+  if (!code.trim()) { toast('卡片内容不能为空', 'err'); return; }
+  const w = clamp(Math.round(+$('#cardW').value || 420), 80, 2400);
+  const h = clamp(Math.round(+$('#cardH').value || 240), 40, 2400);
+  pushUndo();
+  const c = cardEditId ? state.cards.find(x => x.id === cardEditId) : null;
+  if (c) { c.code = code; c.w = w; c.h = h; }
+  else {
+    addCanvasCard(code, {
+      w, h,
+      x: state.view.cx - (w / 2) / CARD_BASE,
+      y: state.view.cy + (h / 2) / CARD_BASE,
+    });
+  }
+  closeBackdrop('cardBackdrop');
+  renderCards();
+  toast(c ? '卡片已更新' : '已插入卡片', 'ok');
+}
 function undo() { if (!state.undo.length) return; state.redo.push(snapshotNow()); loadSnapshot(state.undo.pop()); updateUndoButtons(); toast('已撤销'); }
 function redo() { if (!state.redo.length) return; state.undo.push(snapshotNow()); loadSnapshot(state.redo.pop()); updateUndoButtons(); toast('已重做'); }
 function updateUndoButtons() {
@@ -13437,6 +13717,7 @@ function updateUndoButtons() {
 }
 function clearAll(silent) {
   state.objects = []; state.selection = []; state.toolState = null;
+  state.cards = []; state.cardSel = null; renderCards();
   resetColorCycle();
   if (!silent) { recomputeAll(); refreshAlgebra(); }
 }
@@ -26713,11 +26994,11 @@ async function doNewDocument() {
   toast('已新建');
 }
 async function doClearAll() {
-  const n = state.objects.filter(o => !o.aux).length;
-  if (!n) { toast('画布上还没有对象'); return; }
+  const n = state.objects.filter(o => !o.aux).length, nc = state.cards.length;
+  if (!n && !nc) { toast('画布上还没有内容'); return; }
   const ok = await confirmDialog({
-    title: '清空全部对象',
-    body: '将删除画布上的 ' + n + ' 个对象，表格里的数据不受影响。'
+    title: '清空全部内容',
+    body: '将删除画布上的 ' + n + ' 个对象' + (nc ? '和 ' + nc + ' 张 HTML / CSS 卡片' : '') + '，表格里的数据不受影响。'
       + '清空后可以按 Ctrl+Z 撤销。',
     okText: '清空', danger: true,
   });
