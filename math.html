@@ -1458,6 +1458,24 @@ body.dark .eff-warn{color:#c39bff}
 .eff-css svg{width:17px;height:17px}
 .eff-css.on{color:#fff;background:var(--accent);box-shadow:0 2px 10px var(--accent-soft)}
 .eff-css.on:hover{background:var(--accent-h);color:#fff}
+/* 美化模式：滑条变成流动的彩虹光，提示行跟着点亮 */
+.eff-pop.beautify .eff-fill{
+  background-image:linear-gradient(90deg,#ff6b6b,#ffb84d,#7bd88a,#4facfe,#b47cff,#ff6b6b)!important;
+  background-size:300% 100%!important;
+  animation:effRainbow 2.6s linear infinite;
+}
+@keyframes effRainbow{from{background-position:0% 50%}to{background-position:300% 50%}}
+.eff-pop.beautify .eff-knob{
+  box-shadow:0 0 0 3px rgba(255,255,255,.75),0 0 14px 4px rgba(180,124,255,.55);
+  animation:effKnobGlow 2.6s ease-in-out infinite;
+}
+@keyframes effKnobGlow{0%,100%{filter:hue-rotate(0)}50%{filter:hue-rotate(80deg)}}
+.eff-hint{
+  margin:8px 12px 10px;padding:6px 9px;border-radius:9px;text-align:center;
+  font-size:var(--fs-3xs);line-height:1.5;color:var(--text-3);background:var(--panel-3);
+  transition:var(--t-ui);
+}
+.eff-pop.beautify .eff-hint{color:var(--accent);background:var(--accent-dim)}
 /* 思考强度面板：参考 ChatGPT 模型强度滑条——毛玻璃浮层、离散档位、
    拖动时旋钮跟手，松手吸附；更换档位时标题做一次淡入淡出 */
 .eff-pop{background:rgba(255,255,255,.62);
@@ -3807,7 +3825,7 @@ try {
             <!-- 点思考强度按钮后展开面板：标题 / 重置 + 一条滑条 -->
             <div class="eff-pop" id="effPop" role="dialog" aria-label="思考强度">
               <div class="eff-pop-head">
-                <button class="eff-css" id="effCssOpen" type="button" title="AI 配 CSS：画完图后附一张排版卡片" aria-label="AI 配 CSS" aria-pressed="false" aria-haspopup="false">
+                <button class="eff-css" id="effCssOpen" type="button" title="美化模式：画完图，顺手配张好看的卡片" aria-label="美化模式" aria-pressed="false" aria-haspopup="false">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                     <rect x="3.2" y="5.4" width="12.6" height="9.6" rx="2.6"></rect>
                     <path d="M6.6 18.6h7.4" opacity=".6"></path>
@@ -3829,6 +3847,7 @@ try {
                 <span class="eff-knob" id="effKnobBig" style="left: calc(33.33% + 5.001px);"></span>
                 <input type="range" id="effortRangeBig" min="0" max="6" step="1" value="2" aria-label="思考强度" aria-valuetext="Low" title="思考强度：Low · 默认档，响应快，适合日常作图与简单计算">
               </span>
+              <div class="eff-hint" id="effCssHint">美化模式 · 画完图，顺手配张好看的卡片</div>
             </div>
             <button class="ai-mic" id="aiMic" type="button" title="语音输入" aria-label="语音输入" aria-pressed="false">
               <span class="mic-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"></rect><path d="M5.5 11.5a6.5 6.5 0 0 0 13 0M12 18v3"></path></svg><i class="mic-sq" aria-hidden="true"></i></span>
@@ -4657,12 +4676,12 @@ const state = {
 const APP_VERSION = '2.2.2';
 const APP_CHANGELOG = [
   {
-    v: '2.2.2', date: '2026-11-27', tag: 'AI 配 CSS', code: '约 4.3 万行 · 2.7 MB',
-    lead: '思考强度面板左上角多了一枚小图标：一键开启「AI 配 CSS」——之后 AI 画完图，会再附一张与题目呼应的 HTML / CSS 排版卡。',
+    v: '2.2.2', date: '2026-11-27', tag: '美化模式', code: '约 4.3 万行 · 2.7 MB',
+    lead: '思考强度面板左上角多了一枚小图标：一键打开「美化模式」——滑条亮起彩虹流光，之后 AI 画完图会再顺手配一张好看的卡片。',
     notes: [
-      '开关直接生效，不再展开二级面板；激活时图标点亮（主色实心），并把一段「配图卡」指令追加进系统提示，再点一次关闭',
-      '开启后 AI 会在主体图形画完后输出一个 ```html 块：标题 / 结论 / 关键公式 / 动画卡片，可与图形同屏；关闭后恢复只画图',
-      '偏好记在本机；切换时用一条轻提示说明当前状态，不写多余说明文字',
+      '点开后滑条变成流动的彩虹光、旋钮带柔光，面板里一行小字说明「画完图，顺手配张好看的卡片」；再点一次关闭，提示随之恢复',
+      '打开时给模型追加一段指令：主体图形画完后输出一个 ```html 块，做一张与题目呼应的标题 / 结论 / 公式卡片（可带动画），不遮挡关键图形',
+      '偏好记在本机；切换时一条轻提示说明当前状态',
       '修复：卡片编辑器的「取消」与右上 ✕ 点不动——动态插入的模态没被初始化时的 data-close 扫描覆盖，现在自行绑定',
     ],
   },
@@ -13573,12 +13592,14 @@ const CSSM = (() => {
 function applyCssMode() {
   const b = $('#effCssOpen');
   if (b) { b.classList.toggle('on', !!CSSM.on); b.setAttribute('aria-pressed', CSSM.on ? 'true' : 'false'); }
+  const pop = $('#effPop');
+  if (pop) pop.classList.toggle('beautify', !!CSSM.on);
   try { localStorage.setItem(CSSM_KEY, JSON.stringify(CSSM)); } catch (e) { }
 }
 function toggleCssMode() {
   CSSM.on = !CSSM.on;
   applyCssMode();
-  toast(CSSM.on ? '已开启：AI 画图后会配一张 HTML / CSS 卡片' : '已关闭：AI 只画图，不配 CSS 卡片', 'ok', 2200);
+  toast(CSSM.on ? '美化模式已开启：画完图，AI 会顺手配张好看的卡片' : '美化模式已关闭：AI 只画图', 'ok', 2200);
 }
 let cardIdSeq = 0;
 const DEFAULT_CARD_CODE = `<style>
@@ -32335,14 +32356,19 @@ async function runUITest() {
     if (!$('#cardBackdrop').classList.contains('on')) throw new Error('卡片编辑器没有打开');
     $('#cardBackdrop .modal-foot [data-close]').click(); await sleep(0);
     if ($('#cardBackdrop').classList.contains('on')) throw new Error('编辑器取消按钮点不动');
-    /* 「AI 配 CSS」开关：点亮图标，并把配卡指令写进系统提示 */
+    /* 「美化模式」开关：点亮图标、滑条亮起彩虹流光，并把配卡指令写进系统提示 */
     CSSM.on = false; applyCssMode();
     if (aiSystemPrompt().indexOf('CSS 配图模式') >= 0) throw new Error('默认不该带配 CSS 指令');
+    $('#effortBox').click(); await sleep(0);
     $('#effCssOpen').click(); await sleep(0);
     if (!CSSM.on || !$('#effCssOpen').classList.contains('on')) throw new Error('开关没有激活');
+    if (!$('#effPop').classList.contains('beautify')) throw new Error('滑条没有亮起彩虹流光');
+    if (!$('#effPop').classList.contains('on')) throw new Error('点开关不该关掉面板');
     if (aiSystemPrompt().indexOf('CSS 配图模式') < 0) throw new Error('开启后系统提示没有加指令');
     $('#effCssOpen').click(); await sleep(0);
     if (CSSM.on || aiSystemPrompt().indexOf('CSS 配图模式') >= 0) throw new Error('再点一次没有关闭');
+    if ($('#effPop').classList.contains('beautify')) throw new Error('关闭后流光没有停');
+    $('#effortBox').click(); await sleep(0);
     if ($('#cssMode')) throw new Error('不该有二级面板');
     clearAll(); await sleep(0);
   });
@@ -39153,9 +39179,9 @@ function bindAI() {
     });
     rst.addEventListener('animationend', () => rst.classList.remove('spin'));
   }
-  /* 面板左上角的小图标：直接切换卡片的 CSS 优化显示，不再展开二级面板 */
+  /* 面板左上角的小图标：切换「美化模式」，滑条会亮起彩虹流光，面板保持打开 */
   const cssBtn = $('#effCssOpen');
-  if (cssBtn) cssBtn.addEventListener('click', () => { toggleCssMode(); effOpen(false); });
+  if (cssBtn) cssBtn.addEventListener('click', () => { toggleCssMode(); });
   /* 浅 / 深色切换时按另一套深色色板重绘（色板在 JS 里，不是 CSS 变量） */
   let wasDark = effDark();
   new MutationObserver(() => {
