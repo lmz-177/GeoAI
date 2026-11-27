@@ -1802,6 +1802,12 @@ body.aiHelloPlayed .ai-hello .ink-char{animation:none!important;filter:none!impo
   border:.5px solid var(--border);transition:border-color var(--t),background var(--t);
 }
 .effort:hover,.effort:focus-within{border-color:var(--accent-dim);background:var(--accent-dim)}
+/* 臻彩模式在折叠态也要看得出来：仪表盘缓缓流转彩虹色，外圈带一点柔光 */
+.effort.beautify{border-color:transparent;background:linear-gradient(135deg,rgba(58,131,247,.16),rgba(180,124,255,.2));
+  box-shadow:0 0 0 1px rgba(180,124,255,.32),0 0 10px rgba(120,150,255,.32)}
+.effort.beautify:hover{background:linear-gradient(135deg,rgba(58,131,247,.24),rgba(180,124,255,.28))}
+.effort.beautify .eff-gauge{color:var(--accent);animation:effGaugeFlow 3.4s linear infinite}
+@keyframes effGaugeFlow{from{filter:hue-rotate(0)}to{filter:hue-rotate(360deg)}}
 .eff-gauge{width:17px;height:17px;color:var(--text-3);transition:color .18s ease}
 /* 仪表盘：270° 轨道 + 按档位生长的进度弧 + 会转的指针与中央圆环（仿 60fps 参考图） */
 .eff-prog{stroke-dasharray:100;stroke-dashoffset:calc(100 - var(--pn,.3333) * 100);
