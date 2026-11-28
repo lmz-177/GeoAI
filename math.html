@@ -3490,11 +3490,18 @@ body.kb-open .ai-dock.sheet-open .ai-sheet{max-height:max(140px,calc(100dvh - va
   .sidebar{
     position:absolute;left:calc(12px + env(safe-area-inset-left,0px));top:12px;bottom:12px;z-index:185;
     width:var(--sb-w);flex:0 0 auto;min-width:0;
-    border:.5px solid var(--glass-brd);border-radius:20px;
-    box-shadow:var(--shadow-lg),var(--hi-strong);
+    border:1px solid rgba(255,255,255,.78);border-radius:20px;
+    box-shadow:var(--shadow-lg),var(--hi-strong),
+      inset 0 1px 0 rgba(255,255,255,1),inset 1px 0 0 rgba(255,255,255,.72),
+      inset 0 10px 22px -12px rgba(255,255,255,.95),
+      inset 0 -12px 26px -16px rgba(120,170,255,.55),
+      inset -1px 0 0 rgba(140,200,255,.30),inset 0 -1px 0 rgba(180,145,255,.22);
     /* 透视：更低的底色不透明度 + 5px 轻模糊，网格与函数曲线能真正透出来；
-       大面板每帧都要采样背后的画布，模糊半径不能大，否则会拖慢逐位计算这类长任务。 */
-    background:var(--float-glass);
+       大面板每帧都要采样背后的画布，模糊半径不能大，否则会拖慢逐位计算这类长任务。
+       底色带一点冷蓝 / 淡紫，白画布前才看得出是「一片玻璃」而不是一块白板。 */
+    background:
+      linear-gradient(168deg,rgba(255,255,255,.34) 0%,rgba(214,232,255,.30) 38%,rgba(240,232,255,.22) 72%,rgba(255,255,255,.10) 100%),
+      var(--float-glass);
     -webkit-backdrop-filter:blur(5px) saturate(180%);
     backdrop-filter:blur(5px) saturate(180%);
   }
