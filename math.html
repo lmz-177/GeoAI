@@ -1075,6 +1075,9 @@ body.dark .sidebar::after{background:radial-gradient(closest-side,rgba(90,150,25
   transform:scale(calc(1 / var(--hcs,1)));transform-origin:100% 0;
   opacity:0;pointer-events:none;transition:opacity .15s ease}
 .hcard.sel .hcard-tools{opacity:1;pointer-events:auto}
+/* 卡片被拖到画布上沿：上面放不下 32px 的工具条，会被画布裁掉（看起来像「选中了却没有按钮」）。
+   这时翻到卡片下方 6px，仍然在卡片外面、不压内容。 */
+.hcard.tools-below .hcard-tools{top:calc(100% + 6px / var(--hcs,1))}
 .hcard-tools button{
   pointer-events:auto;width:26px;height:26px;border-radius:8px;display:flex;align-items:center;justify-content:center;
   background:rgba(255,255,255,.92);color:#1c1c1e;border:.5px solid rgba(0,0,0,.14);
@@ -4789,8 +4792,16 @@ const state = {
    版本号在左上角 GeoAI 打开的「更新与版本」弹窗里展示。改完版本号后，在
    APP_CHANGELOG 最上面补一条（版本、日期、类型、一句摘要、几条说明），
    新版本会自动出现在版本历史里。 */
-const APP_VERSION = '2.3.1';
+const APP_VERSION = '2.3.2';
 const APP_CHANGELOG = [
+  {
+    v: '2.3.2', date: '2026-11-28', tag: '工具不丢', code: '约 4.3 万行 · 2.7 MB',
+    lead: '修复卡片贴着画布上沿时，选中后的置顶 / 置底 / 编辑 / 删除按钮被画布裁掉、看起来像「选了却没按钮」的问题：上方放不下就自动翻到卡片下方。',
+    notes: [
+      '卡片顶部离画布上沿不足 36px 时，工具条自动翻到卡片下方 6px，仍在卡片外面、不压内容；把卡片拖回下方又自动回到上方',
+      '与 2.3.1 的层级调整配合：代数区、缩放条、比例徽标、右上透视胶囊始终压在卡片之上，卡片只盖画布本身',
+    ],
+  },
   {
     v: '2.3.1', date: '2026-11-28', tag: '玻璃与联动', code: '约 4.3 万行 · 2.7 MB',
     lead: '左侧代数区换成和缩放按钮同一套液态玻璃（斜向镜面反光 + 冷暖色散 + 边缘折射光斑）；卡片工具只在选中后出现在卡片外上方并换成线性图标；卡片可以直接读写画布对象，每一次写操作都是独立的一步撤销。',
@@ -13978,6 +13989,8 @@ function renderCards() {
     el.style.setProperty('--hcs', String(sc));
     /* 图层顺序优先，同层按 state.cards 数组顺序（拖动会把卡片挪到本层末尾 = 本层置顶） */
     el.style.zIndex = String(cardLayerIndex(c) * 10000 + i);
+    /* 顶边留不出 32px 时把工具条翻到卡片下方，否则选中后按钮会被画布上沿裁掉 */
+    el.classList.toggle('tools-below', toScreenY(c.y) < 36);
     const hidden = !cardLayerVisible(c), locked = cardLayerLocked(c);
     el.style.display = hidden ? 'none' : '';
     el.classList.toggle('locked', locked);
