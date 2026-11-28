@@ -32822,6 +32822,7 @@ async function runUITest() {
     /* 「臻彩模式」开关：点亮图标、滑条亮起彩虹流光，并把配卡指令写进系统提示 */
     CSSM.on = false; applyCssMode();
     if (aiSystemPrompt().indexOf('臻彩模式已开启') >= 0) throw new Error('默认不该带配 CSS 指令');
+    if (aiSystemPrompt().indexOf('当前未开启') < 0 || aiSystemPrompt().indexOf('星标') < 0) throw new Error('关闭时没有告诉 AI 臻彩模式是什么、怎么开');
     $('#effortBox').click(); await sleep(0);
     $('#effCssOpen').click(); await sleep(0);
     if (!CSSM.on || !$('#effCssOpen').classList.contains('on')) throw new Error('开关没有激活');
@@ -32831,6 +32832,7 @@ async function runUITest() {
     if (!$('#effPop').classList.contains('showhint')) throw new Error('开启时没有顶替标题做提示');
     if (!$('#effPop').classList.contains('on')) throw new Error('点开关不该关掉面板');
     if (aiSystemPrompt().indexOf('臻彩模式已开启') < 0) throw new Error('开启后系统提示没有加指令');
+    if (aiSystemPrompt().indexOf('geo.exec') < 0 || aiSystemPrompt().indexOf('@card') < 0) throw new Error('开启后的提示词没有写清卡片读写画布与改卡方式');
     await sleep(1950);
     if ($('#effPop').classList.contains('showhint')) throw new Error('提示文字没有自动消失');
     if (!$('#effPop').classList.contains('beautify')) throw new Error('提示消失后流光也跟着没了');
@@ -39096,13 +39098,6 @@ ask 会变成一张澄清卡片等用户选择；done 只写一句结论，表�
 - 手写题目：识别手写内容后按常规解题流程处理。
 - 几何图形：识别点、线、圆、三角形关系，必要时用命令重建。
 
-【画布 HTML / CSS 卡片】
-- 需要漂亮的排版、色块、标题卡或 CSS 动画时，单独输出一个 \`\`\`html 代码块，块里是一段自包含的 HTML + \`<style>\`，控件会把它变成画布上一张可拖动、可编辑的卡片。
-- 写法：根容器用 class="card"，并给 \`height:100%\`；卡片默认 420×240 设计像素，按标准视图 1:1 排版，随画布缩放。用背景渐变、圆角、阴影、@keyframes 做质感，字体用 -apple-system / PingFang SC / system-ui。
-- 可以写 \`<script>\`、onclick 等事件属性、\`<iframe sandbox>\`、表单与外链资源：按钮、\`<input type="range">\` 滑条配合 JS 实时改样式都行。\`<script>\` 只执行一次，需要定时器 / 全局监听时把清理函数挂到 \`host.__cardCleanup\`；不要访问父页面的 DOM / window / localStorage，不要外发数据。文字用简体中文，内容要和当前题目相关，不要挡住关键图形。
-- 卡片是装饰与说明，不能替代数学对象：几何关系仍然用 geogebra 命令画。
-- 画布上已有卡片时，「当前画布」会列出它们的序号、id 与完整源码。要改其中一张，就在 \`\`\`html 块的第一行写 @card 序号（或 @card id），下面写整段替换代码；不要新建第二张重复的卡片。
-
 【语法与命名】
 - 点：A = (1, 2)，也可以 Point(1, 2)；想让人能拖动就写成这种坐标点。
 - 数值 / 滑动条：a = 3   ；   a = Slider(-5, 5, 0.1)
@@ -39200,19 +39195,44 @@ const AI_CAS_SYSTEM = `【精确计算（需要时由你自行调用）】
 · 绝对不要在正文里抄写或复述长数字（几十位以上都算长）：需要在正文展示时，写占位符 «CAS:π(5000)» 或 «CAS:2^2000»，前端会算好并展开显示。
 · 一次只算一个算式；需要多步就分多条 CAS 命令，一条一行。
 · 计算与作图可以同时进行：题目里既有计算又有图形时，先给计算结果，再按需画图（作图规则同平常）。`;
-/* 用户点了「臻彩模式」才追加：画完主体图形后，按需再附排版卡 */
-const AI_CSS_HINT = `【臻彩模式已开启】画完主体图形后，可以再输出 \`\`\`html 代码块，用自包含 HTML 做一张与题目呼应的卡片（标题 / 结论 / 关键公式 / 简短说明，也可以做可交互的小组件）。要求：
+/* 用户点亮星标（臻彩模式）后才追加的完整提示：卡片写法 + 与画布互通的 geo 接口 */
+const AI_CSS_HINT = `【臻彩模式已开启】画完主体图形后，可以再输出 \`\`\`html 代码块，用自包含 HTML 做一张与题目呼应的卡片（标题 / 结论 / 关键公式 / 说明，也可以做可交互的小组件）。要求：
+一、什么时候画
 · 可选：不适合配卡（纯计算、一句话能说清、用户只想要图）就不画，不要为凑格式硬加。
-· 数量按需：一张通常够；内容确实多时可给 2~3 张，每张一个代码块，别让卡片盖过正文。
-· 可以写完整的 Web：HTML + <style> + <script>、onclick 等事件属性、<iframe>（请自带 sandbox）、<form>、外链字体 / 图片 / 脚本都可以用。
-· 交互建议：用 <input type="range">、<button> 配合 JS 实时改 CSS 变量或元素样式；按钮切换 class、:hover / :active 过渡、@keyframes、requestAnimationFrame 都行。
-· 脚本约定：卡片内容渲染在 Shadow DOM 里，<script> 只执行一次；要设定时器 / 全局监听时，把清理函数挂到 host.__cardCleanup = fn（卡片重绘或删除时会调用），优先用 addEventListener 而非 on* 属性。
-· 安全：不要访问父页面的 DOM、window 或 localStorage，不要向外部发送数据；需要嵌入外部网页用 <iframe sandbox="...">。
-· 根容器用 class="card" 并给 height:100%；配色克制、与图形区分开，不遮住关键图形。
-· 卡片只是说明与交互补充，不能替代数学对象。`;
+· 一轮对话最多新建 1 张卡片；多步作图时只在收尾那一步输出，后续步骤不要再画第二张。
+· 画布上已有卡片时，「当前画布」会列出它们的序号、id 与完整源码。要改其中一张，就在 \`\`\`html 块第一行写 @card 序号（或 @card id），下面写整段替换代码；不要新建重复卡片。
+二、卡片怎么写
+· 根容器用 class="card" 并给 height:100%；默认 420×240 设计像素，按标准视图 1:1 排版，随画布缩放。用背景渐变、圆角、阴影、@keyframes 做质感，字体用 -apple-system / PingFang SC / system-ui。
+· 可以写完整的 Web：HTML + <style> + <script>、onclick 等事件属性、<iframe sandbox>、<form>、外链字体 / 图片。文字用简体中文，内容与当前题目相关，不要挡住关键图形。
+· 交互：用 <input type="range">、<button> 配合 JS 实时改 CSS 变量或元素样式；按钮切换 class、:hover / :active 过渡、@keyframes、requestAnimationFrame 都行。
+· 脚本在 Shadow DOM 里只执行一次；定时器 / 全局监听要把清理函数挂到 host.__cardCleanup = fn（卡片重绘或删除时调用）。优先 addEventListener，少用 on* 属性。
+· 不要访问父页面的 DOM / window / localStorage，不要外发数据；要嵌外部网页用 <iframe sandbox="...">。
+· 卡片是说明与交互补充，不能替代数学对象：几何关系仍然用 geogebra 命令画。
+三、卡片可以直接读写画布（脚本里用 geo）
+· 读：
+  geo.list() → [{ label, type, value, text, visible, layer }]
+  geo.value('A') / geo.get('A')；点返回 {x,y}，数值返回数字
+  geo.camera() / geo.toScreen(x,y) / geo.toWorld(px,py) / geo.version()
+  geo.onChange(fn) —— 画布变化后约 80ms 回调一次 fn({ objects, version })；清理时调用 geo.offChange(fn)
+· 写（会真正修改画布，并进入撤销栈；每调用一次 = 一步撤销）：
+  geo.exec('Circle(A,2)')       执行一条画布命令
+  geo.set('k', 3)               改数字 / 滑动条 / 布尔；名字不存在会新建数值对象
+  geo.point('P', 1, 2)          geo.define('f(x) = x^2')      geo.remove('A')      geo.clear()
+  geo.batch(fn)                 把多次写合并成一步撤销
+  返回 { ok:true, created:[...] } 或 { ok:false, error:'...' }，请检查 ok，失败时在卡片里给出提示，不要静默失败。
+· 写操作会立即重算并留下撤销记录：不要在 requestAnimationFrame / setInterval 里无条件连续写；连续动画先 geo.batch，或只改卡片自身的样式。
+四、视觉
+· 配色克制、与图形区分开；一张卡片只讲一件事，别让卡片盖过正文。`;
+
+/* 未开启臻彩模式：只说明它是什么、怎么开，不把卡片写法教给模型 */
+const AI_CSS_OFF_HINT = `【关于「臻彩模式」（当前未开启）】
+· 这是画板的一个增强模式：开启后，AI 画完图可以再做一张漂亮的 HTML/CSS 卡片（标题、结论、公式、可交互小组件），卡片里的脚本还能通过 geo 接口实时读写画布对象。
+· 当前是关闭状态：本轮不要输出 html 卡片代码块，也不要用卡片替代数学对象。
+· 用户想要「更好看的配图 / 可交互卡片 / 卡片联动画布」时，告诉用户：点开 AI 输入条右侧的「思考强度」面板，点亮左上角的星标（★）即可开启臻彩模式，开启后重新说一次需求。
+· 不要假装已经开启，也不要在关闭状态下偷偷输出卡片。`;
 
 /* 实际发给模型的系统提示：作图规则 + 精确计算规则始终都在，由 AI 自己判断何时调用 CAS */
-function aiSystemPrompt() { return AI_SYSTEM + '\n\n' + AI_CAS_SYSTEM + (CSSM.on ? '\n\n' + AI_CSS_HINT : ''); }
+function aiSystemPrompt() { return AI_SYSTEM + '\n\n' + AI_CAS_SYSTEM + '\n\n' + (CSSM.on ? AI_CSS_HINT : AI_CSS_OFF_HINT); }
 
 /* 分步作图执行器：ReAct（Thought → Action → Observation）循环，每次请求只做一个动作。
    参考 ReAct (Yao et al., 2022) 的 thought/action/observation 三元组，以及 Reflexion 的
@@ -42160,7 +42180,7 @@ async function aiSend() {
          而不是把错误一路带到最后。 */
       /* 多步作图时，一旦本轮已经配过卡片，就不再诱导模型继续输出卡片：
          模型每步都能看到同一份提示词，会以为「还没配过」，于是一步步各画一张。 */
-      const stepSys = () => AI_STEP_SYSTEM + '\n\n' + AI_CAS_SYSTEM + (CSSM.on ? '\n\n' + AI_CSS_HINT : '')
+      const stepSys = () => AI_STEP_SYSTEM + '\n\n' + AI_CAS_SYSTEM + '\n\n' + (CSSM.on ? AI_CSS_HINT : AI_CSS_OFF_HINT)
         + (state.aiRunCards > 0
           ? '\n\n【卡片已配好】本轮已经创建过 HTML 卡片（画布上已有 ' + state.aiRunCards + ' 张），不要再新增卡片代码块，否则会出现重复卡片；只有需要修改已有卡片时，才输出 html 代码块并以 @card n 开头覆盖它。'
           : '');
