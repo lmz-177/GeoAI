@@ -533,39 +533,11 @@ body.tool-folded .tool-head{padding-bottom:0}
   transition:width var(--t-slow),flex-basis var(--t-slow),
     opacity var(--t-slow),transform var(--t-slow),border-right-color var(--t);
 }
-/* 折射层：斜向镜面条 + 冷 / 暖两处色散，全部压在内容下面
-   （isolation + z-index:-1），滚动、点按都不受影响。
-   这里用正常混合而不是 screen：白画布上 screen 会把白色高光直接吃掉，
-   整块玻璃看着还是一块白板；正常混合的淡蓝 / 淡紫才会真正显色。 */
-.sidebar::before{
-  content:'';position:absolute;inset:0;z-index:-1;pointer-events:none;border-radius:inherit;
-  background:
-    /* 左上到右下的斜向镜面反光 */
-    linear-gradient(105deg,rgba(255,255,255,.62) 0%,rgba(255,255,255,.16) 9%,rgba(255,255,255,0) 18%),
-    /* 顶沿厚玻璃的亮边 */
-    linear-gradient(180deg,rgba(255,255,255,.55),rgba(255,255,255,0) 9%),
-    /* 右上冷蓝、左下淡紫，模拟折射后的色散 */
-    radial-gradient(110% 40% at 100% 0%,rgba(120,180,255,.28),rgba(120,180,255,0) 62%),
-    radial-gradient(80% 40% at 0% 100%,rgba(190,140,255,.24),rgba(190,140,255,0) 70%),
-    /* 中段一点点冷调，避免中间完全无色 */
-    linear-gradient(160deg,rgba(226,240,255,.30),rgba(238,232,255,.22) 55%,rgba(255,255,255,.06));
-}
-body.dark .sidebar::before{
-  background:
-    linear-gradient(105deg,rgba(255,255,255,.26) 0%,rgba(255,255,255,.06) 9%,rgba(255,255,255,0) 20%),
-    linear-gradient(180deg,rgba(255,255,255,.20),rgba(255,255,255,0) 9%),
-    radial-gradient(110% 40% at 100% 0%,rgba(70,130,235,.24),rgba(70,130,235,0) 62%),
-    radial-gradient(80% 40% at 0% 100%,rgba(130,90,230,.20),rgba(130,90,230,0) 70%),
-    linear-gradient(160deg,rgba(52,74,110,.26),rgba(70,56,102,.20) 55%,rgba(30,34,44,.10));
-}
-/* 右下角一小片「折射光斑」：像玻璃把背后的光折了一下，只有光没有色块 */
-.sidebar::after{
-  content:'';position:absolute;right:-18%;bottom:-30%;width:86%;height:56%;
-  z-index:-1;pointer-events:none;border-radius:50%;filter:blur(18px);
-  background:radial-gradient(closest-side,rgba(150,200,255,.30),rgba(150,200,255,0));
-  opacity:.9;
-}
-body.dark .sidebar::after{background:radial-gradient(closest-side,rgba(90,150,255,.20),rgba(90,150,255,0))}
+/* 折射与高光统一交给「设置 → 通用 → 外观 → 液态玻璃」（initLiquidGlass）：
+   它按圆角轮廓生成法线场，在 backdrop-filter 里用 feDisplacementMap 真正折弯背后的
+   网格 / 曲线，Chromium 生效；高光由上面 box-shadow 的内描边与 1px 玻璃边提供。
+   这里不再叠自绘的白色渐变——白底会把折射糊成一块白板，反而看不出玻璃。 */
+body.lg-on .sidebar{background:var(--glass)}
 /* 收起态：不用 display:none（那样没法做动画），改成宽度归零 + 左移淡出。
    这里的 !important 是为了盖过通用的 .hidden{display:none!important}。 */
 .sidebar.hidden{
@@ -3517,7 +3489,8 @@ body.kb-open .ai-dock.sheet-open .ai-sheet{max-height:max(140px,calc(100dvh - va
       inset 0 -14px 30px -18px rgba(120,170,255,.55),
       inset -1px 0 0 rgba(140,200,255,.30),inset 0 -1px 0 rgba(180,145,255,.22);
     /* 材质与右下角缩放条同源（--glass / --glass-brd / --hi-strong）；
-       色散与镜面反光由 .sidebar::before / ::after 负责，这里只留底色。
+       边缘折射由设置里的「液态玻璃」注入（backdrop-filter 引用 SVG 置换滤镜），
+       上面的内描边就是玻璃的高光；这里只留底色。
        大面板每帧都要采样背后画布，模糊半径压到 14px，和 34px 视觉几乎无差，但省一半开销。 */
     background:var(--glass);
     -webkit-backdrop-filter:blur(14px) saturate(180%);
