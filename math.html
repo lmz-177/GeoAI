@@ -994,12 +994,31 @@ body.tool-folded .tool-head{padding-bottom:0}
 .card-layer{position:absolute;inset:0;z-index:6;pointer-events:none;overflow:hidden}
 .hcard{
   position:absolute;left:0;top:0;transform-origin:0 0;pointer-events:auto;
-  border-radius:14px;overflow:hidden;cursor:grab;touch-action:none;user-select:none;
+  border-radius:14px;overflow:visible;cursor:grab;touch-action:none;user-select:none;
   will-change:transform;outline:1.5px solid transparent;outline-offset:3px;
   transition:outline-color .15s ease;
 }
 .hcard:hover,.hcard.sel{outline-color:var(--accent)}
 .hcard:active{cursor:grabbing}
+/* 锁定图层里的卡片：看得见但选不中、拖不动 */
+.hcard.locked{cursor:default}
+.hcard.locked:hover{outline-color:transparent}
+.hcard.locked .hcard-tools{opacity:0;pointer-events:none}
+/* 缩放手柄：只在选中时出现；命中区 28px、视觉 12px。
+   手柄随卡片一起被 scale(--hcs)，再用 1/--hcs 抵消，屏幕上大小恒定 */
+.hcard-resize{
+  position:absolute;right:0;bottom:0;width:28px;height:28px;z-index:3;touch-action:none;
+  transform:scale(calc(1 / var(--hcs, 1)));transform-origin:100% 100%;
+  opacity:0;pointer-events:none;transition:opacity .15s ease;cursor:nwse-resize;
+  background:transparent;border:0;padding:0;margin:0;
+}
+.hcard-resize::after{
+  content:'';position:absolute;right:5px;bottom:5px;width:12px;height:12px;border-radius:4px;
+  background:var(--accent);box-shadow:0 1px 4px rgba(0,0,0,.25);
+}
+.hcard.sel .hcard-resize{opacity:1;pointer-events:auto}
+.hcard-resize:active{cursor:nwse-resize}
+.hcard.locked .hcard-resize{display:none}
 .hcard-tools{position:absolute;top:6px;right:6px;z-index:2;display:flex;gap:4px;opacity:0;transition:opacity .15s ease}
 .hcard:hover .hcard-tools,.hcard.sel .hcard-tools{opacity:1}
 @media (pointer:coarse){.hcard-tools{opacity:.92}}
@@ -1029,6 +1048,11 @@ body.tool-folded .tool-head{padding-bottom:0}
   width:82px;height:30px;padding:0 8px;border-radius:8px;background:var(--panel-2);
   border:.5px solid var(--border);font-size:var(--fs-2xs);color:var(--text);
 }
+.ce-row select{
+  height:30px;max-width:160px;padding:0 8px;border-radius:8px;background:var(--panel-2);
+  border:.5px solid var(--border);font-size:var(--fs-2xs);color:var(--text);
+}
+.ce-row select option:disabled{color:var(--text-3)}
 .ce-code{
   width:100%;height:300px;resize:vertical;background:var(--panel-2);border:.5px solid var(--border);
   border-radius:12px;padding:11px 12px;font-family:var(--mono);font-size:var(--fs-2xs);line-height:1.55;
@@ -3563,7 +3587,7 @@ try {
           <button class="dd-item" data-act="rename">重命名选中… <span class="k">F2</span></button>
           <button class="dd-item" data-act="objProps">对象设置…</button>
           <div class="dd-sep"></div>
-          <button class="dd-item" data-act="htmlcard">插入 HTML / CSS 卡片…</button>
+          <button class="dd-item" data-act="htmlcard">插入 HTML 卡片…</button>
           <button class="dd-item" data-act="clear">清空全部对象</button>
         </div>
       </div>
@@ -4634,13 +4658,15 @@ const SET = {
   piDigits: 60, eDigits: 60, divMode: 'cycle', divDigits: 20,
   /* AI：开启后请求带 safety_check（DeepSeek 内容安全校验） */
   safetyCheck: false,
+  /* 画布卡片允许执行 <script> / 事件属性 / iframe（关闭后入口处剥掉，和旧版一致） */
+  cardScript: true,
 };
 /* 设置持久化：小数位、角度单位、网格 / 坐标轴开关这些是「下次打开还想保持」的偏好。
    主题不在这里 —— 它有自己的 ggai_theme（要在首屏前应用，避免闪一下白底）。 */
 const SET_STORE = 'ggai_settings_v1';
 const SET_KEYS = ['round', 'grid', 'axes', 'labels', 'snap', 'snapToObjects',
   'pointSize', 'lineWidth', 'fontSize', 'showMinor', 'boldGrid', 'showGridNumbers', 'angleUnit',
-  'piDigits', 'eDigits', 'divMode', 'divDigits', 'safetyCheck'];
+  'piDigits', 'eDigits', 'divMode', 'divDigits', 'safetyCheck', 'cardScript'];
 function saveSET() {
   if (TEST_MODE) return;                 /* 自测模式不写本地存储，保证用例之间确定性 */
   try {
@@ -4664,8 +4690,9 @@ function loadSET() {
 }
 const state = {
   objects: [],           // GeoObject[]
-  /* HTML / CSS 卡片：{ id, x, y, w, h, code }。x/y 是世界坐标左上角，
-     w/h 是「标准视图 1:1」下的设计像素；渲染时按 view.scale / 46 整体缩放。 */
+  /* HTML 卡片：{ id, x, y, w, h, code, layer }。x/y 是世界坐标左上角，
+     w/h 是「标准视图 1:1」下的设计像素；渲染时按 view.scale / 46 整体缩放。
+     layer 是 state.layers 的下标：随图层显隐 / 锁定，叠放次序图层优先。 */
   cards: [],
   cardSel: null,
   view: { cx: 0, cy: 0, scale: 46 },   // 世界坐标中心 + 每单位像素
@@ -4703,8 +4730,20 @@ const state = {
    版本号在左上角 GeoAI 打开的「更新与版本」弹窗里展示。改完版本号后，在
    APP_CHANGELOG 最上面补一条（版本、日期、类型、一句摘要、几条说明），
    新版本会自动出现在版本历史里。 */
-const APP_VERSION = '2.2.2';
+const APP_VERSION = '2.3.0';
 const APP_CHANGELOG = [
+  {
+    v: '2.3.0', date: '2026-11-28', tag: '自由卡片', code: '约 4.3 万行 · 2.7 MB',
+    lead: '画布卡片放开完整 Web 能力：<script>、事件属性、iframe、表单都能用，滑条与按钮不再被拖动吞掉；卡片归属图层，选中后可直接在画布上拖角缩放。',
+    notes: [
+      '卡片支持 <script> / onclick / <iframe> / <form> / 外链资源：脚本只执行一次，移动、缩放、选中、换层都不会重跑；卡片可把清理函数挂到 host.__cardCleanup，重绘 / 删除时自动调用',
+      '修复：卡片内的按钮、滑条、输入框点不动——整卡拖动改用 composedPath 判断真实目标，命中交互控件就不启动拖动；双击编辑同样避开这些区域',
+      '卡片接入图层：新建落到当前图层，随图层显隐 / 锁定（锁定层不可选、拖、编辑、删除），叠放次序图层优先、同层按顺序；工具条新增 ⤒ 置顶 / ⤓ 置底（本层内）；编辑器可换图层；图层面板显示「N + M 卡」；删图层 / 排序时卡片跟着迁移',
+      '画布内缩放：选中卡片后右下角出现手柄，拖动改 w/h（Shift 锁比例），手柄屏幕大小恒定；选中后方向键微移、Shift 一次 10 单位；最小尺寸 160×80',
+      '安全兜底：设置 → 通用 新增「允许卡片脚本」开关（默认开，关后退回旧的剥离行为）；载入在线分享 / 构造文件时若卡片含脚本，先弹确认，可一键剥掉脚本再载入',
+      'AI 提示词同步：臻彩模式与分步作图都允许脚本、滑条、iframe，并要求不访问父页面、不外发数据；canvasSig 把图层算进签名',
+    ],
+  },
   {
     v: '2.2.2', date: '2026-11-27', tag: '臻彩模式', code: '约 4.3 万行 · 2.7 MB',
     lead: '思考强度面板左上角多了一枚微光星标：一键打开「臻彩模式」——滑条亮起彩虹流光，之后 AI 画完图会再配一张好看的卡片。',
@@ -8580,6 +8619,12 @@ function removeLayer(i) {
     if (k === i) o.layer = dst;
     else if (k > i) o.layer = k - 1;
   }
+  /* 卡片与对象同一套规则：整层卡片落到相邻层，上层卡片下标前移，不丢 */
+  for (const c of state.cards) {
+    const k = cardLayerIndex(c);
+    if (k === i) c.layer = dst;
+    else if (k > i) c.layer = k - 1;
+  }
   state.layers.splice(i, 1);
   state.curLayer = clamp(state.curLayer, 0, state.layers.length - 1);
   ensureUnlockedCurLayer(true);
@@ -8660,6 +8705,7 @@ function moveLayerTo(from, to) {
   const L = state.layers.splice(from, 1)[0];
   state.layers.splice(to, 0, L);
   for (const o of state.objects) o.layer = clamp(layerShift(o.layer, from, to), 0, state.layers.length - 1);
+  for (const c of state.cards) c.layer = clamp(layerShift(cardLayerIndex(c), from, to), 0, state.layers.length - 1);
   state.curLayer = clamp(layerShift(state.curLayer, from, to), 0, state.layers.length - 1);
   return true;
 }
@@ -13587,13 +13633,14 @@ function loadSnapshot(json) {
   endBatch();
   state.view = Object.assign({ cx: 0, cy: 0, scale: 46 }, d.v || {});
   state.selection = [];
-  /* HTML / CSS 卡片随快照一起还原；旧存档没有 h 字段时就是空数组 */
+  /* HTML 卡片随快照一起还原；旧存档没有 h 字段时就是空数组，没有 layer 时落到第 0 层 */
   state.cards = (Array.isArray(d.h) ? d.h : []).filter(c => c && typeof c.code === 'string').map(c => ({
     id: String(c.id || nextCardId()),
     x: isNum(c.x) ? c.x : 0, y: isNum(c.y) ? c.y : 0,
-    w: clamp(Math.round(isNum(c.w) ? c.w : 420), 80, 2400),
-    h: clamp(Math.round(isNum(c.h) ? c.h : 240), 40, 2400),
+    w: clamp(Math.round(isNum(c.w) ? c.w : 420), CARD_MIN_W, 2400),
+    h: clamp(Math.round(isNum(c.h) ? c.h : 240), CARD_MIN_H, 2400),
     code: String(c.code),
+    layer: clamp(c.layer | 0, 0, state.layers.length - 1),
   }));
   state.cardSel = null;
   renderCards();
@@ -13611,11 +13658,13 @@ function loadSnapshot(json) {
   /* 快照里若带着「动画中」状态，恢复后继续播放 */
   animKick();
 }
-/* ── 画布 HTML / CSS 卡片 ──
-   用户和 AI 都能写一段自包含的 HTML + <style>（含 @keyframes 动画），
-   控件把它渲染成画布上的一块卡片：随缩放平移，可拖动、双击编辑、删除。
-   内容放在 Shadow DOM 里，样式不会污染主界面；<script> 与事件属性在入口处剥掉。 */
+/* ── 画布 HTML 卡片 ──
+   用户和 AI 都能写一段自包含的 HTML + <style>（含 @keyframes 动画），控件把它渲染成
+   画布上的一块卡片：随缩放平移，可拖动、选中后拖角缩放、双击编辑、删除，归属于某个图层。
+   内容放在 Shadow DOM 里，样式不会污染主界面。<script> / 事件属性 / iframe / 表单默认放行
+   （设置里可关），脚本只执行一次：位置 / 尺寸变化只改 transform，不重刷内容。 */
 const CARD_BASE = 46;   /* 设计像素与标准视图 1:1 的基准 scale */
+const CARD_MIN_W = 160, CARD_MIN_H = 80;   /* 卡片最小尺寸（缩放手柄与编辑器共用） */
 /* 「AI 配 CSS」：打开后给模型加一段指令，画完图再附一张排版卡。
    每次进入应用都从关闭开始，免得忘了关、白白多消耗额度。 */
 const CSSM = { on: false };
@@ -13664,9 +13713,12 @@ const DEFAULT_CARD_CODE = `<style>
 </style>
 <div class="card"><h1>把想法<br>画到画布上</h1><p>GeoAI · 动态数学画板</p></div>`;
 function nextCardId() { cardIdSeq++; return 'hc' + Date.now().toString(36) + cardIdSeq; }
-/* 只保留排版 / 动画需要的东西：脚本、内嵌页面、事件属性、javascript: 全部剥掉。
-   CSS 本身不能执行代码；外链字体与图片仍然允许。 */
-function sanitizeCardCode(code) {
+/* 卡片代码里的「可执行部分」：脚本、事件属性、内嵌页面。用来判断要不要在载入
+   分享 / 外部文件时多问一句，以及「允许卡片脚本」关着时按旧规则剥掉。 */
+const CARD_EXEC_RE = /<script\b|\son[a-z]+\s*=|<iframe\b|javascript\s*:/i;
+function cardHasExec(code) { return CARD_EXEC_RE.test(String(code == null ? '' : code)); }
+/* 旧的剥离逻辑：设置里关掉「允许卡片脚本」、或用户拒绝载入含脚本的分享时用 */
+function stripCardCode(code) {
   return String(code == null ? '' : code)
     .replace(/<script\b[\s\S]*?<\/script\s*>/gi, '')
     .replace(/<(iframe|object|embed|form)\b[\s\S]*?<\/\1\s*>/gi, '')
@@ -13674,28 +13726,87 @@ function sanitizeCardCode(code) {
     .replace(/\son[a-z]+\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi, '')
     .replace(/javascript\s*:/gi, '');
 }
-const CARD_SHADOW_BASE = ':host{display:block;width:100%;height:100%;overflow:hidden}'
+/* 入口过滤器：默认原样放行（SET.cardScript）；关掉开关后退回旧的剥离行为。
+   保留函数名与所有调用点，免得大改。 */
+function sanitizeCardCode(code) {
+  const s = String(code == null ? '' : code);
+  return SET.cardScript ? s : stripCardCode(s);
+}
+const CARD_SHADOW_BASE = ':host{display:block;width:100%;height:100%;border-radius:inherit;overflow:hidden}'
   + '*,*::before,*::after{box-sizing:border-box}.hc-body{width:100%;height:100%}';
+/* 清掉一张卡片的内容：先跑卡片自己登记的清理函数（setInterval / 全局监听之类），再清 DOM。
+   卡片脚本约定把清理函数 push 到自己作用域里能拿到的 host.__cardCleanup（见 AI_CSS_HINT）。 */
+function clearCardHost(host) {
+  if (!host) return;
+  if (host.__cardCleanup) {
+    const fns = host.__cardCleanup; host.__cardCleanup = null;
+    for (const fn of (Array.isArray(fns) ? fns : [fns])) { try { fn(); } catch (e) { } }
+  }
+  if (host.__cardHostTokens) {
+    for (const t of host.__cardHostTokens) delete CARD_HOSTS[t];
+    host.__cardHostTokens = null;
+  }
+  const sr = host.shadowRoot;
+  if (sr) sr.innerHTML = '';
+}
+/* 卡片脚本拿到的 host：按 token 暂存，执行完（经典脚本是同步的）就删掉，
+   模块脚本留到卡片重绘 / 删除时再清，避免泄漏。 */
+const CARD_HOSTS = Object.create(null);
+let cardHostSeq = 0;
 function paintCardHost(host, code) {
+  clearCardHost(host);
   let sr = host.shadowRoot;
   if (!sr) sr = host.attachShadow({ mode: 'open' });
-  sr.innerHTML = '<style>' + CARD_SHADOW_BASE + '</style><div class="hc-body">' + sanitizeCardCode(code) + '</div>';
+  sr.innerHTML = '<style>' + CARD_SHADOW_BASE + '</style><div class="hc-body"></div><slot name="hcard-ui"></slot>';
+  const body = sr.querySelector('.hc-body');
+  body.innerHTML = code;
+  /* innerHTML 插进去的 <script> 不会执行：换成真节点它才跑，而且 inline onclick
+     调用的全局函数也要靠这一步定义出来。
+     host 用块级 const 注入：不污染全局、多张卡片互不覆盖；块里的函数声明
+     仍会提升到全局（Annex B），所以 onclick="foo()" 照样能用。 */
+  for (const old of Array.from(body.querySelectorAll('script'))) {
+    const token = 'gh' + (++cardHostSeq);
+    CARD_HOSTS[token] = host;
+    (host.__cardHostTokens || (host.__cardHostTokens = [])).push(token);
+    const s = document.createElement('script');
+    for (const a of Array.from(old.attributes)) s.setAttribute(a.name, a.value);
+    s.textContent = '{\nconst host = window.__geoCardHosts["' + token + '"] || null;\n' + old.textContent + '\n}';
+    old.replaceWith(s);
+    if ((old.getAttribute('type') || '').toLowerCase() !== 'module') delete CARD_HOSTS[token];
+  }
+  host.__cardCleanup = host.__cardCleanup || null;
 }
+window.__geoCardHosts = CARD_HOSTS;
 function cardCssScale() { return state.view.scale / CARD_BASE; }
+function cardLayerIndex(c) { return clamp((c && c.layer) | 0, 0, state.layers.length - 1); }
+function cardLayerVisible(c) { const L = state.layers[cardLayerIndex(c)]; return !!L && L.visible !== false; }
+function cardLayerLocked(c) { const L = state.layers[cardLayerIndex(c)]; return !!L && !!L.locked; }
 function renderCards() {
   const layer = $('#cardLayer'); if (!layer) return;
   const keep = new Set(state.cards.map(c => c.id));
-  for (const el of Array.from(layer.children)) if (!keep.has(el.dataset.cid)) el.remove();
+  for (const el of Array.from(layer.children)) {
+    if (!keep.has(el.dataset.cid)) { clearCardHost(el); el.remove(); }
+  }
   const sc = cardCssScale();
-  for (const c of state.cards) {
-    let el = Array.from(layer.children).find(x => x.dataset.cid === c.id);
+  const kids = Array.from(layer.children);
+  /* 当前选中的卡片所在图层被隐藏 / 锁定：清掉选中，不留一个选不中的高亮 */
+  const selC = state.cards.find(c => c.id === state.cardSel);
+  if (selC && (!cardLayerVisible(selC) || cardLayerLocked(selC))) state.cardSel = null;
+  state.cards.forEach((c, i) => {
+    let el = kids.find(x => x.dataset.cid === c.id);
     if (!el) { el = buildCardEl(c); layer.appendChild(el); }
     el.style.width = c.w + 'px';
     el.style.height = c.h + 'px';
     el.style.transform = 'translate3d(' + toScreenX(c.x) + 'px,' + toScreenY(c.y) + 'px,0) scale(' + sc + ')';
-    el.classList.toggle('sel', state.cardSel === c.id);
+    el.style.setProperty('--hcs', String(sc));
+    /* 图层顺序优先，同层按 state.cards 数组顺序（拖动会把卡片挪到本层末尾 = 本层置顶） */
+    el.style.zIndex = String(cardLayerIndex(c) * 10000 + i);
+    const hidden = !cardLayerVisible(c), locked = cardLayerLocked(c);
+    el.style.display = hidden ? 'none' : '';
+    el.classList.toggle('locked', locked);
+    el.classList.toggle('sel', state.cardSel === c.id && !locked && !hidden);
     if (el._code !== c.code) { paintCardHost(el, c.code); el._code = c.code; }
-  }
+  });
 }
 function buildCardEl(c) {
   const el = document.createElement('div');
@@ -13703,36 +13814,78 @@ function buildCardEl(c) {
   el.dataset.cid = c.id;
   el.tabIndex = 0;
   el.setAttribute('role', 'group');
-  el.setAttribute('aria-label', 'HTML / CSS 卡片');
-  el.innerHTML = '<div class="hcard-tools"><button class="edit" type="button" title="编辑卡片" aria-label="编辑卡片">✎</button>'
-    + '<button class="del" type="button" title="删除卡片" aria-label="删除卡片">✕</button></div>';
+  el.setAttribute('aria-label', 'HTML 卡片');
+  el.innerHTML = '<div class="hcard-tools" slot="hcard-ui">'
+    + '<button class="top" type="button" title="置顶（本图层内）" aria-label="置顶">⤒</button>'
+    + '<button class="bottom" type="button" title="置底（本图层内）" aria-label="置底">⤓</button>'
+    + '<button class="edit" type="button" title="编辑卡片" aria-label="编辑卡片">✎</button>'
+    + '<button class="del" type="button" title="删除卡片" aria-label="删除卡片">✕</button></div>'
+    + '<div class="hcard-resize" slot="hcard-ui" role="separator" aria-orientation="corner" title="拖动缩放" aria-label="拖动调整卡片大小"></div>';
   el.querySelector('.edit').addEventListener('click', e => { e.preventDefault(); e.stopPropagation(); openHtmlCardEditor(c.id); });
   el.querySelector('.del').addEventListener('click', e => { e.preventDefault(); e.stopPropagation(); deleteCanvasCard(c.id); });
-  el.addEventListener('dblclick', e => { e.preventDefault(); e.stopPropagation(); openHtmlCardEditor(c.id); });
-  /* 键盘：Tab 到卡片即选中，Enter 编辑，Delete 删除（和画布对象一致的直觉） */
-  el.addEventListener('focus', () => selectCanvasCard(c.id));
+  el.querySelector('.top').addEventListener('click', e => { e.preventDefault(); e.stopPropagation(); reorderCanvasCard(c.id, 'top'); });
+  el.querySelector('.bottom').addEventListener('click', e => { e.preventDefault(); e.stopPropagation(); reorderCanvasCard(c.id, 'bottom'); });
+  el.addEventListener('dblclick', e => {
+    if (cardEventInteractive(e)) return;
+    e.preventDefault(); e.stopPropagation(); openHtmlCardEditor(c.id);
+  });
+  /* 键盘：Tab 到卡片即选中，Enter 编辑，Delete 删除（和画布对象一致的直觉）。
+     注意：撤销 / 载入快照会重建 state.cards 里的卡片对象，闭包里不能一直用创建时的 c，
+     否则方向键会去改一个已经不在 state.cards 里的旧对象。 */
+  const liveCard = () => state.cards.find(x => x.id === c.id);
+  el.addEventListener('focus', () => { const cc = liveCard(); if (cc && !cardLayerLocked(cc)) selectCanvasCard(cc.id); });
   el.addEventListener('keydown', e => {
-    if (e.key === 'Enter') { e.preventDefault(); openHtmlCardEditor(c.id); }
-    else if (e.key === 'Delete' || e.key === 'Backspace') { e.preventDefault(); deleteCanvasCard(c.id); }
+    if (e.target !== el) return;           /* 卡片内部控件的按键不归我们管 */
+    const cc = liveCard(); if (!cc) return;
+    if (e.key === 'Enter') { e.preventDefault(); openHtmlCardEditor(cc.id); }
+    else if (e.key === 'Delete' || e.key === 'Backspace') { e.preventDefault(); deleteCanvasCard(cc.id); }
     else if (e.key === ' ') { e.preventDefault(); }
+    else if (e.key === 'ArrowLeft' || e.key === 'ArrowRight' || e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+      /* 选中后方向键微移（Shift 一次 10 单位）：缩放手柄之外的另一个键盘入口 */
+      e.preventDefault();
+      const st = state.view.scale || CARD_BASE, step = (e.shiftKey ? 10 : 1) / st;
+      const snap = snapshotNow();
+      if (e.key === 'ArrowLeft') cc.x -= step; else if (e.key === 'ArrowRight') cc.x += step;
+      else if (e.key === 'ArrowUp') cc.y += step; else cc.y -= step;
+      pushUndo(snap); renderCards();
+    }
   });
   el.addEventListener('pointerdown', e => startCardDrag(e, c.id));
+  const rz = el.querySelector('.hcard-resize');
+  rz.addEventListener('pointerdown', e => startCardResize(e, c.id));
   return el;
 }
+/* 真实的点击目标：Shadow DOM 会把 e.target 重定向成 host，得走 composedPath */
+function cardEventPath(e) { return (e.composedPath && e.composedPath()[0]) || e.target; }
+/* 命中卡片内部的交互控件就不启动拖动 / 不开编辑器，否则按钮、滑条、输入框全被卡片吞掉 */
+function cardEventInteractive(e) {
+  let t = cardEventPath(e);
+  if (t && !t.closest && t.parentElement) t = t.parentElement;   /* 文本节点 */
+  if (!t || !t.closest) return false;
+  return !!t.closest('button,input,textarea,select,a,label,[contenteditable],[data-nodrag],.hcard-tools,.hcard-resize');
+}
 function selectCanvasCard(id) {
+  const c = state.cards.find(x => x.id === id);
+  if (c && (cardLayerLocked(c) || !cardLayerVisible(c))) return false;
   state.cardSel = id;
   const layer = $('#cardLayer');
   if (layer) Array.from(layer.children).forEach(el => el.classList.toggle('sel', el.dataset.cid === id));
+  return true;
 }
 function startCardDrag(e, id) {
-  if (e.button !== 0 || (e.target.closest && e.target.closest('.hcard-tools'))) return;
-  const c = state.cards.find(x => x.id === id); if (!c) return;
+  if (e.button !== 0 || cardEventInteractive(e)) return;
+  const c = state.cards.find(x => x.id === id);
+  if (!c || cardLayerLocked(c)) { return; }
   e.preventDefault();
   const snap = snapshotNow();
-  /* 拖到哪张卡片，就把它提到最上面一层 */
+  /* 拖到哪张卡片，就把它提到本图层最上面 */
   const idx = state.cards.indexOf(c);
-  if (idx >= 0 && idx !== state.cards.length - 1) { state.cards.splice(idx, 1); state.cards.push(c); }
-  selectCanvasCard(id); renderCards();
+  const li = cardLayerIndex(c);
+  if (idx >= 0) {
+    let last = -1;
+    state.cards.forEach((x, k) => { if (cardLayerIndex(x) === li) last = k; });
+    if (idx !== last) { state.cards.splice(idx, 1); state.cards.splice(last, 0, c); }
+  }  selectCanvasCard(id); renderCards();
   const sx = e.clientX, sy = e.clientY, ox = c.x, oy = c.y;
   let moved = false;
   const move = ev => {
@@ -13753,19 +13906,75 @@ function startCardDrag(e, id) {
   window.addEventListener('pointerup', up);
   window.addEventListener('pointercancel', up);
 }
-function deleteCanvasCard(id) {
+/* 选中后右下角手柄缩放：只改 w/h，不重刷 Shadow 内容；Shift 锁比例 */
+function startCardResize(e, id) {
+  if (e.button !== 0) return;
+  const c = state.cards.find(x => x.id === id);
+  if (!c || cardLayerLocked(c)) return;
+  e.preventDefault(); e.stopPropagation();
+  selectCanvasCard(id); renderCards();
+  const snap = snapshotNow();
+  const sx = e.clientX, sy = e.clientY, sw = c.w, sh = c.h, ratio = sw / Math.max(1, sh);
+  let changed = false;
+  const el = e.currentTarget;
+  try { el.setPointerCapture(e.pointerId); } catch (err) { }
+  const move = ev => {
+    /* w/h 是卡片 CSS 像素，屏幕上还要乘 cardCssScale()，所以按它换算才 1:1 跟手 */
+    const k = cardCssScale() || 1;
+    const dx = (ev.clientX - sx) / k, dy = (ev.clientY - sy) / k;
+    let w = sw + dx, h = sh + dy;
+    if (ev.shiftKey || ev.metaKey || ev.ctrlKey) {           /* 按原比例：取变化大的那个方向 */
+      if (dx / Math.max(1, sw) > dy / Math.max(1, sh)) h = w / ratio; else w = h * ratio;
+    }
+    const nw = clamp(Math.round(w), CARD_MIN_W, 2400), nh = clamp(Math.round(h), CARD_MIN_H, 2400);
+    if (nw !== c.w || nh !== c.h) { c.w = nw; c.h = nh; changed = true; renderCards(); }
+  };
+  const up = () => {
+    el.removeEventListener('pointermove', move);
+    el.removeEventListener('pointerup', up);
+    el.removeEventListener('pointercancel', up);
+    try { el.releasePointerCapture(e.pointerId); } catch (err) { }
+    if (changed) { pushUndo(snap); canvasAutoSaveSoon(); }
+  };
+  el.addEventListener('pointermove', move);
+  el.addEventListener('pointerup', up);
+  el.addEventListener('pointercancel', up);
+}
+/* 置顶 / 置底：只在卡片所在的图层内调整数组顺序，随后重排 zIndex */
+function reorderCanvasCard(id, where) {
   const c = state.cards.find(x => x.id === id); if (!c) return;
+  const li = cardLayerIndex(c);
+  const idx = state.cards.indexOf(c);
+  if (idx < 0) return;
+  const same = state.cards.filter(x => cardLayerIndex(x) === li);
+  if (same.length < 2) return;
+  /* 目标位置：本层最后一张之后（置顶）/ 本层第一张之前（置底）。
+     先算好「抽取之后」的插入点，避免 splice 后下标漂移。 */
+  let pos = -1;
+  if (where === 'top') { for (let k = state.cards.length - 1; k >= 0; k--) if (cardLayerIndex(state.cards[k]) === li) { pos = k; break; } }
+  else { for (let k = 0; k < state.cards.length; k++) if (cardLayerIndex(state.cards[k]) === li) { pos = k; break; } }
+  if (pos === idx) return;
+  const snap = snapshotNow();
+  state.cards.splice(idx, 1);
+  const at = pos > idx ? pos - 1 : pos;
+  state.cards.splice(where === 'top' ? at + 1 : at, 0, c);
+  pushUndo(snap); renderCards(); canvasAutoSaveSoon();
+}
+function deleteCanvasCard(id) {
+  const c = state.cards.find(x => x.id === id);
+  if (!c) return;
+  if (cardLayerLocked(c)) { toast('卡片在锁定图层里，先解锁再删除', 'warn'); return; }
   pushUndo();
   state.cards = state.cards.filter(x => x.id !== id);
   if (state.cardSel === id) state.cardSel = null;
   renderCards(); canvasAutoSaveSoon();
   toast('已删除卡片');
 }
-/* 新增一张卡片：默认放在当前视图中心，多张时依次错开一点 */
+/* 新增一张卡片：默认放在当前视图中心，多张时依次错开一点；归属当前图层 */
 function addCanvasCard(code, opts) {
   const o = opts || {};
-  const w = clamp(Math.round(o.w || 420), 80, 2400);
-  const h = clamp(Math.round(o.h || 240), 40, 2400);
+  const w = clamp(Math.round(o.w || 420), CARD_MIN_W, 2400);
+  const h = clamp(Math.round(o.h || 240), CARD_MIN_H, 2400);
   const n = state.cards.length % 5;
   const s = state.view.scale || CARD_BASE;
   const c = {
@@ -13774,6 +13983,7 @@ function addCanvasCard(code, opts) {
     x: o.x != null ? o.x : state.view.cx - (w / 2) / s + n * 18 / s,
     y: o.y != null ? o.y : state.view.cy + (h / 2) / s - n * 14 / s,
     w, h, code: sanitizeCardCode(code),
+    layer: o.layer != null ? clamp(o.layer | 0, 0, state.layers.length - 1) : state.curLayer,
   };
   state.cards.push(c);
   renderCards(); canvasAutoSaveSoon();
@@ -13787,15 +13997,17 @@ function ensureCardEditor() {
   wrap.className = 'backdrop';
   wrap.id = 'cardBackdrop';
   wrap.innerHTML =
-    '<div class="modal card-modal" role="dialog" aria-modal="true" aria-label="HTML / CSS 卡片">'
-    + '<div class="modal-head"><div><b id="cardTitle">插入 HTML / CSS 卡片</b>'
-    + '<div class="ce-tip">写一段自包含的 HTML + &lt;style&gt;，支持 CSS 动画；不要写 &lt;script&gt;。</div></div>'
+    '<div class="modal card-modal" role="dialog" aria-modal="true" aria-label="HTML 卡片">'
+    +     '<div class="modal-head"><div><b id="cardTitle">插入 HTML 卡片</b>'
+    + '<div class="ce-tip">写一段自包含的 HTML + &lt;style&gt;，可用 &lt;script&gt;、事件属性、iframe、表单与外链资源；脚本只执行一次。</div></div>'
     + '<button class="icon-btn" type="button" data-close="cardBackdrop" aria-label="关闭">✕</button></div>'
     + '<div class="modal-body"><div class="ce-grid">'
     + '<div class="ce-col"><div class="ce-preview" id="cardPreview"><div class="ce-stage" id="cardStage"></div></div>'
-    + '<div class="ce-tip">用 <code>.card</code> 当根容器并设 <code>height:100%</code>；预览按卡片真实比例缩放。</div></div>'
-    + '<div class="ce-col"><div class="ce-row"><label>宽</label><input id="cardW" type="number" min="80" max="2400" step="10" value="420">'
-    + '<label>高</label><input id="cardH" type="number" min="40" max="2400" step="10" value="240"></div>'
+    + '<div class="ce-tip">用 <code>.card</code> 当根容器并设 <code>height:100%</code>；预览按卡片真实比例缩放。'
+    + '需要定时器 / 全局监听时，把清理函数挂到 <code>host.__cardCleanup</code>（卡片重绘或删除时会调用）。</div></div>'
+    + '<div class="ce-col"><div class="ce-row"><label>宽</label><input id="cardW" type="number" min="160" max="2400" step="10" value="420">'
+    + '<label>高</label><input id="cardH" type="number" min="80" max="2400" step="10" value="240">'
+    + '<label>图层</label><select id="cardLayerSel" aria-label="卡片所在图层"></select></div>'
     + '<textarea class="ce-code" id="cardCode" spellcheck="false" aria-label="卡片 HTML 与 CSS"></textarea></div>'
     + '</div></div>'
     + '<div class="modal-foot"><button class="btn" type="button" data-close="cardBackdrop">取消</button>'
@@ -13816,11 +14028,20 @@ function ensureCardEditor() {
   $('#cardH').addEventListener('input', () => { clearTimeout(cardPreviewTimer); cardPreviewTimer = setTimeout(paintCardPreview, 120); });
   $('#cardSave').addEventListener('click', saveCardFromEditor);
 }
+/* 编辑器里的图层下拉：列出所有图层；锁定 / 隐藏的图层禁选并注明 */
+function fillCardLayerSel(cur) {
+  const sel = $('#cardLayerSel'); if (!sel) return;
+  sel.innerHTML = state.layers.map((L, i) => {
+    const dis = L.locked || L.visible === false;
+    const why = L.locked ? '（已锁定）' : L.visible === false ? '（已隐藏）' : '';
+    return '<option value="' + i + '"' + (i === cur ? ' selected' : '') + (dis ? ' disabled' : '') + '>' + esc(L.name) + why + '</option>';
+  }).join('');
+}
 function paintCardPreview() {
   const stage = $('#cardStage'); if (!stage) return;
   const box = $('#cardPreview');
-  const w = clamp(Math.round(+$('#cardW').value || 420), 80, 2400);
-  const h = clamp(Math.round(+$('#cardH').value || 240), 40, 2400);
+  const w = clamp(Math.round(+$('#cardW').value || 420), CARD_MIN_W, 2400);
+  const h = clamp(Math.round(+$('#cardH').value || 240), CARD_MIN_H, 2400);
   paintCardHost(stage, $('#cardCode').value);
   stage.style.width = w + 'px';
   stage.style.height = h + 'px';
@@ -13832,10 +14053,12 @@ function openHtmlCardEditor(id) {
   ensureCardEditor();
   cardEditId = id || null;
   const c = id ? state.cards.find(x => x.id === id) : null;
-  $('#cardTitle').textContent = c ? '编辑 HTML / CSS 卡片' : '插入 HTML / CSS 卡片';
+  if (c && cardLayerLocked(c)) { toast('卡片在锁定图层里，先解锁再编辑', 'warn'); return; }
+  $('#cardTitle').textContent = c ? '编辑 HTML 卡片' : '插入 HTML 卡片';
   $('#cardCode').value = c ? c.code : DEFAULT_CARD_CODE;
   $('#cardW').value = c ? c.w : 420;
   $('#cardH').value = c ? c.h : 240;
+  fillCardLayerSel(c ? cardLayerIndex(c) : state.curLayer);
   $('#cardSave').textContent = c ? '保存修改' : '插入画布';
   openBackdrop('cardBackdrop');
   paintCardPreview();
@@ -13848,19 +14071,21 @@ function openHtmlCardEditor(id) {
 function saveCardFromEditor() {
   const code = sanitizeCardCode($('#cardCode').value);
   if (!code.trim()) { toast('卡片内容不能为空', 'err'); return; }
-  const w = clamp(Math.round(+$('#cardW').value || 420), 80, 2400);
-  const h = clamp(Math.round(+$('#cardH').value || 240), 40, 2400);
+  const w = clamp(Math.round(+$('#cardW').value || 420), CARD_MIN_W, 2400);
+  const h = clamp(Math.round(+$('#cardH').value || 240), CARD_MIN_H, 2400);
+  const li = clamp(+($('#cardLayerSel') && $('#cardLayerSel').value) || 0, 0, state.layers.length - 1);
   pushUndo();
   const c = cardEditId ? state.cards.find(x => x.id === cardEditId) : null;
-  if (c) { c.code = code; c.w = w; c.h = h; }
+  if (c) { c.code = code; c.w = w; c.h = h; c.layer = li; }
   else {
     addCanvasCard(code, {
-      w, h,
+      w, h, layer: li,
       x: state.view.cx - (w / 2) / (state.view.scale || CARD_BASE),
       y: state.view.cy + (h / 2) / (state.view.scale || CARD_BASE),
     });
   }
   closeBackdrop('cardBackdrop');
+  clearCardHost($('#cardStage'));
   renderCards();
   toast(c ? '卡片已更新' : '已插入卡片', 'ok');
 }
@@ -18839,7 +19064,7 @@ C('Delete', 'Delete(对象)', '删除对象及其后代', (a) => {
 }, ['删除']);
 COMMANDS['delete'].tolerant = true;   /* 删除列表里可以夹不存在的名字 */
 C('DeleteAll', 'DeleteAll()', '清空所有对象', () => { clearAll(); return []; }, ['清空']);
-C('HTMLCard', 'HTMLCard() 或 HTMLCard("HTML+CSS", 宽, 高)', '画布上插入一张 HTML / CSS 卡片（支持 CSS 动画）；不写内容则打开编辑器', (a) => {
+C('HTMLCard', 'HTMLCard() 或 HTMLCard("HTML", 宽, 高)', '画布上插入一张 HTML 卡片（支持 CSS 动画与脚本）；不写内容则打开编辑器', (a) => {
   const raw = a.length && typeof a[0].val === 'string' ? String(a[0].val) : '';
   if (!raw.trim()) { openHtmlCardEditor(); return []; }
   addCanvasCard(raw, {
@@ -23732,10 +23957,11 @@ function bindLayerBar() {
 function layerPanelRowHtml(i) {
   const L = state.layers[i];
   const n = state.objects.filter(o => !o.aux && layerIndexOf(o) === i).length;
+  const nc = state.cards.filter(c => cardLayerIndex(c) === i).length;
   const dis = b => b ? ' disabled' : '';
   return '<div class="lp-row' + (i === state.curLayer ? ' cur' : '') + '" data-layer="' + i + '">' +
     '<span class="lp-name" title="点击切换当前图层">' + esc(L.name) + '</span>' +
-    '<span class="lp-cnt">' + n + '</span>' +
+    '<span class="lp-cnt" title="' + n + ' 个对象' + (nc ? ' · ' + nc + ' 张卡片' : '') + '">' + n + (nc ? ' + ' + nc + ' 卡' : '') + '</span>' +
     '<span class="lp-btns">' +
     '<button data-lact="up" title="上移一层（画得更靠上）"' + dis(i >= state.layers.length - 1) + '>' + ICON.chevUp + '</button>' +
     '<button data-lact="down" title="下移一层（画得更靠下）"' + dis(i <= 0) + '>' + ICON.chevDown + '</button>' +
@@ -26263,7 +26489,8 @@ function settingsHtml() {
       '<div class="set-row"><label>角度单位</label><select data-sel="angleUnit"><option value="deg"' + (SET.angleUnit === 'deg' ? ' selected' : '') + '>度 (°)</option><option value="rad"' + (SET.angleUnit === 'rad' ? ' selected' : '') + '>弧度</option></select></div>' +
       '<div class="set-row"><label>液态玻璃<span class="sublabel">边缘折射与高光；Chromium 上生效</span></label><div class="switch' + (glassOn ? ' on' : '') + '" role="switch" aria-checked="' + !!glassOn + '" tabindex="0" data-glass></div></div>' +
       '</div></div>' +
-      '<div class="set-group"><h3>智能</h3><div class="set-card">' + sw('safetyCheck', 'AI 内容安全校验') + '</div></div>', true) +
+      '<div class="set-group"><h3>智能</h3><div class="set-card">' + sw('safetyCheck', 'AI 内容安全校验') + '</div></div>' +
+      '<div class="set-group"><h3>画布卡片</h3><div class="set-card">' + sw('cardScript', '允许卡片脚本', '关闭后 &lt;script&gt; / 事件属性 / iframe 在入口处剥掉') + '</div></div>', true) +
     pane('view',
       '<div class="set-group"><h3>绘图区</h3><div class="set-card">' +
       sw('grid', '显示网格') + sw('axes', '显示坐标轴') + sw('showGridNumbers', '坐标轴刻度数字') + sw('showMinor', '次要网格线') + sw('boldGrid', '加粗网格线') +
@@ -27575,8 +27802,10 @@ async function loadShare(rawOrKey) {
   const key = parseShareKey(rawOrKey) || String(rawOrKey || '');
   if (!key) throw new Error('标识码不对：应为 geoai- 加 8 位字符，或一条分享链接');
   const d = await shareDownload(key);
+  const cards = await confirmExecutableCards(d.cards, '这份在线分享');
+  if (cards === null) throw new Error('已取消载入含可执行代码的分享');
   pushUndo();
-  loadSnapshot(JSON.stringify({ o: d.objects, v: d.view || state.view, s: d.sheet || {}, ly: d.layers, cl: d.curLayer, h: d.cards || [] }));
+  loadSnapshot(JSON.stringify({ o: d.objects, v: d.view || state.view, s: d.sheet || {}, ly: d.layers, cl: d.curLayer, h: cards }));
   if (d.settings) Object.assign(SET, d.settings);
   recomputeAll(); refreshAlgebra(); setTool('move'); draw();
   lastShareKey = '';      /* 载入别人的分享后，再分享应生成新码，别把原记录覆盖掉 */
@@ -28557,6 +28786,22 @@ function loadConstructionData(d) {
   lastShareKey = '';
   applyTheme(); recomputeAll(); refreshAlgebra();
 }
+/* 外部来源（在线分享 / 打开文件）的卡片若含 <script> / 事件属性 / iframe，先问一句再执行。
+   返回处理后的卡片数组；用户拒绝时返回剥离后的版本；取消整个载入返回 null。
+   本地编辑与本机 AI 生成的卡片不经过这里。 */
+async function confirmExecutableCards(cards, what) {
+  const list = Array.isArray(cards) ? cards : [];
+  if (!list.some(c => c && cardHasExec(c.code))) return list;
+  if (TEST_MODE && !window.__cardConfirmReal) return list;   /* 自测默认放行，专门用例会打开真实确认 */
+  const ok = await confirmDialog({
+    title: '载入可执行代码？',
+    body: (what || '这份文件') + '包含 <b>' + list.filter(c => c && cardHasExec(c.code)).length + '</b> 张带脚本 / 内嵌页面的卡片。'
+      + '卡片脚本与画板同源运行，可以读取本机的本地存储。只载入你信任的来源。',
+    okText: '加载并运行', cancelText: '剥掉脚本后加载', danger: true,
+  });
+  if (ok) return list;
+  return list.map(c => c ? { ...c, code: stripCardCode(c.code) } : c);
+}
 function openFile(file) {
   if (basicBlocked('打开构造文件')) return;
   const name = String(file.name || '');
@@ -28573,16 +28818,20 @@ function openFile(file) {
       if (d) {
         if (!Array.isArray(d.objects)) { toast('打开失败：这个文件不是 GeoAI 构造文件', 'err', 3200); return; }
         const before = snapshotNow();
-        pushUndo();
-        try {
-          loadConstructionData(d);
-          toast('已载入构造文件（Ctrl+Z 可退回）', 'ok');
-        } catch (e) {
-          state.undo.pop();
-          try { loadSnapshot(before); } catch (e2) { }
-          recomputeAll(); refreshAlgebra();
-          toast('载入失败，已保留原画布：' + ((e && e.message) || e), 'err', 3600);
-        }
+        /* 卡片含脚本时先确认（Promise），再继续原来的载入流程 */
+        confirmExecutableCards(d.cards, '这个构造文件').then(cards => {
+          if (cards === null) { toast('已取消打开'); return; }
+          pushUndo();
+          try {
+            loadConstructionData({ ...d, cards });
+            toast('已载入构造文件（Ctrl+Z 可退回）', 'ok');
+          } catch (e) {
+            state.undo.pop();
+            try { loadSnapshot(before); } catch (e2) { }
+            recomputeAll(); refreshAlgebra();
+            toast('载入失败，已保留原画布：' + ((e && e.message) || e), 'err', 3600);
+          }
+        });
         return;
       }
       if (/\.json$/i.test(name)) { toast('打开失败：不是有效的 JSON 文件', 'err', 3200); return; }
@@ -30791,6 +31040,8 @@ async function runUITest() {
       .forEach(l => { try { executeLine(l); } catch (e) { } });
     recomputeAll(); refreshAlgebra(); resizeCanvas();
     if (!isFinite(state.view.scale) || state.view.scale < 5 || state.view.scale > 1e4) state.view.scale = 40;
+    /* 合成 pointerdown 会被「点别处收起输入条」的全局监听改成 true，别带进下一个用例 */
+    state.aiUserFold = false;
   };
   const A = async (name, fn) => {
     reset(); closeAll();
@@ -32377,7 +32628,7 @@ async function runUITest() {
     if (localStorage.getItem('geoai_canvas_autosave')) throw new Error('点丢弃后存档应被清掉');
     state.objects = []; recomputeAll();
   });
-  /* 画布 HTML / CSS 卡片：渲染到 DOM 层、脚本被剥掉、随撤销恢复 */
+  /* 画布 HTML 卡片：渲染到 DOM 层、脚本放行、随撤销恢复 */
   await A('画布卡片:渲染、隔离与撤销', async () => {
     executeLine('DeleteAll()'); await sleep(0);
     const c = addCanvasCard('<style>.x{color:red}</style><div class="x">卡片</div>', { x: 0, y: 0, w: 200, h: 120 });
@@ -32386,8 +32637,14 @@ async function runUITest() {
     if (!el) throw new Error('卡片没有渲染到画布层');
     if (!el.shadowRoot || !el.shadowRoot.textContent.includes('卡片')) throw new Error('卡片内容没有进 Shadow DOM');
     if (el.style.transform.indexOf('translate3d') !== 0) throw new Error('卡片没有按视图定位');
-    const bad = addCanvasCard('<img src=x onerror="window.__x=1"><script>window.__x=2<\/script>', { x: 0, y: 0, w: 100, h: 80 });
-    if (/onerror|<script/i.test(bad.code)) throw new Error('卡片里的脚本没有剥掉');
+    /* 默认放行脚本；关掉「允许卡片脚本」后退回剥离 */
+    const bad = addCanvasCard('<img src=x onerror="window.__x=1"><script>window.__x=2<\/script>', { x: 0, y: 0, w: 200, h: 120 });
+    if (!/onerror|<script/i.test(bad.code)) throw new Error('默认没有放行卡片脚本');
+    SET.cardScript = false;
+    const bad2 = addCanvasCard('<img src=x onerror="window.__x=1"><script>window.__x=2<\/script>', { x: 0, y: 0, w: 200, h: 120 });
+    SET.cardScript = true;
+    if (/onerror|<script/i.test(bad2.code)) throw new Error('关闭开关后脚本没有剥掉');
+    state.cards = state.cards.filter(x => x !== bad && x !== bad2); renderCards();
     if (aiCardBlocks('```html\n<b>x</b>\n```').length !== 1) throw new Error('AI 的 html 块没有识别');
     if (extractGeoCommands('```html\n<b>x</b>\n```').length) throw new Error('html 块被当成作图命令执行了');
     /* AI 能读到卡片源码，并能按序号原地改写 */
@@ -32429,6 +32686,223 @@ async function runUITest() {
     $('#effortBox').click(); await sleep(0);
     if ($('#cssMode')) throw new Error('不该有二级面板');
     clearAll(); await sleep(0);
+  });
+  /* 卡片自由化：脚本只跑一次、内部控件不被拖动吞掉、iframe / form 可用 */
+  await A('画布卡片:脚本、交互控件与清理', async () => {
+    executeLine('DeleteAll()'); await sleep(0);
+    SET.cardScript = true;
+    window.__csRuns = 0;
+    const code = '<style>#b{padding:4px}</style><button id="b" type="button">点我</button><span id="t">0</span>'
+      + '<input id="r" type="range" min="0" max="100" value="0"><div id="box" style="width:20px;height:8px;background:#333"></div>'
+      + '<iframe title="x" src="about:blank"></iframe><form id="f"><input name="q"></form>'
+      + '<script>host.__cardCleanup = function(){ window.__csClean = (window.__csClean||0)+1; };'
+      + 'host.shadowRoot.getElementById("b").addEventListener("click", function(){ window.__csRuns++; });'
+      + 'host.shadowRoot.getElementById("r").addEventListener("input", function(e){ host.shadowRoot.getElementById("box").style.width = e.target.value + "px"; });'
+      + '<\/script>';
+    const c = addCanvasCard(code, { x: 0, y: 0, w: 300, h: 200 });
+    await sleep(0);
+    const el = $('#cardLayer .hcard[data-cid="' + c.id + '"]');
+    const sr = el && el.shadowRoot;
+    if (!sr) throw new Error('卡片没有 Shadow DOM');
+    if (!sr.querySelector('iframe') || !sr.querySelector('form')) throw new Error('iframe / form 没有进 Shadow');
+    if (sr.querySelectorAll('script').length !== 1) throw new Error('script 节点数不对');
+    /* 1. 内部按钮能点：按钮点击计数 +1 */
+    sr.getElementById('b').click(); await sleep(0);
+    if (window.__csRuns !== 1) throw new Error('卡片内按钮点击无效：' + window.__csRuns);
+    /* 2. range 滑动改变样式 */
+    const r = sr.getElementById('r'); r.value = '80';
+    r.dispatchEvent(new sr.ownerDocument.defaultView.Event('input', { bubbles: true, composed: true })); await sleep(0);
+    if (sr.getElementById('box').style.width !== '80px') throw new Error('range 没改到样式');
+    /* 3. 拖动 / 选中 / 缩放 / 换层 / 置顶都不重跑脚本：按钮监听仍只挂一次 */
+    const btn = sr.getElementById('b');
+    c.x += 1; c.y += 1; renderCards();
+    selectCanvasCard(c.id); renderCards();
+    c.w = 320; c.h = 220; renderCards();
+    c.layer = state.curLayer; renderCards();
+    btn.click(); await sleep(0);
+    if (window.__csRuns !== 2) throw new Error('脚本被重跑或监听丢失：' + window.__csRuns);
+    if (el._code !== c.code) throw new Error('_code 缓存失效');
+    /* 4. 修改代码才重绘；重绘前调用旧清理函数 */
+    window.__csClean = 0;
+    c.code = code.replace('<span id="t">0</span>', '<span id="t">1</span>'); renderCards(); await sleep(0);
+    if (window.__csClean !== 1) throw new Error('重绘前没有调用 __cardCleanup：' + window.__csClean);
+    if (!el.shadowRoot.getElementById('t') || el.shadowRoot.getElementById('t').textContent !== '1') throw new Error('改代码后没有重绘');
+    /* 5. 删除卡片时也调用清理 */
+    window.__csClean = 0;
+    deleteCanvasCard(c.id); await sleep(0);
+    if (window.__csClean !== 1) throw new Error('删除时没有调用 __cardCleanup');
+    if ($('#cardLayer .hcard[data-cid="' + c.id + '"]')) throw new Error('卡片没有删掉');
+    /* 6. 拖动判断：命中卡片内的 button / input 不启动拖动（pointerdown 位置不动） */
+    const c2 = addCanvasCard('<button class="in" type="button">x</button><div class="plain">空白</div>', { x: 0, y: 0, w: 200, h: 120 });
+    await sleep(0);
+    const el2 = $('#cardLayer .hcard[data-cid="' + c2.id + '"]');
+    const inBtn = el2.shadowRoot.querySelector('.in');
+    const pd = (target, extra) => {
+      const ev = new PointerEvent('pointerdown', Object.assign({ bubbles: true, composed: true, cancelable: true, button: 0, clientX: 10, clientY: 10 }, extra || {}));
+      Object.defineProperty(ev, 'composedPath', { value: () => [target, el2.shadowRoot.firstChild, el2, document.body, document.documentElement, document, window] });
+      target.dispatchEvent(ev);
+      return ev;
+    };
+    if (pd(inBtn).defaultPrevented) throw new Error('点卡片内按钮被 preventDefault（会吞交互）');
+    const plain = el2.shadowRoot.querySelector('.plain');
+    const ev2 = pd(plain);
+    if (!ev2.defaultPrevented) throw new Error('点卡片空白处应启动拖动');
+    window.dispatchEvent(new PointerEvent('pointerup', { bubbles: true }));
+    window.dispatchEvent(new PointerEvent('pointercancel', { bubbles: true }));
+    /* 7. dblclick 命中内部按钮不开编辑器 */
+    const dbl = (target) => {
+      const ev = new MouseEvent('dblclick', { bubbles: true, composed: true });
+      Object.defineProperty(ev, 'composedPath', { value: () => [target, el2, document.body, document.documentElement, document, window] });
+      target.dispatchEvent(ev);
+    };
+    dbl(inBtn); await sleep(0);
+    if ($('#cardBackdrop') && $('#cardBackdrop').classList.contains('on')) throw new Error('双击卡片内按钮误开了编辑器');
+    dbl(plain); await sleep(0);
+    if (!$('#cardBackdrop').classList.contains('on')) throw new Error('双击卡片空白处没开编辑器');
+    closeBackdrop('cardBackdrop');
+  });
+  /* 卡片接入图层：显隐 / 锁定 / 叠放 / 换层 / 删层迁移 */
+  await A('画布卡片:图层归属', async () => {
+    executeLine('DeleteAll()'); await sleep(0);
+    state.layers = [{ name: '图层 1', visible: true, locked: false }, { name: '图层 2', visible: true, locked: false }]; state.curLayer = 0;
+    const a = addCanvasCard('<div>a</div>', { x: 0, y: 0, w: 200, h: 120 });
+    if (a.layer !== 0) throw new Error('新卡片没有落到当前图层');
+    state.curLayer = 1;
+    const b = addCanvasCard('<div>b</div>', { x: 0, y: 0, w: 200, h: 120 });
+    if (b.layer !== 1) throw new Error('切换图层后新卡片 layer 不对');
+    renderCards(); await sleep(0);
+    const ea = $('#cardLayer .hcard[data-cid="' + a.id + '"]'), eb = $('#cardLayer .hcard[data-cid="' + b.id + '"]');
+    if (!(+eb.style.zIndex > +ea.style.zIndex)) throw new Error('zIndex 没按图层排序：' + ea.style.zIndex + ' vs ' + eb.style.zIndex);
+    /* 置顶 / 置底只在本层内：给第 0 层再放一张 */
+    const a2 = addCanvasCard('<div>a2</div>', { x: 0, y: 0, w: 200, h: 120, layer: 0 });
+    const ea2 = $('#cardLayer .hcard[data-cid="' + a2.id + '"]');
+    if (!(+ea2.style.zIndex > +ea.style.zIndex)) throw new Error('同层顺序不对');
+    ea.querySelector('.hcard-tools .bottom').click(); await sleep(0);
+    if (!(+$('#cardLayer .hcard[data-cid="' + a.id + '"]').style.zIndex < +$('#cardLayer .hcard[data-cid="' + a2.id + '"]').style.zIndex)) throw new Error('置底无效');
+    if (a.layer !== 0) throw new Error('置底改变了图层');
+    ea.querySelector('.hcard-tools .top').click(); await sleep(0);
+    if (!(+$('#cardLayer .hcard[data-cid="' + a.id + '"]').style.zIndex > +$('#cardLayer .hcard[data-cid="' + a2.id + '"]').style.zIndex)) throw new Error('置顶无效');
+    /* 隐藏图层 1：卡片 display:none 且不可选中 */
+    state.layers[1].visible = false; recomputeAll(); await sleep(0);
+    if (eb.style.display !== 'none') throw new Error('隐藏图层后卡片仍可见');
+    if (selectCanvasCard(b.id) !== false || state.cardSel === b.id) throw new Error('隐藏层的卡片不该能选中');
+    state.layers[1].visible = true;
+    /* 锁定图层 1：加 .locked、选不中、删不掉 */
+    state.layers[1].locked = true; recomputeAll(); await sleep(0);
+    if (!eb.classList.contains('locked')) throw new Error('锁定图层后卡片没有 locked 态');
+    if (selectCanvasCard(b.id) !== false) throw new Error('锁定层的卡片不该能选中');
+    deleteCanvasCard(b.id); await sleep(0);
+    if (!state.cards.some(x => x.id === b.id)) throw new Error('锁定层的卡片被删掉了');
+    /* 选中态的卡片所在图层被锁定 → 清选中 */
+    state.layers[1].locked = false; recomputeAll();
+    selectCanvasCard(b.id); renderCards();
+    if (state.cardSel !== b.id) throw new Error('解锁后应能选中');
+    state.layers[1].locked = true; recomputeAll(); await sleep(0);
+    if (state.cardSel === b.id) throw new Error('图层锁定后选中态没有清掉');
+    state.layers[1].locked = false; recomputeAll();
+    /* 图层面板计数带卡片 */
+    $('#layerPanelBtn').click(); await sleep(0);
+    const row0 = Array.from($('#layerPanelList').querySelectorAll('.lp-row')).find(r => +r.dataset.layer === 0);
+    if (!row0.querySelector('.lp-cnt').textContent.includes('2')) throw new Error('面板没有显示卡片数：' + row0.querySelector('.lp-cnt').textContent);
+    closeLayerPanel();
+    /* 删图层：卡片迁到相邻层；排序：卡片下标跟着走 */
+    deleteLayerAt(1); await sleep(0);
+    if (state.layers.length !== 1) throw new Error('删图层失败');
+    if (!state.cards.every(x => x.layer === 0)) throw new Error('删图层后卡片没有迁移：' + state.cards.map(x => x.layer).join(','));
+    state.layers = [{ name: '图层 1', visible: true, locked: false }, { name: '图层 2', visible: true, locked: false }];
+    state.cards.forEach(x => { x.layer = 1; });
+    moveLayerTo(0, 1); recomputeAll(); await sleep(0);
+    if (!state.cards.every(x => x.layer === 0)) throw new Error('图层排序后卡片下标没跟着走');
+    /* 编辑器图层下拉：列出图层、保存写回 layer */
+    openHtmlCardEditor(a.id); await sleep(0);
+    const sel = $('#cardLayerSel');
+    if (sel.options.length !== 2) throw new Error('编辑器图层下拉数量不对');
+    sel.value = '1'; $('#cardSave').click(); await sleep(0);
+    if (a.layer !== 1) throw new Error('编辑器没有写回 layer');
+    state.layers[0].locked = true;
+    openHtmlCardEditor(a.id); await sleep(0);
+    if (!$('#cardLayerSel').options[0].disabled) throw new Error('锁定图层应禁选');
+    state.layers[0].locked = false;
+    closeBackdrop('cardBackdrop');
+    /* 旧存档（无 layer）能载入并落到第 0 层 */
+    loadSnapshot(JSON.stringify({ o: [], v: state.view, s: {}, ly: [{ name: '图层 1' }, { name: '图层 2' }], cl: 1, h: [{ id: 'old1', x: 0, y: 0, w: 300, h: 200, code: '<b>old</b>' }] }));
+    const o1 = state.cards.find(x => x.id === 'old1');
+    if (!o1 || o1.layer !== 0) throw new Error('旧存档卡片没有落到第 0 层');
+    /* 撤销能恢复换层 */
+    state.undo.length = 0;
+    o1.layer = 1; renderCards();
+    const before = snapshotNow();
+    pushUndo(before); o1.layer = 0; renderCards(); loadSnapshot(state.undo.pop());
+    const restored = state.cards.find(x => x.id === 'old1');
+    if (!restored || restored.layer !== 1) throw new Error('撤销没有恢复 layer');
+  });
+  /* 画布内缩放：手柄拖动改 w/h，撤销可恢复 */
+  await A('画布卡片:缩放手柄', async () => {
+    executeLine('DeleteAll()'); await sleep(0);
+    state.layers = [{ name: '图层 1', visible: true, locked: false }]; state.curLayer = 0;
+    state.view.scale = 46;
+    const c = addCanvasCard('<div>x</div>', { x: 0, y: 0, w: 300, h: 200 });
+    await sleep(0);
+    const el = $('#cardLayer .hcard[data-cid="' + c.id + '"]');
+    const rz = el.querySelector('.hcard-resize');
+    if (!rz) throw new Error('没有缩放手柄');
+    if (getComputedStyle(rz).opacity !== '0') throw new Error('未选中时手柄不该可见');
+    selectCanvasCard(c.id); renderCards();
+    let rOp = '0';
+    for (let i = 0; i < 20 && rOp !== '1'; i++) { await sleep(50); rOp = getComputedStyle(rz).opacity; }
+    if (rOp !== '1') throw new Error('选中后手柄应可见：op=' + rOp + ' cls=' + el.className);
+    if (el.style.getPropertyValue('--hcs') !== '1') throw new Error('--hcs 没按视图缩放设置：' + el.style.getPropertyValue('--hcs'));
+    const w0 = c.w, h0 = c.h;
+    const snap0 = state.undo.length;
+    rz.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, composed: true, button: 0, clientX: 100, clientY: 100 }));
+    if (!el.classList.contains('sel')) throw new Error('按下手柄应选中');
+    rz.dispatchEvent(new PointerEvent('pointermove', { bubbles: true, composed: true, clientX: 160, clientY: 130 }));
+    if (c.w !== w0 + 60 || c.h !== h0 + 30) throw new Error('缩放后尺寸不对：' + c.w + '×' + c.h);
+    if (el.style.width !== c.w + 'px') throw new Error('手柄拖动没有同步到 DOM 宽度');
+    rz.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, composed: true, clientX: 160, clientY: 130 }));
+    if (state.undo.length !== snap0 + 1) throw new Error('缩放后没有记撤销');
+    undo(); await sleep(0);
+    const c2 = state.cards.find(x => x.id === c.id);
+    if (!c2 || c2.w !== w0 || c2.h !== h0) throw new Error('撤销没有恢复尺寸');
+    /* Shift 锁比例 + 最小尺寸 */
+    const c3 = state.cards.find(x => x.id === c.id) || addCanvasCard('<div>x</div>', { x: 0, y: 0, w: 300, h: 200 });
+    selectCanvasCard(c3.id); renderCards();
+    const el3 = $('#cardLayer .hcard[data-cid="' + c3.id + '"]'), rz3 = el3.querySelector('.hcard-resize');
+    rz3.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, composed: true, button: 0, clientX: 0, clientY: 0 }));
+    rz3.dispatchEvent(new PointerEvent('pointermove', { bubbles: true, composed: true, clientX: 92, clientY: 0, shiftKey: true }));
+    if (Math.abs(c3.w / c3.h - 300 / 200) > 0.01) throw new Error('Shift 没锁比例：' + c3.w + '×' + c3.h);
+    rz3.dispatchEvent(new PointerEvent('pointermove', { bubbles: true, composed: true, clientX: -5000, clientY: -5000 }));
+    if (c3.w !== CARD_MIN_W || c3.h !== CARD_MIN_H) throw new Error('没有守住最小尺寸：' + c3.w + '×' + c3.h);
+    rz3.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, composed: true }));
+    /* 锁定层不出现手柄、不可缩放 */
+    state.layers[0].locked = true; recomputeAll(); await sleep(0);
+    if (getComputedStyle(el3.querySelector('.hcard-resize')).display !== 'none') throw new Error('锁定层仍显示手柄');
+    state.layers[0].locked = false; recomputeAll();
+    /* 方向键微移 */
+    state.undo.length = 0;
+    const x0 = c3.x;
+    el3.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+    if (Math.abs(c3.x - (x0 + 1 / state.view.scale)) > 1e-9) throw new Error('方向键没有移动卡片：x0=' + x0 + ' x=' + c3.x + ' scale=' + state.view.scale + ' conn=' + el3.isConnected + ' sel=' + state.cardSel + ' id=' + c3.id);
+    if (!state.undo.length) throw new Error('方向键移动没有记撤销');
+  });
+  /* 载入含脚本的分享 / 文件要确认 */
+  await A('画布卡片:载入确认', async () => {
+    window.__cardConfirmReal = true;
+    const run = [{ id: 's1', x: 0, y: 0, w: 200, h: 120, code: '<script>1<\/script><b>s</b>' }];
+    const plain = [{ id: 'p1', x: 0, y: 0, w: 200, h: 120, code: '<b>p</b>' }];
+    /* 无脚本：不弹框直接返回 */
+    const p = await confirmExecutableCards(plain, '测试');
+    if (p !== plain) throw new Error('无脚本卡片不该走确认');
+    /* 有脚本：弹框；点「剥掉脚本后加载」 */
+    setTimeout(() => { if ($('#confirmBackdrop').classList.contains('on')) resolveConfirm(false); }, 0);
+    const st = await confirmExecutableCards(run, '测试');
+    if (/script/i.test(st[0].code)) throw new Error('拒绝后没有剥掉脚本');
+    /* 有脚本：点「加载并运行」 */
+    setTimeout(() => { if ($('#confirmBackdrop').classList.contains('on')) resolveConfirm(true); }, 0);
+    const ok = await confirmExecutableCards(run, '测试');
+    if (!/script/i.test(ok[0].code)) throw new Error('同意后不该剥脚本');
+    if (!cardHasExec('<div onclick="x()">a</div>') || !cardHasExec('<iframe src="x"></iframe>') || cardHasExec('<style>a{}</style><b>x</b>')) throw new Error('cardHasExec 判断不对');
+    window.__cardConfirmReal = false;
   });
   /* CAS 精确数值：大整数幂按科学计数 + 位数显示，π 给足小数位 */
   await A('CAS:大数与科学计算器', async () => {
@@ -38469,7 +38943,7 @@ ask 会变成一张澄清卡片等用户选择；done 只写一句结论，表�
 【画布 HTML / CSS 卡片】
 - 需要漂亮的排版、色块、标题卡或 CSS 动画时，单独输出一个 \`\`\`html 代码块，块里是一段自包含的 HTML + \`<style>\`，控件会把它变成画布上一张可拖动、可编辑的卡片。
 - 写法：根容器用 class="card"，并给 \`height:100%\`；卡片默认 420×240 设计像素，按标准视图 1:1 排版，随画布缩放。用背景渐变、圆角、阴影、@keyframes 做质感，字体用 -apple-system / PingFang SC / system-ui。
-- 不要写 \`<script>\`、事件属性、\`<iframe>\`、表单或外部 JS（会被剥掉）；文字用简体中文，内容要和当前题目相关，不要挡住关键图形。
+- 可以写 \`<script>\`、onclick 等事件属性、\`<iframe sandbox>\`、表单与外链资源：按钮、\`<input type="range">\` 滑条配合 JS 实时改样式都行。\`<script>\` 只执行一次，需要定时器 / 全局监听时把清理函数挂到 \`host.__cardCleanup\`；不要访问父页面的 DOM / window / localStorage，不要外发数据。文字用简体中文，内容要和当前题目相关，不要挡住关键图形。
 - 卡片是装饰与说明，不能替代数学对象：几何关系仍然用 geogebra 命令画。
 - 画布上已有卡片时，「当前画布」会列出它们的序号、id 与完整源码。要改其中一张，就在 \`\`\`html 块的第一行写 @card 序号（或 @card id），下面写整段替换代码；不要新建第二张重复的卡片。
 
@@ -38571,12 +39045,15 @@ const AI_CAS_SYSTEM = `【精确计算（需要时由你自行调用）】
 · 一次只算一个算式；需要多步就分多条 CAS 命令，一条一行。
 · 计算与作图可以同时进行：题目里既有计算又有图形时，先给计算结果，再按需画图（作图规则同平常）。`;
 /* 用户点了「臻彩模式」才追加：画完主体图形后，按需再附排版卡 */
-const AI_CSS_HINT = `【臻彩模式已开启】画完主体图形后，可以再输出 \`\`\`html 代码块，用自包含 HTML + <style> 做一张与题目呼应的卡片（标题 / 结论 / 关键公式 / 简短说明）。要求：
+const AI_CSS_HINT = `【臻彩模式已开启】画完主体图形后，可以再输出 \`\`\`html 代码块，用自包含 HTML 做一张与题目呼应的卡片（标题 / 结论 / 关键公式 / 简短说明，也可以做可交互的小组件）。要求：
 · 可选：不适合配卡（纯计算、一句话能说清、用户只想要图）就不画，不要为凑格式硬加。
 · 数量按需：一张通常够；内容确实多时可给 2~3 张，每张一个代码块，别让卡片盖过正文。
-· 可以加纯 CSS 交互：:hover / :active 过渡、悬停高亮、渐变流光、@keyframes 循环动画都行；不要写 <script>、事件属性、iframe 或表单。
+· 可以写完整的 Web：HTML + <style> + <script>、onclick 等事件属性、<iframe>（请自带 sandbox）、<form>、外链字体 / 图片 / 脚本都可以用。
+· 交互建议：用 <input type="range">、<button> 配合 JS 实时改 CSS 变量或元素样式；按钮切换 class、:hover / :active 过渡、@keyframes、requestAnimationFrame 都行。
+· 脚本约定：卡片内容渲染在 Shadow DOM 里，<script> 只执行一次；要设定时器 / 全局监听时，把清理函数挂到 host.__cardCleanup = fn（卡片重绘或删除时会调用），优先用 addEventListener 而非 on* 属性。
+· 安全：不要访问父页面的 DOM、window 或 localStorage，不要向外部发送数据；需要嵌入外部网页用 <iframe sandbox="...">。
 · 根容器用 class="card" 并给 height:100%；配色克制、与图形区分开，不遮住关键图形。
-· 卡片只是装饰与说明，不能替代数学对象。`;
+· 卡片只是说明与交互补充，不能替代数学对象。`;
 
 /* 实际发给模型的系统提示：作图规则 + 精确计算规则始终都在，由 AI 自己判断何时调用 CAS */
 function aiSystemPrompt() { return AI_SYSTEM + '\n\n' + AI_CAS_SYSTEM + (CSSM.on ? '\n\n' + AI_CSS_HINT : ''); }
@@ -38592,7 +39069,7 @@ const AI_STEP_SYSTEM = `你是「GeoAI」动态几何画板的作图执行器：
 然后只输出一个代码块，从四种动作里选一种：
 1. \`\`\`geogebra —— 执行 1~4 条命令（每行一条），把这一小步画出来；
 2. \`\`\`search —— 确实缺条件 / 需要外部资料时，写一行检索词；
-3. \`\`\`html —— 贴一张 HTML / CSS 卡片（自包含 HTML + <style>，可带 @keyframes 动画；不要 <script>）；用户要排版 / 标题卡 / 动画时用；改已有卡片时第一行写 @card 序号，下面是完整替换代码；
+3. \`\`\`html —— 贴一张 HTML 卡片（自包含 HTML + <style> + <script>，可带 @keyframes 动画、滑条 / 按钮交互、iframe）；用户要排版 / 标题卡 / 动画 / 小组件时用；改已有卡片时第一行写 @card 序号，下面是完整替换代码；
 4. \`\`\`done —— 整幅图已经完整时结束，块里写一句结论。可以和最后一个 geogebra 块同时出现（命令会先执行）。
 
 【执行原则】
@@ -41557,7 +42034,7 @@ async function aiSend() {
         /* 卡片内容也进签名：等长改写（改颜色 / 改字）同样算「画布变了」 */
         let h = 0; const t = String(c.code || '');
         for (let i = 0; i < t.length; i++) h = (h * 31 + t.charCodeAt(i)) | 0;
-        return [c.id, c.x.toFixed(3), c.y.toFixed(3), c.w, c.h, t.length, h].join('~');
+        return [c.id, c.x.toFixed(3), c.y.toFixed(3), c.w, c.h, c.layer | 0, t.length, h].join('~');
       }).join('|');
       let idleRounds = 0, stopNote = '', lastStepEl = null, noProgressStop = false;
       let lastCmdsKey = firstCmds.join('\n');   /* 用来识别「原样重发同一批失败命令」 */
