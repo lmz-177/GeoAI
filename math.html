@@ -1052,8 +1052,10 @@ body.dark .sidebar::before{
 }
 .hcard.sel .hcard-resize{opacity:1;pointer-events:auto}
 .hcard-resize:active{cursor:nwse-resize}
-/* 卡片工具只在「点选后」出现：hover 不再亮，避免遮挡内容；触屏也一样 */
-.hcard-tools{position:absolute;top:6px;right:6px;z-index:2;display:flex;gap:4px;
+/* 卡片工具只在「点选后」出现，并且挂在卡片外面上方（不再压住标题/内容）。
+   位置和大小都按 --hcs 反算，屏幕上恒定：距卡片顶 6px、按钮 26px。 */
+.hcard-tools{position:absolute;right:0;top:calc(-32px / var(--hcs,1));z-index:6;display:flex;gap:4px;
+  transform:scale(calc(1 / var(--hcs,1)));transform-origin:100% 0;
   opacity:0;pointer-events:none;transition:opacity .15s ease}
 .hcard.sel .hcard-tools{opacity:1;pointer-events:auto}
 .hcard-tools button{
@@ -41253,12 +41255,21 @@ function applyAiCardBlocks(blocks) {
         rs.push({ line: 'HTML 卡片（改 ' + target.id + '）', ok: true, label: target.id, err: '' });
         return;
       }
+      /* 同一轮里模型把上一张卡原样再发一遍：不要再叠一张，直接当作「已存在」。
+         多步作图常见：第一步已经配好卡，第二步又完整输出一遍。 */
+      const norm = t => String(t).replace(/\s+/g, ' ').trim();
+      const same = state.cards.find(x => norm(x.code) === norm(code));
+      if (same) {
+        rs.push({ line: 'HTML 卡片（已存在，未重复创建）', ok: true, label: same.id, err: '' });
+        return;
+      }
       /* 多张卡片依次错开，别叠在同一处 */
       const c = addCanvasCard(code, {
         w: 420, h: 240,
         x: state.view.cx - 210 / s + i * 16 / s,
         y: state.view.cy + 120 / s - i * 12 / s,
       });
+      state.aiRunCards = (state.aiRunCards || 0) + 1;
       rs.push({ line: 'HTML 卡片', ok: true, label: c.id, err: '' });
     } catch (e) {
       rs.push({ line: 'HTML 卡片', ok: false, label: '', err: (e && e.message) || String(e) });
@@ -41647,6 +41658,8 @@ async function aiSend() {
   const imgs = (state.aiImages || []).slice();
   const docs = (state.aiDocs || []).slice();
   if ((!text && !imgs.length && !docs.length) || state.aiBusy) return;
+  /* 新一轮对话：卡片计数清零。多步作图时用它来判断「已经配过卡」，避免每步都新建一张。 */
+  state.aiRunCards = 0;
   inp.value = ''; inp.dispatchEvent(new Event('input', { bubbles: true }));
   const box0 = inp.closest('.ai-box'); if (box0) box0.classList.remove('grow');
   /* 历史记录折叠着就保持折叠：只发消息，不替用户展开对话 */
@@ -42031,8 +42044,14 @@ async function aiSend() {
          回传，由模型自己决定下一步：继续画 / 换构造 / 补搜 / 结束。
          相比「照事先写好的计划硬走」，画到一半发现两线不相交时它能立刻换构造，
          而不是把错误一路带到最后。 */
+      /* 多步作图时，一旦本轮已经配过卡片，就不再诱导模型继续输出卡片：
+         模型每步都能看到同一份提示词，会以为「还没配过」，于是一步步各画一张。 */
+      const stepSys = () => AI_STEP_SYSTEM + '\n\n' + AI_CAS_SYSTEM + (CSSM.on ? '\n\n' + AI_CSS_HINT : '')
+        + (state.aiRunCards > 0
+          ? '\n\n【卡片已配好】本轮已经创建过 HTML 卡片（画布上已有 ' + state.aiRunCards + ' 张），不要再新增卡片代码块，否则会出现重复卡片；只有需要修改已有卡片时，才输出 html 代码块并以 @card n 开头覆盖它。'
+          : '');
       const planMsgs = [
-        { role: 'system', content: AI_STEP_SYSTEM + '\n\n' + AI_CAS_SYSTEM + (CSSM.on ? '\n\n' + AI_CSS_HINT : '') },
+        { role: 'system', content: stepSys() },
         { role: 'user', content: userContent },
       ];
       const obsText = (rs, raw) => {
@@ -42109,6 +42128,7 @@ async function aiSend() {
         };
         const stopStepPaint = () => { if (sTimer) { clearTimeout(sTimer); sTimer = 0; } };
         let sr = { content: '' };
+        planMsgs[0].content = stepSys();
         try { sr = await callAI(planMsgs, eff, onStep); }
         catch (e) { stopStepPaint(); if (e && e.name === 'AbortError') { stepAborted = true; break; } throw e; }
         stopStepPaint(); paintStep();
