@@ -13953,7 +13953,10 @@ function renderCards() {
     el.style.display = hidden ? 'none' : '';
     el.classList.toggle('locked', locked);
     el.classList.toggle('sel', state.cardSel === c.id && !locked && !hidden);
-    if (el._code !== c.code) { paintCardHost(el, c.code); el._code = c.code; }
+    /* 先记下 code 再画：卡片脚本里的写操作会触发 draw() → renderCards()，
+       如果这时 _code 还没更新，就会重新 paint 并再次执行脚本（递归），
+       一次按钮操作能塞进上百步撤销。 */
+    if (el._code !== c.code) { el._code = c.code; paintCardHost(el, c.code); }
   });
 }
 function buildCardEl(c) {
