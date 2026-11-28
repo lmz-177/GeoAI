@@ -681,6 +681,12 @@ body.lg-on .sidebar{background:var(--glass)}
 /* 面板底用 iOS 的 systemGroupedBackground（灰底），每组一张白底圆角卡片；
    层次靠底色差而不是描边 / 阴影 —— 这就是 iOS「设置」里分组列表的样子。 */
 #paneAlgebra{background:var(--bg)}
+/* 液态玻璃开启时，侧栏是一整块玻璃：内层面板 / 工具区 / 页签条都不再铺自己的
+   不透明底，否则背后的网格、曲线与边缘折射会被整片挡住，看着还是一块白板。
+   （内容卡片 .al-card 仍保留浅底，保证文字可读。） */
+body.lg-on #paneAlgebra{background:transparent}
+body.lg-on .toolwrap{background:transparent}
+body.lg-on .panel-tabs{background:transparent;-webkit-backdrop-filter:none;backdrop-filter:none}
 #algebraList{padding:2px 7px 18px}
 .al-card{background:var(--panel);border-radius:var(--r-lg);overflow:hidden}
 .al-card.off{opacity:.6}
@@ -4765,8 +4771,18 @@ const state = {
    版本号在左上角 GeoAI 打开的「更新与版本」弹窗里展示。改完版本号后，在
    APP_CHANGELOG 最上面补一条（版本、日期、类型、一句摘要、几条说明），
    新版本会自动出现在版本历史里。 */
-const APP_VERSION = '2.3.2';
+const APP_VERSION = '2.3.3';
 const APP_CHANGELOG = [
+  {
+    v: '2.3.3', date: '2026-11-28', tag: '一块玻璃', code: '约 4.3 万行 · 2.7 MB',
+    lead: '左侧侧栏改用设置里的液态玻璃（边缘折射 + 高光）：去掉自绘的白色反光层，内层面板透明化，Chromium 下能真正看到背后的网格与曲线在玻璃边缘被折弯。',
+    notes: [
+      '材质与右上角透视胶囊、右下缩放条完全同源：--glass 底色 + 1px 玻璃亮边 + 内描边高光，折射交给设置里的 initLiquidGlass（backdrop-filter 引用 SVG 置换滤镜）',
+      '代数面板、绘图工具区、页签条在开启时改为透明，不再用不透明底色把背后的画布挡住；内容卡片仍保留浅底保证文字可读',
+      '绘图工具区不再单独套一层折射滤镜：嵌套 backdrop-filter + 内滚动在 Chromium 下容易残留像素，现在直接沿用侧栏这一块玻璃',
+      '关闭「液态玻璃」开关后恢复原来的分区底色与模糊，行为与设置开关一致',
+    ],
+  },
   {
     v: '2.3.2', date: '2026-11-28', tag: '工具不丢', code: '约 4.3 万行 · 2.7 MB',
     lead: '修复卡片贴着画布上沿时，选中后的置顶 / 置底 / 编辑 / 删除按钮被画布裁掉、看起来像「选了却没按钮」的问题：上方放不下就自动翻到卡片下方。',
@@ -42541,7 +42557,9 @@ async function aiSend() {
 (function initLiquidGlass() {
   'use strict';
   var LS = 'ggai_glass';
-  var TARGET = '.sidebar,.persp-float,.fmenu-btn,.fmenu,.ctx,.ask-pop,.qs-pop,.eff-pop,.api-pop,.gv-zoom,.gv-badge,.layer-pop,.ai-sheet,.cmd-search,.toolwrap';
+  /* .toolwrap 是侧栏内部的面板，不单独算一块玻璃：它自己的 backdrop-filter 会跟
+     侧栏的折射嵌套，滚动时还容易残留像素；侧栏透明后直接沿用侧栏这一块玻璃。 */
+  var TARGET = '.sidebar,.persp-float,.fmenu-btn,.fmenu,.ctx,.ask-pop,.qs-pop,.eff-pop,.api-pop,.gv-zoom,.gv-badge,.layer-pop,.ai-sheet,.cmd-search';
   var REFRACT = 16;        /* 边缘折弯强度（px） */
   var MAX_FIELD = 48;
   var on = true;
