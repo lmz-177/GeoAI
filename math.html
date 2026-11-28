@@ -516,6 +516,8 @@ body.tool-folded .tool-head{padding-bottom:0}
    侧栏是滑出去而不是瞬间消失。 */
 .sidebar{
   width:var(--sb-w);flex:0 0 var(--sb-w);display:flex;flex-direction:column;position:relative;
+  /* 浮在画布上方，层级必须高于卡片层（.card-layer 是 6），否则卡片会压住代数区 */
+  z-index:20;
   /* 侧栏本身就是一块液态玻璃：半透明底 + 背景模糊，画布的网格会透过一层柔光，
      而不是被一块实心白板挡住。内层的 .panel-body 必须让位（见下面的 transparent），
      否则又把玻璃糊回不透明。 */
@@ -995,38 +997,44 @@ body.tool-folded .tool-head{padding-bottom:0}
 .hcard{
   position:absolute;left:0;top:0;transform-origin:0 0;pointer-events:auto;
   border-radius:14px;overflow:visible;cursor:grab;touch-action:none;user-select:none;
-  will-change:transform;outline:1.5px solid transparent;outline-offset:3px;
-  transition:outline-color .15s ease;
+  will-change:transform;
 }
-.hcard:hover,.hcard.sel{outline-color:var(--accent)}
 .hcard:active{cursor:grabbing}
+/* 选中框画在卡片内部（.hcard-ring），跟卡片同一个盒 / 圆角，边框宽度按 --hcs 反算，
+   屏幕上恒为 1.5px。以前用 outline + offset:3px，框比卡片大一圈，贴着框拖还拖不动。 */
+.hcard-ring{position:absolute;inset:0;z-index:4;border-radius:inherit;pointer-events:none;
+  border:calc(1.5px / var(--hcs,1)) solid transparent;transition:border-color .15s ease}
+.hcard.sel .hcard-ring{border-color:var(--accent)}
 /* 锁定图层里的卡片：看得见但选不中、拖不动 */
 .hcard.locked{cursor:default}
-.hcard.locked:hover{outline-color:transparent}
-.hcard.locked .hcard-tools{opacity:0;pointer-events:none}
+.hcard.locked .hcard-tools,.hcard.locked .hcard-resize{display:none!important}
 /* 缩放手柄：只在选中时出现；命中区 28px、视觉 12px。
    手柄随卡片一起被 scale(--hcs)，再用 1/--hcs 抵消，屏幕上大小恒定 */
 .hcard-resize{
   position:absolute;right:0;bottom:0;width:28px;height:28px;z-index:3;touch-action:none;
-  transform:scale(calc(1 / var(--hcs, 1)));transform-origin:100% 100%;
+  transform:scale(calc(1 / var(--hcs,1)));transform-origin:100% 100%;
   opacity:0;pointer-events:none;transition:opacity .15s ease;cursor:nwse-resize;
   background:transparent;border:0;padding:0;margin:0;
 }
+/* 右下角用两条斜线表示可缩放，比一块实心方块更轻 */
 .hcard-resize::after{
-  content:'';position:absolute;right:5px;bottom:5px;width:12px;height:12px;border-radius:4px;
-  background:var(--accent);box-shadow:0 1px 4px rgba(0,0,0,.25);
+  content:'';position:absolute;right:5px;bottom:5px;width:12px;height:12px;
+  background:
+    linear-gradient(135deg,transparent 0 46%,var(--accent) 46% 54%,transparent 54%),
+    linear-gradient(135deg,transparent 0 72%,var(--accent) 72% 80%,transparent 80%);
 }
 .hcard.sel .hcard-resize{opacity:1;pointer-events:auto}
 .hcard-resize:active{cursor:nwse-resize}
-.hcard.locked .hcard-resize{display:none}
-.hcard-tools{position:absolute;top:6px;right:6px;z-index:2;display:flex;gap:4px;opacity:0;transition:opacity .15s ease}
-.hcard:hover .hcard-tools,.hcard.sel .hcard-tools{opacity:1}
-@media (pointer:coarse){.hcard-tools{opacity:.92}}
+/* 卡片工具只在「点选后」出现：hover 不再亮，避免遮挡内容；触屏也一样 */
+.hcard-tools{position:absolute;top:6px;right:6px;z-index:2;display:flex;gap:4px;
+  opacity:0;pointer-events:none;transition:opacity .15s ease}
+.hcard.sel .hcard-tools{opacity:1;pointer-events:auto}
 .hcard-tools button{
   pointer-events:auto;width:26px;height:26px;border-radius:8px;display:flex;align-items:center;justify-content:center;
   background:rgba(255,255,255,.92);color:#1c1c1e;border:.5px solid rgba(0,0,0,.14);
-  box-shadow:0 2px 8px rgba(0,0,0,.18);font-size:var(--fs-xs);line-height:1;
+  box-shadow:0 2px 8px rgba(0,0,0,.18);line-height:1;
 }
+.hcard-tools button svg{width:14px;height:14px;display:block}
 .hcard-tools button:active{transform:scale(.94)}
 .hcard-tools button.del{color:#c3271e}
 /* 卡片编辑器：左预览右代码，手机上上下排 */
@@ -13815,11 +13823,16 @@ function buildCardEl(c) {
   el.tabIndex = 0;
   el.setAttribute('role', 'group');
   el.setAttribute('aria-label', 'HTML 卡片');
-  el.innerHTML = '<div class="hcard-tools" slot="hcard-ui">'
-    + '<button class="top" type="button" title="置顶（本图层内）" aria-label="置顶">⤒</button>'
-    + '<button class="bottom" type="button" title="置底（本图层内）" aria-label="置底">⤓</button>'
-    + '<button class="edit" type="button" title="编辑卡片" aria-label="编辑卡片">✎</button>'
-    + '<button class="del" type="button" title="删除卡片" aria-label="删除卡片">✕</button></div>'
+  el.innerHTML = '<div class="hcard-ring" slot="hcard-ui"></div>'
+    + '<div class="hcard-tools" slot="hcard-ui">'
+    + '<button class="top" type="button" title="置顶（本图层内）" aria-label="置顶">'
+    + '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16"/><path d="M12 20V8"/><path d="m6.5 13.5 5.5-5.5 5.5 5.5"/></svg></button>'
+    + '<button class="bottom" type="button" title="置底（本图层内）" aria-label="置底">'
+    + '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h16"/><path d="M12 4v12"/><path d="m6.5 10.5 5.5 5.5 5.5-5.5"/></svg></button>'
+    + '<button class="edit" type="button" title="编辑卡片" aria-label="编辑卡片">'
+    + '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></button>'
+    + '<button class="del" type="button" title="删除卡片" aria-label="删除卡片">'
+    + '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v5M14 11v5"/></svg></button></div>'
     + '<div class="hcard-resize" slot="hcard-ui" role="separator" aria-orientation="corner" title="拖动缩放" aria-label="拖动调整卡片大小"></div>';
   el.querySelector('.edit').addEventListener('click', e => { e.preventDefault(); e.stopPropagation(); openHtmlCardEditor(c.id); });
   el.querySelector('.del').addEventListener('click', e => { e.preventDefault(); e.stopPropagation(); deleteCanvasCard(c.id); });
