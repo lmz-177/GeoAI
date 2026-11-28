@@ -11873,6 +11873,7 @@ function recomputeAll() {
   updateCondVisibility();
   refreshAlgebra(); draw();
   sheetRefreshValues();
+  cardGeoSubsNotify();
 }
 /* ═══════════════════════ 6. 视图与渲染 ═══════════════════════ */
 let canvas = null, ctx = null, geoC = false;
@@ -13793,6 +13794,109 @@ function clearCardHost(host) {
   const sr = host.shadowRoot;
   if (sr) sr.innerHTML = '';
 }
+/* ══════════ 卡片 ↔ 画布（读 + 写）══════════
+   卡片脚本里直接用 geo：
+     读：geo.list() / geo.get('A') / geo.value('A') / geo.camera()
+         geo.toScreen(x,y) / geo.toWorld(px,py) / geo.version()
+         geo.onChange(fn) / geo.offChange(fn)（80ms 节流，拖动时不会每帧回调）
+     写：geo.exec('Circle(A,2)') / geo.set('k',3) / geo.point('P',1,2)
+         geo.define('f(x) = x^2') / geo.remove('A') / geo.clear()
+         geo.batch(fn) —— 一次撤销里做完多步
+   写操作与界面走同一条撤销栈：一次调用 = 一步撤销；失败会把那一步弹掉，不留空撤销。 */
+const CARD_GEO_SUBS = new Set();
+let CARD_GEO_DEPTH = 0, cardGeoTimer = 0;
+function cardGeoList() { return state.objects.map(cardGeoInfo); }
+function cardGeoInfo(o) {
+  const v = o.value;
+  return {
+    id: o.id, label: o.label, type: o.type,
+    value: (o.type === 'point' && v) ? { x: v.x, y: v.y } : (v == null ? null : v),
+    text: objValueText(o),
+    visible: o.visible !== false,
+    layer: o.layer | 0,
+  };
+}
+function cardGeoSubsNotify() {
+  if (!CARD_GEO_SUBS.size || cardGeoTimer) return;
+  cardGeoTimer = setTimeout(() => {
+    cardGeoTimer = 0;
+    const snap = { objects: cardGeoList(), version: OBJVER };
+    for (const fn of Array.from(CARD_GEO_SUBS)) { try { fn(snap); } catch (e) { } }
+  }, 80);
+}
+/* 外层调用：入撤销栈 + 批处理；嵌套调用（geo.batch 里的 exec / set）复用外层的这一步 */
+function cardGeoRun(fn) {
+  if (CARD_GEO_DEPTH) { CARD_GEO_DEPTH++; try { return fn(); } finally { CARD_GEO_DEPTH--; } }
+  pushUndo(); beginBatch(); CARD_GEO_DEPTH = 1;
+  let out;
+  try { out = fn(); }
+  catch (e) {
+    CARD_GEO_DEPTH = 0; endBatch();
+    state.undo.pop(); updateUndoButtons();          /* 失败：别在撤销栈里留一步空操作 */
+    cardGeoSubsNotify();
+    throw e;
+  }
+  CARD_GEO_DEPTH = 0; endBatch();
+  refreshAlgebra(); draw(); canvasAutoSaveSoon(); cardGeoSubsNotify();
+  return out;
+}
+const CARD_GEO_API = {
+  list() { return cardGeoList(); },
+  get(name) { const o = getObjByLabel(String(name)); return o ? cardGeoInfo(o) : null; },
+  value(name) {
+    const o = getObjByLabel(String(name)); if (!o) return null;
+    if (o.type === 'point' && o.value) return { x: o.value.x, y: o.value.y };
+    return o.value == null ? null : o.value;
+  },
+  version() { return OBJVER; },
+  camera() { return { cx: state.view.cx, cy: state.view.cy, scale: state.view.scale }; },
+  toScreen(x, y) { return { x: toScreenX(+x), y: toScreenY(+y) }; },
+  toWorld(px, py) { return { x: toWorldX(+px), y: toWorldY(+py) }; },
+  onChange(fn) { if (typeof fn === 'function') CARD_GEO_SUBS.add(fn); return () => CARD_GEO_SUBS.delete(fn); },
+  offChange(fn) { CARD_GEO_SUBS.delete(fn); },
+  exec(cmd) {
+    try {
+      let created = [];
+      cardGeoRun(() => {
+        const r = executeLine(String(cmd));
+        created = ((r && r.created) || []).map(x => x.label);
+      });
+      return { ok: true, created };
+    } catch (e) { return { ok: false, error: (e && e.message) || String(e) }; }
+  },
+  batch(fn) {
+    if (typeof fn !== 'function') return { ok: false, error: 'batch 需要一个函数' };
+    try { cardGeoRun(fn); return { ok: true }; }
+    catch (e) { return { ok: false, error: (e && e.message) || String(e) }; }
+  },
+  set(name, v) {
+    try {
+      const o = getObjByLabel(String(name));
+      if (!o) return CARD_GEO_API.exec(String(name) + ' = ' + (Array.isArray(v) ? '(' + v.join(',') + ')' : v));
+      cardGeoRun(() => {
+        if (o.type === 'slider' || o.type === 'number') {
+          const n = Number(v);
+          if (!isFinite(n)) throw new Error(name + ' 需要一个数字');
+          o.value = o.type === 'slider' ? clamp(n, Math.min(o.def.min, o.def.max), Math.max(o.def.min, o.def.max)) : n;
+          if (o.type !== 'slider') { o.src = fmt(n, 9); o.ast = null; o.definition = o.label + ' = ' + fmt(n, 9); }
+          recomputeAll();
+        } else if (o.type === 'boolean') { o.value = !!v; recomputeAll(); }
+        else { executeLine(o.label + ' = ' + (Array.isArray(v) ? '(' + v.join(',') + ')' : v)); }
+      });
+      return { ok: true };
+    } catch (e) { return { ok: false, error: (e && e.message) || String(e) }; }
+  },
+  point(name, x, y) { return CARD_GEO_API.exec(name + ' = (' + x + ', ' + y + ')'); },
+  define(name, expr) { return CARD_GEO_API.exec(name + ' = ' + expr); },
+  remove(name) { return CARD_GEO_API.exec('Delete(' + name + ')'); },
+  clear() {
+    try {
+      cardGeoRun(() => { state.objects = []; state.selection = []; state.groupSeq = 0; recomputeAll(); });
+      return { ok: true };
+    } catch (e) { return { ok: false, error: (e && e.message) || String(e) }; }
+  },
+};
+window.__geoCard = CARD_GEO_API;
 /* 卡片脚本拿到的 host：按 token 暂存，执行完（经典脚本是同步的）就删掉，
    模块脚本留到卡片重绘 / 删除时再清，避免泄漏。 */
 const CARD_HOSTS = Object.create(null);
@@ -13814,7 +13918,7 @@ function paintCardHost(host, code) {
     (host.__cardHostTokens || (host.__cardHostTokens = [])).push(token);
     const s = document.createElement('script');
     for (const a of Array.from(old.attributes)) s.setAttribute(a.name, a.value);
-    s.textContent = '{\nconst host = window.__geoCardHosts["' + token + '"] || null;\n' + old.textContent + '\n}';
+    s.textContent = '{\nconst host = window.__geoCardHosts["' + token + '"] || null;\nconst geo = window.__geoCard || null;\n' + old.textContent + '\n}';
     old.replaceWith(s);
     if ((old.getAttribute('type') || '').toLowerCase() !== 'module') delete CARD_HOSTS[token];
   }
