@@ -533,26 +533,39 @@ body.tool-folded .tool-head{padding-bottom:0}
   transition:width var(--t-slow),flex-basis var(--t-slow),
     opacity var(--t-slow),transform var(--t-slow),border-right-color var(--t);
 }
-/* 折射层：左上镜面高光 + 右下淡紫色散 + 右上冷光，全部压在内容下面
-   （isolation + z-index:-1），滚动、点按都不受影响。 */
+/* 折射层：斜向镜面条 + 冷 / 暖两处色散，全部压在内容下面
+   （isolation + z-index:-1），滚动、点按都不受影响。
+   这里用正常混合而不是 screen：白画布上 screen 会把白色高光直接吃掉，
+   整块玻璃看着还是一块白板；正常混合的淡蓝 / 淡紫才会真正显色。 */
 .sidebar::before{
   content:'';position:absolute;inset:0;z-index:-1;pointer-events:none;border-radius:inherit;
   background:
-    linear-gradient(118deg,rgba(255,255,255,.92) 0%,rgba(255,255,255,.28) 7%,rgba(255,255,255,0) 20%),
-    radial-gradient(120% 46% at 0% 0%,rgba(255,255,255,.62),rgba(255,255,255,0) 58%),
-    radial-gradient(85% 44% at 100% 2%,rgba(150,205,255,.30),rgba(150,205,255,0) 68%),
-    radial-gradient(72% 42% at 0% 100%,rgba(190,145,255,.22),rgba(190,145,255,0) 72%),
-    linear-gradient(90deg,rgba(255,255,255,.55),rgba(255,255,255,0) 5%,rgba(255,255,255,0) 94%,rgba(150,205,255,.28));
-  mix-blend-mode:screen;
+    /* 左上到右下的斜向镜面反光 */
+    linear-gradient(105deg,rgba(255,255,255,.62) 0%,rgba(255,255,255,.16) 9%,rgba(255,255,255,0) 18%),
+    /* 顶沿厚玻璃的亮边 */
+    linear-gradient(180deg,rgba(255,255,255,.55),rgba(255,255,255,0) 9%),
+    /* 右上冷蓝、左下淡紫，模拟折射后的色散 */
+    radial-gradient(110% 40% at 100% 0%,rgba(120,180,255,.28),rgba(120,180,255,0) 62%),
+    radial-gradient(80% 40% at 0% 100%,rgba(190,140,255,.24),rgba(190,140,255,0) 70%),
+    /* 中段一点点冷调，避免中间完全无色 */
+    linear-gradient(160deg,rgba(226,240,255,.30),rgba(238,232,255,.22) 55%,rgba(255,255,255,.06));
 }
 body.dark .sidebar::before{
   background:
-    linear-gradient(118deg,rgba(255,255,255,.30) 0%,rgba(255,255,255,.06) 8%,rgba(255,255,255,0) 22%),
-    radial-gradient(120% 46% at 0% 0%,rgba(120,180,255,.18),rgba(120,180,255,0) 60%),
-    radial-gradient(85% 44% at 100% 2%,rgba(90,150,240,.16),rgba(90,150,240,0) 68%),
-    radial-gradient(72% 42% at 0% 100%,rgba(150,110,240,.14),rgba(150,110,240,0) 72%);
-  mix-blend-mode:screen;
+    linear-gradient(105deg,rgba(255,255,255,.26) 0%,rgba(255,255,255,.06) 9%,rgba(255,255,255,0) 20%),
+    linear-gradient(180deg,rgba(255,255,255,.20),rgba(255,255,255,0) 9%),
+    radial-gradient(110% 40% at 100% 0%,rgba(70,130,235,.24),rgba(70,130,235,0) 62%),
+    radial-gradient(80% 40% at 0% 100%,rgba(130,90,230,.20),rgba(130,90,230,0) 70%),
+    linear-gradient(160deg,rgba(52,74,110,.26),rgba(70,56,102,.20) 55%,rgba(30,34,44,.10));
 }
+/* 右下角一小片「折射光斑」：像玻璃把背后的光折了一下，只有光没有色块 */
+.sidebar::after{
+  content:'';position:absolute;right:-18%;bottom:-30%;width:86%;height:56%;
+  z-index:-1;pointer-events:none;border-radius:50%;filter:blur(18px);
+  background:radial-gradient(closest-side,rgba(150,200,255,.30),rgba(150,200,255,0));
+  opacity:.9;
+}
+body.dark .sidebar::after{background:radial-gradient(closest-side,rgba(90,150,255,.20),rgba(90,150,255,0))}
 /* 收起态：不用 display:none（那样没法做动画），改成宽度归零 + 左移淡出。
    这里的 !important 是为了盖过通用的 .hidden{display:none!important}。 */
 .sidebar.hidden{
@@ -892,11 +905,15 @@ body.dark .sidebar::before{
   background:var(--glass);border:.5px solid var(--glass-brd);border-radius:99px;padding:5px 12px;
   font-size:var(--fs-2xs);color:var(--text-2);box-shadow:var(--shadow),var(--hi);pointer-events:none;font-family:var(--mono);
   -webkit-backdrop-filter:var(--glass-blur);backdrop-filter:var(--glass-blur);
+  /* 卡片层是 6：徽标必须显式抬高，否则被卡片盖住（auto 在 z-index:6 前必输） */
+  z-index:40;
 }
 /* 画布右下角的缩放条：和右上「代数 / 图形」胶囊用同一套液态玻璃材质
    （半透明底 + 高光描边 + 大圆角），画布上的浮动控件才像一套东西。 */
 .gv-zoom{
   position:absolute;right:calc(14px + env(safe-area-inset-right,0px));bottom:calc(14px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:1px;
+  /* 同上：必须在卡片层（6）之上，否则拖动卡片会盖住缩放 / 图层竖条 */
+  z-index:40;
   background:var(--glass);border:.5px solid var(--glass-brd);border-radius:16px;
   box-shadow:var(--shadow),var(--hi-strong);overflow:hidden;
   -webkit-backdrop-filter:var(--glass-blur);backdrop-filter:var(--glass-blur);
@@ -3490,20 +3507,18 @@ body.kb-open .ai-dock.sheet-open .ai-sheet{max-height:max(140px,calc(100dvh - va
   .sidebar{
     position:absolute;left:calc(12px + env(safe-area-inset-left,0px));top:12px;bottom:12px;z-index:185;
     width:var(--sb-w);flex:0 0 auto;min-width:0;
-    border:1px solid rgba(255,255,255,.78);border-radius:20px;
+    border:1px solid var(--glass-brd);border-radius:20px;
     box-shadow:var(--shadow-lg),var(--hi-strong),
       inset 0 1px 0 rgba(255,255,255,1),inset 1px 0 0 rgba(255,255,255,.72),
-      inset 0 10px 22px -12px rgba(255,255,255,.95),
-      inset 0 -12px 26px -16px rgba(120,170,255,.55),
+      inset 0 12px 26px -14px rgba(255,255,255,.95),
+      inset 0 -14px 30px -18px rgba(120,170,255,.55),
       inset -1px 0 0 rgba(140,200,255,.30),inset 0 -1px 0 rgba(180,145,255,.22);
-    /* 透视：更低的底色不透明度 + 5px 轻模糊，网格与函数曲线能真正透出来；
-       大面板每帧都要采样背后的画布，模糊半径不能大，否则会拖慢逐位计算这类长任务。
-       底色带一点冷蓝 / 淡紫，白画布前才看得出是「一片玻璃」而不是一块白板。 */
-    background:
-      linear-gradient(168deg,rgba(255,255,255,.34) 0%,rgba(214,232,255,.30) 38%,rgba(240,232,255,.22) 72%,rgba(255,255,255,.10) 100%),
-      var(--float-glass);
-    -webkit-backdrop-filter:blur(5px) saturate(180%);
-    backdrop-filter:blur(5px) saturate(180%);
+    /* 材质与右下角缩放条同源（--glass / --glass-brd / --hi-strong）；
+       色散与镜面反光由 .sidebar::before / ::after 负责，这里只留底色。
+       大面板每帧都要采样背后画布，模糊半径压到 14px，和 34px 视觉几乎无差，但省一半开销。 */
+    background:var(--glass);
+    -webkit-backdrop-filter:blur(14px) saturate(180%);
+    backdrop-filter:blur(14px) saturate(180%);
   }
   .sidebar.hidden{
     width:var(--sb-w)!important;flex-basis:auto!important;min-width:0!important;
