@@ -520,11 +520,38 @@ body.tool-folded .tool-head{padding-bottom:0}
   z-index:20;
   /* 侧栏本身就是一块液态玻璃：半透明底 + 背景模糊，画布的网格会透过一层柔光，
      而不是被一块实心白板挡住。内层的 .panel-body 必须让位（见下面的 transparent），
-     否则又把玻璃糊回不透明。 */
-  background:var(--glass-2);border-right:.5px solid var(--glass-brd);min-width:180px;overflow:hidden;
+     否则又把玻璃糊回不透明。
+     材质和右下角缩放条（.gv-zoom）对齐，再叠一层斜向折射高光。 */
+  background:
+    linear-gradient(180deg,rgba(255,255,255,.30),rgba(255,255,255,.08) 30%,rgba(255,255,255,.14) 64%,rgba(255,255,255,.04)),
+    var(--glass-2);
+  border-right:.5px solid var(--glass-brd);min-width:180px;overflow:hidden;
+  box-shadow:inset .5px 0 0 rgba(255,255,255,.85),inset -1px 0 0 rgba(150,205,255,.30),
+    var(--hi-strong),10px 0 46px -30px rgba(10,70,150,.42);
   -webkit-backdrop-filter:var(--glass-blur);backdrop-filter:var(--glass-blur);
+  isolation:isolate;
   transition:width var(--t-slow),flex-basis var(--t-slow),
     opacity var(--t-slow),transform var(--t-slow),border-right-color var(--t);
+}
+/* 折射层：左上镜面高光 + 右下淡紫色散 + 右上冷光，全部压在内容下面
+   （isolation + z-index:-1），滚动、点按都不受影响。 */
+.sidebar::before{
+  content:'';position:absolute;inset:0;z-index:-1;pointer-events:none;border-radius:inherit;
+  background:
+    linear-gradient(118deg,rgba(255,255,255,.92) 0%,rgba(255,255,255,.28) 7%,rgba(255,255,255,0) 20%),
+    radial-gradient(120% 46% at 0% 0%,rgba(255,255,255,.62),rgba(255,255,255,0) 58%),
+    radial-gradient(85% 44% at 100% 2%,rgba(150,205,255,.30),rgba(150,205,255,0) 68%),
+    radial-gradient(72% 42% at 0% 100%,rgba(190,145,255,.22),rgba(190,145,255,0) 72%),
+    linear-gradient(90deg,rgba(255,255,255,.55),rgba(255,255,255,0) 5%,rgba(255,255,255,0) 94%,rgba(150,205,255,.28));
+  mix-blend-mode:screen;
+}
+body.dark .sidebar::before{
+  background:
+    linear-gradient(118deg,rgba(255,255,255,.30) 0%,rgba(255,255,255,.06) 8%,rgba(255,255,255,0) 22%),
+    radial-gradient(120% 46% at 0% 0%,rgba(120,180,255,.18),rgba(120,180,255,0) 60%),
+    radial-gradient(85% 44% at 100% 2%,rgba(90,150,240,.16),rgba(90,150,240,0) 68%),
+    radial-gradient(72% 42% at 0% 100%,rgba(150,110,240,.14),rgba(150,110,240,0) 72%);
+  mix-blend-mode:screen;
 }
 /* 收起态：不用 display:none（那样没法做动画），改成宽度归零 + 左移淡出。
    这里的 !important 是为了盖过通用的 .hidden{display:none!important}。 */
@@ -42345,7 +42372,7 @@ async function aiSend() {
 (function initLiquidGlass() {
   'use strict';
   var LS = 'ggai_glass';
-  var TARGET = '.persp-float,.fmenu-btn,.fmenu,.ctx,.ask-pop,.qs-pop,.eff-pop,.api-pop,.gv-zoom,.gv-badge,.layer-pop,.ai-sheet,.cmd-search,.toolwrap';
+  var TARGET = '.sidebar,.persp-float,.fmenu-btn,.fmenu,.ctx,.ask-pop,.qs-pop,.eff-pop,.api-pop,.gv-zoom,.gv-badge,.layer-pop,.ai-sheet,.cmd-search,.toolwrap';
   var REFRACT = 16;        /* 边缘折弯强度（px） */
   var MAX_FIELD = 48;
   var on = true;
@@ -42469,11 +42496,13 @@ async function aiSend() {
     var id = filterId(w, h, rr, url);
     if (el.dataset.lgOn !== '1') el.dataset.lgPrev = el.style.backdropFilter || '';
     /* 大面板（抽屉 / AI 面板）保留较强模糊，否则中间没被折弯的区域会太透、字压不住背景；
-       小胶囊只留一点点，避免糊成一片 */
+       小胶囊只留一点点，避免糊成一片。
+       侧栏是整块画布透视区，每帧都要折弯，模糊必须压小，否则拖动 / 逐位计算会掉帧。 */
     var area = w * h;
-    var tail = area >= 120000 ? ' blur(18px) saturate(1.4)'
-      : area >= 20000 ? ' blur(8px) saturate(1.45)'
-        : ' blur(2px) saturate(1.5)';
+    var tail = el.classList.contains('sidebar') ? ' blur(4px) saturate(1.6)'
+      : area >= 120000 ? ' blur(18px) saturate(1.4)'
+        : area >= 20000 ? ' blur(8px) saturate(1.45)'
+          : ' blur(2px) saturate(1.5)';
     el.style.webkitBackdropFilter = 'url(#' + id + ')' + tail;
     el.style.backdropFilter = 'url(#' + id + ')' + tail;
     el.dataset.lgOn = '1';
